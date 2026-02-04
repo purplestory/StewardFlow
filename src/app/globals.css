@@ -24,3 +24,298 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+.react-calendar {
+  width: 100%;
+  max-width: 100%;
+  border: 1px solid #e5e5e5;
+  border-radius: 12px;
+  padding: 16px;
+  font-family: inherit;
+  font-size: 16px;
+  margin: 0 auto; /* 중앙 정렬 */
+}
+
+/* 달력 팝업에서 사용할 때 더 크게 */
+.react-calendar__navigation {
+  margin-bottom: 16px;
+}
+
+.react-calendar__navigation button {
+  font-size: 16px;
+  padding: 8px 12px;
+  min-width: 44px;
+}
+
+.react-calendar__month-view__weekdays {
+  margin-bottom: 8px;
+}
+
+.react-calendar__month-view__weekdays__weekday {
+  font-size: 14px;
+  font-weight: 600;
+  padding: 8px 0;
+}
+
+.react-calendar__tile {
+  font-size: 16px;
+  padding: 12px 8px;
+  min-height: 44px;
+}
+
+/* 요일과 날짜 그리드 레이아웃 */
+.react-calendar__month-view__weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+}
+
+.react-calendar__month-view__weekdays__weekday {
+  text-align: center;
+}
+
+.react-calendar__month-view__days {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+}
+
+.react-calendar__tile {
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.react-calendar__tile {
+  border-radius: 8px;
+}
+
+.react-calendar__tile:enabled:hover,
+.react-calendar__tile:enabled:focus {
+  background: #f5f5f5;
+}
+
+/* 토요일 색상을 평일과 동일하게 검정색으로 (en-US locale에서 토요일은 7번째) */
+.react-calendar__month-view__weekdays__weekday:nth-child(7),
+.react-calendar__month-view__days__day:nth-child(7n),
+.react-calendar__month-view__days__day--weekend:not(:first-child) {
+  color: #171717 !important;
+}
+
+/* 일요일(주일) 요일 레이블과 날짜 숫자 모두 빨간색으로 표시 (en-US locale에서 일요일은 첫 번째) */
+.react-calendar__month-view__weekdays__weekday:first-child,
+.react-calendar__month-view__days__day:first-child,
+.react-calendar__month-view__days__day:nth-child(7n-6),
+.react-calendar__month-view__days__day--weekend:first-child {
+  color: #dc2626 !important;
+}
+
+/* 공휴일은 빨간색으로 표시 */
+.react-calendar__tile--holiday,
+.calendar-holiday {
+  color: #dc2626 !important;
+}
+
+.calendar-pending {
+  background: rgba(245, 158, 11, 0.2);
+  color: #92400e;
+}
+
+.calendar-approved {
+  background: rgba(16, 185, 129, 0.2);
+  color: #065f46;
+}
+
+.calendar-returned {
+  background: rgba(107, 114, 128, 0.2);
+  color: #374151;
+}
+
+.calendar-rejected {
+  background: rgba(244, 63, 94, 0.2);
+  color: #9f1239;
+}
+
+/* Professional Form Styles - Unified Design System */
+.form-input {
+  @apply h-10 w-full rounded-lg border border-neutral-200 bg-white px-4 text-sm font-normal text-neutral-900 placeholder:text-neutral-400 transition-all duration-200;
+  @apply focus:border-slate-600 focus:outline-none focus:ring-2 focus:ring-slate-500/20 focus:shadow-sm;
+  @apply disabled:bg-neutral-50 disabled:text-neutral-500 disabled:cursor-not-allowed;
+  @apply hover:border-neutral-300;
+}
+
+.form-select {
+  @apply h-10 w-full rounded-lg border border-neutral-200 bg-white px-4 text-sm font-normal text-neutral-900 transition-all duration-200;
+  @apply focus:border-slate-600 focus:outline-none focus:ring-2 focus:ring-slate-500/20 focus:shadow-sm;
+  @apply disabled:bg-neutral-50 disabled:text-neutral-500 disabled:cursor-not-allowed;
+  @apply hover:border-neutral-300;
+  /* select 요소의 높이를 정확히 맞추기 위한 추가 스타일 */
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3E%3C/svg%3E");
+  background-position: right 0.75rem center;
+  background-repeat: no-repeat;
+  background-size: 1.25em 1.25em;
+  padding-right: 2.75rem;
+}
+
+.form-textarea {
+  @apply min-h-[100px] w-full rounded-lg border border-neutral-200 bg-white px-4 py-3 text-sm font-normal text-neutral-900 placeholder:text-neutral-400 transition-all duration-200 resize-y;
+  @apply focus:border-slate-600 focus:outline-none focus:ring-2 focus:ring-slate-500/20 focus:shadow-sm;
+  @apply disabled:bg-neutral-50 disabled:text-neutral-500 disabled:cursor-not-allowed;
+  @apply hover:border-neutral-300;
+}
+
+/* datetime-local 입력 필드의 달력 팝업 크기 조정 */
+input[type="datetime-local"] {
+  font-size: 16px; /* iOS에서 줌 방지 */
+}
+
+/* 브라우저 기본 달력 팝업 크기 조정 (브라우저별로 다를 수 있음) */
+input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  padding: 4px;
+  font-size: 18px;
+}
+
+input[type="datetime-local"]::-webkit-datetime-edit {
+  font-size: 16px;
+  padding: 4px;
+}
+
+input[type="datetime-local"]::-webkit-datetime-edit-fields-wrapper {
+  padding: 4px;
+}
+
+input[type="datetime-local"]::-webkit-datetime-edit-text {
+  padding: 0 4px;
+  font-size: 16px;
+}
+
+input[type="datetime-local"]::-webkit-datetime-edit-month-field,
+input[type="datetime-local"]::-webkit-datetime-edit-day-field,
+input[type="datetime-local"]::-webkit-datetime-edit-year-field,
+input[type="datetime-local"]::-webkit-datetime-edit-hour-field,
+input[type="datetime-local"]::-webkit-datetime-edit-minute-field {
+  padding: 0 2px;
+  font-size: 16px;
+}
+
+/* 달력 팝업 자체는 브라우저가 제어하므로, 대신 입력 필드를 더 크게 만들어 사용성을 개선 */
+input[type="datetime-local"] {
+  min-height: 48px;
+  padding: 12px 16px;
+  font-size: 16px;
+}
+
+.form-label {
+  @apply text-sm font-medium text-neutral-900;
+}
+
+.form-label-optional {
+  @apply text-xs font-normal text-neutral-500 ml-1;
+}
+
+/* Unified Button Styles */
+.btn-primary {
+  @apply h-10 px-4 rounded-lg text-sm font-medium transition-all bg-neutral-900 text-white;
+  @apply hover:bg-neutral-800;
+  @apply focus:outline-none focus:ring-2 focus:ring-neutral-500 focus:ring-offset-2;
+  @apply disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-neutral-900;
+  @apply flex items-center justify-center;
+}
+
+.btn-secondary {
+  @apply h-10 px-4 rounded-lg text-sm font-medium transition-all bg-white text-neutral-700 border border-neutral-200;
+  @apply hover:bg-neutral-50 hover:border-neutral-300;
+  @apply focus:outline-none focus:ring-2 focus:ring-neutral-500 focus:ring-offset-2;
+  @apply disabled:opacity-50 disabled:cursor-not-allowed;
+  @apply flex items-center justify-center;
+}
+
+.btn-sm {
+  @apply h-10 px-4 rounded-lg text-sm font-medium transition-all bg-white text-neutral-700 border border-neutral-200;
+  @apply hover:bg-neutral-50 hover:border-neutral-300;
+  @apply focus:outline-none focus:ring-2 focus:ring-neutral-500 focus:ring-offset-2;
+  @apply disabled:opacity-50 disabled:cursor-not-allowed;
+  @apply flex items-center justify-center;
+}
+
+.btn-outline {
+  @apply h-10 px-4 rounded-lg text-sm font-medium transition-all bg-white text-neutral-700 border border-neutral-200;
+  @apply hover:bg-neutral-50 hover:border-neutral-300;
+  @apply focus:outline-none focus:ring-2 focus:ring-neutral-500 focus:ring-offset-2;
+  @apply disabled:opacity-50 disabled:cursor-not-allowed;
+  @apply flex items-center justify-center;
+}
+
+.btn-ghost {
+  @apply h-10 px-4 rounded-lg text-sm font-medium transition-all bg-white text-neutral-700 border border-neutral-200;
+  @apply hover:bg-neutral-50 hover:border-neutral-300;
+  @apply focus:outline-none focus:ring-2 focus:ring-neutral-500 focus:ring-offset-2;
+  @apply disabled:opacity-50 disabled:cursor-not-allowed;
+  @apply flex items-center justify-center;
+}
+
+.form-section {
+  @apply space-y-6;
+}
+
+.form-grid {
+  @apply grid gap-6 md:grid-cols-2;
+}
+
+.image-upload-area {
+  @apply rounded-xl border-2 border-dashed border-neutral-200 bg-neutral-50 p-6 transition-colors duration-200;
+  @apply hover:border-neutral-300 hover:bg-neutral-100;
+}
+
+.image-upload-preview {
+  @apply h-64 w-full rounded-lg object-cover shadow-sm;
+}
+
+.image-upload-placeholder {
+  @apply flex h-64 items-center justify-center text-sm text-neutral-500;
+}
+
+.image-upload-input {
+  @apply mt-4 w-full rounded-lg border border-neutral-200 bg-white px-4 py-3 text-sm text-neutral-700 transition-all duration-200;
+  @apply focus:border-slate-500 focus:outline-none focus:ring-2 focus:ring-slate-500/20;
+  @apply file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-slate-900 file:text-white file:cursor-pointer file:transition-colors;
+  @apply file:hover:bg-slate-800;
+}
+
+/* abbr 태그 기본 점선 스타일 제거 */
+abbr,
+abbr[title],
+abbr:where([title]) {
+  -webkit-text-decoration: none !important;
+  text-decoration: none !important;
+  text-decoration-line: none !important;
+  text-decoration-style: none !important;
+  border-bottom: none !important;
+}
+
+/* 요일 버튼 점선 제거 */
+.day-button,
+.day-button span,
+.day-button abbr {
+  text-decoration: none !important;
+  border-bottom: none !important;
+  text-decoration-line: none !important;
+  text-decoration-style: none !important;
+  text-underline-offset: 0 !important;
+  text-underline-position: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+  -webkit-text-decoration: none !important;
+}
+
+/* abbr 태그 기본 스타일 오버라이드 */
+abbr.day-button,
+.day-button abbr,
+button.day-button abbr {
+  -webkit-text-decoration: none !important;
+  text-decoration: none !important;
+  text-decoration-line: none !important;
+  text-decoration-style: none !important;
+  border-bottom: none !important;
+}

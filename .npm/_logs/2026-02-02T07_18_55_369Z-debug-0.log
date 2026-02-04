@@ -1,0 +1,57 @@
+0 verbose cli /opt/homebrew/Cellar/node/24.2.0/bin/node /opt/homebrew/lib/node_modules/npm/bin/npm-cli.js
+1 info using npm@11.3.0
+2 info using node@v24.2.0
+3 silly config load:file:/opt/homebrew/lib/node_modules/npm/npmrc
+4 silly config load:file:/Users/psilvu/Dev/ChurchAsset/.npmrc
+5 silly config load:file:/Users/psilvu/.npmrc
+6 silly config load:file:/opt/homebrew/etc/npmrc
+7 verbose title npm exec create-next-app@latest . --ts --tailwind --eslint --app --src-dir --import-alias @/*
+8 verbose argv "exec" "--yes" "--" "create-next-app@latest" "." "--ts" "--tailwind" "--eslint" "--app" "--src-dir" "--import-alias" "@/*"
+9 verbose logfile logs-max:10 dir:/Users/psilvu/Dev/ChurchAsset/.npm/_logs/2026-02-02T07_18_55_369Z-
+10 verbose logfile /Users/psilvu/Dev/ChurchAsset/.npm/_logs/2026-02-02T07_18_55_369Z-debug-0.log
+11 silly logfile done cleaning log files
+12 verbose stack Error: EPERM: operation not permitted, open '/opt/homebrew/lib/node_modules/npm/node_modules/@sigstore/verify/dist/key/index.js'
+12 verbose stack     at Object.readFileSync (node:fs:433:20)
+12 verbose stack     at defaultLoadImpl (node:internal/modules/cjs/loader:1128:17)
+12 verbose stack     at loadSource (node:internal/modules/cjs/loader:1761:20)
+12 verbose stack     at Object..js (node:internal/modules/cjs/loader:1893:44)
+12 verbose stack     at Module.load (node:internal/modules/cjs/loader:1469:32)
+12 verbose stack     at Module._load (node:internal/modules/cjs/loader:1286:12)
+12 verbose stack     at TracingChannel.traceSync (node:diagnostics_channel:322:14)
+12 verbose stack     at wrapModuleLoad (node:internal/modules/cjs/loader:235:24)
+12 verbose stack     at Module.require (node:internal/modules/cjs/loader:1491:12)
+12 verbose stack     at require (node:internal/modules/helpers:135:16)
+13 error code EPERM
+14 error syscall open
+15 error path /opt/homebrew/lib/node_modules/npm/node_modules/@sigstore/verify/dist/key/index.js
+16 error errno -1
+17 error Error: EPERM: operation not permitted, open '/opt/homebrew/lib/node_modules/npm/node_modules/@sigstore/verify/dist/key/index.js'
+17 error     at Object.readFileSync (node:fs:433:20)
+17 error     at defaultLoadImpl (node:internal/modules/cjs/loader:1128:17)
+17 error     at loadSource (node:internal/modules/cjs/loader:1761:20)
+17 error     at Object..js (node:internal/modules/cjs/loader:1893:44)
+17 error     at Module.load (node:internal/modules/cjs/loader:1469:32)
+17 error     at Module._load (node:internal/modules/cjs/loader:1286:12)
+17 error     at TracingChannel.traceSync (node:diagnostics_channel:322:14)
+17 error     at wrapModuleLoad (node:internal/modules/cjs/loader:235:24)
+17 error     at Module.require (node:internal/modules/cjs/loader:1491:12)
+17 error     at require (node:internal/modules/helpers:135:16) {
+17 error   errno: -1,
+17 error   code: 'EPERM',
+17 error   syscall: 'open',
+17 error   path: '/opt/homebrew/lib/node_modules/npm/node_modules/@sigstore/verify/dist/key/index.js'
+17 error }
+18 error
+18 error The operation was rejected by your operating system.
+18 error It is likely you do not have the permissions to access this file as the current user
+18 error
+18 error If you believe this might be a permissions issue, please double-check the
+18 error permissions of the file and its containing directories, or try running
+18 error the command again as root/Administrator.
+19 verbose cwd /Users/psilvu/Dev/ChurchAsset
+20 verbose os Darwin 25.2.0
+21 verbose node v24.2.0
+22 verbose npm  v11.3.0
+23 verbose exit -1
+24 verbose code -1
+25 error A complete log of this run can be found in: /Users/psilvu/Dev/ChurchAsset/.npm/_logs/2026-02-02T07_18_55_369Z-debug-0.log

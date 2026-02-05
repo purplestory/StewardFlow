@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { generateShortId } from "@/lib/short-id";
+import type { DepartmentChangeRequest } from "@/types/database";
 
 type ProfileRow = {
   id: string;
@@ -48,6 +49,9 @@ export default function UserRoleManager() {
   const [availableDepartments, setAvailableDepartments] = useState<string[]>([]);
   const [lastLoadedAt, setLastLoadedAt] = useState<string | null>(null);
   const [needsOrganization, setNeedsOrganization] = useState(false);
+  const [departmentChangeRequests, setDepartmentChangeRequests] = useState<
+    (DepartmentChangeRequest & { requester_name: string | null; requester_email: string })[]
+  >([]);
 
   const load = async () => {
     setLoading(true);
@@ -170,6 +174,28 @@ export default function UserRoleManager() {
       }
 
       setAvailableDepartments(sortedDepartments.map((d) => d.name));
+    }
+
+    // 부서 변경 요청 로드 (관리자 또는 부서 관리자만)
+    if (profileData.role === "admin" || profileData.role === "manager") {
+      const { data: requestsData, error: requestsError } = await supabase
+        .from("department_change_requests")
+        .select(`
+          *,
+          profiles!department_change_requests_requester_id_fkey(name, email)
+        `)
+        .eq("organization_id", profileData.organization_id)
+        .eq("status", "pending")
+        .order("created_at", { ascending: false });
+
+      if (!requestsError && requestsData) {
+        const requestsWithRequester = requestsData.map((req: any) => ({
+          ...req,
+          requester_name: req.profiles?.name || null,
+          requester_email: req.profiles?.email || "",
+        }));
+        setDepartmentChangeRequests(requestsWithRequester);
+      }
     }
 
     const { data, error } = await supabase
@@ -633,6 +659,150 @@ export default function UserRoleManager() {
     });
   };
 
+  const approveDepartmentChange = async (request: DepartmentChangeRequest) => {
+    setMessage(null);
+
+    if (currentUserRole === "user") {
+      setMessage("부서 변경 승인은 관리자만 가능합니다.");
+      return;
+    }
+
+    if (!organizationId || !currentUserId) {
+      setMessage("기관 정보를 확인할 수 없습니다.");
+      return;
+    }
+
+    // 부서 관리자는 자신의 부서 사용자 요청만 승인 가능
+    if (currentUserRole === "manager") {
+      const { data: currentProfile } = await supabase
+        .from("profiles")
+        .select("department")
+        .eq("id", currentUserId)
+        .maybeSingle();
+
+      if (
+        currentProfile?.department !== request.from_department &&
+        currentProfile?.department !== request.to_department
+      ) {
+        setMessage("자신의 부서 사용자 요청만 승인할 수 있습니다.");
+        return;
+      }
+    }
+
+    // 요청 승인 및 프로필 업데이트
+    const now = new Date().toISOString();
+    const { error: updateRequestError } = await supabase
+      .from("department_change_requests")
+      .update({
+        status: "approved",
+        resolved_at: now,
+        resolved_by: currentUserId,
+      })
+      .eq("id", request.id);
+
+    if (updateRequestError) {
+      setMessage(`요청 승인 실패: ${updateRequestError.message}`);
+      return;
+    }
+
+    // 프로필의 부서 업데이트
+    const { error: updateProfileError } = await supabase
+      .from("profiles")
+      .update({ department: request.to_department })
+      .eq("id", request.requester_id)
+      .eq("organization_id", organizationId);
+
+    if (updateProfileError) {
+      setMessage(`프로필 업데이트 실패: ${updateProfileError.message}`);
+      // 요청 상태는 되돌리기
+      await supabase
+        .from("department_change_requests")
+        .update({ status: "pending", resolved_at: null, resolved_by: null })
+        .eq("id", request.id);
+      return;
+    }
+
+    // audit log
+    await supabase.from("audit_logs").insert({
+      organization_id: organizationId,
+      actor_id: currentUserId,
+      action: "department_change_approved",
+      target_type: "department_change_request",
+      target_id: request.id,
+      metadata: {
+        requester_id: request.requester_id,
+        from_department: request.from_department,
+        to_department: request.to_department,
+      },
+    });
+
+    setMessage("부서 변경 요청이 승인되었습니다.");
+    await load();
+  };
+
+  const rejectDepartmentChange = async (request: DepartmentChangeRequest) => {
+    setMessage(null);
+
+    if (currentUserRole === "user") {
+      setMessage("부서 변경 거부는 관리자만 가능합니다.");
+      return;
+    }
+
+    if (!organizationId || !currentUserId) {
+      setMessage("기관 정보를 확인할 수 없습니다.");
+      return;
+    }
+
+    // 부서 관리자는 자신의 부서 사용자 요청만 거부 가능
+    if (currentUserRole === "manager") {
+      const { data: currentProfile } = await supabase
+        .from("profiles")
+        .select("department")
+        .eq("id", currentUserId)
+        .maybeSingle();
+
+      if (
+        currentProfile?.department !== request.from_department &&
+        currentProfile?.department !== request.to_department
+      ) {
+        setMessage("자신의 부서 사용자 요청만 거부할 수 있습니다.");
+        return;
+      }
+    }
+
+    const now = new Date().toISOString();
+    const { error } = await supabase
+      .from("department_change_requests")
+      .update({
+        status: "rejected",
+        resolved_at: now,
+        resolved_by: currentUserId,
+      })
+      .eq("id", request.id);
+
+    if (error) {
+      setMessage(`요청 거부 실패: ${error.message}`);
+      return;
+    }
+
+    // audit log
+    await supabase.from("audit_logs").insert({
+      organization_id: organizationId,
+      actor_id: currentUserId,
+      action: "department_change_rejected",
+      target_type: "department_change_request",
+      target_id: request.id,
+      metadata: {
+        requester_id: request.requester_id,
+        from_department: request.from_department,
+        to_department: request.to_department,
+      },
+    });
+
+    setMessage("부서 변경 요청이 거부되었습니다.");
+    await load();
+  };
+
   if (loading) {
     return (
       <div className="rounded-lg border border-dashed border-neutral-300 p-6 text-center text-sm text-neutral-500">
@@ -813,6 +983,51 @@ export default function UserRoleManager() {
           </div>
         )}
       </div>
+
+      {departmentChangeRequests.length > 0 && (
+        <div className="space-y-3 rounded-lg border border-blue-200 bg-blue-50 p-4">
+          <h3 className="text-sm font-semibold text-blue-900">부서 변경 요청</h3>
+          {departmentChangeRequests.map((request) => (
+            <div
+              key={request.id}
+              className="rounded-lg border border-blue-200 bg-white p-3"
+            >
+              <div className="flex flex-wrap items-start justify-between gap-2">
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-neutral-900">
+                    {request.requester_name || request.requester_email}
+                  </p>
+                  <p className="text-xs text-neutral-500 mt-1">
+                    {request.from_department || "(없음)"} → {request.to_department}
+                  </p>
+                  {request.note && (
+                    <p className="text-xs text-neutral-600 mt-1">사유: {request.note}</p>
+                  )}
+                  <p className="text-xs text-neutral-400 mt-1">
+                    {formatDateTime(request.created_at)}
+                  </p>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => approveDepartmentChange(request)}
+                    className="h-10 rounded-lg border border-green-200 bg-white px-3 text-xs font-medium text-green-600 transition-all duration-200 hover:bg-green-50 hover:border-green-300 hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    승인
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => rejectDepartmentChange(request)}
+                    className="h-10 rounded-lg border border-rose-200 bg-white px-3 text-xs font-medium text-rose-600 transition-all duration-200 hover:bg-rose-50 hover:border-rose-300 hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-rose-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    거부
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       <div className="space-y-2">
         {profiles.length === 0 ? (

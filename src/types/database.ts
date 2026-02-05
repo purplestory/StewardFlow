@@ -239,3 +239,16 @@ export type AssetTransferRequest = {
   created_at: string;
   resolved_at: string | null;
 };
+
+export type DepartmentChangeRequest = {
+  id: string;
+  organization_id: string | null;
+  requester_id: string;
+  from_department: string | null;
+  to_department: string;
+  status: "pending" | "approved" | "rejected" | "cancelled";
+  note: string | null;
+  created_at: string;
+  resolved_at: string | null;
+  resolved_by: string | null;
+};

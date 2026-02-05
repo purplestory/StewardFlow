@@ -19,6 +19,14 @@ const mobilityLabel: Record<NonNullable<Asset["mobility"]>, string> = {
   movable: "이동",
 };
 
+const categoryLabel: Record<NonNullable<Asset["category"]>, string> = {
+  sound: "음향",
+  video: "영상",
+  kitchen: "조리",
+  furniture: "가구",
+  etc: "기타",
+};
+
 export default function AssetCard({ asset, requiredRoleLabel }: AssetCardProps) {
   const tags = asset.tags ?? [];
   const showUnused = !asset.last_used_at;
@@ -49,10 +57,11 @@ export default function AssetCard({ asset, requiredRoleLabel }: AssetCardProps) 
         </div>
       </Link>
       <Link href={detailUrl} className="block">
-        <div className="mt-4 flex items-center gap-2 flex-wrap">
-          <h2 className="text-base font-semibold hover:text-neutral-700 cursor-pointer transition-colors flex-1 min-w-0">
-            {asset.name}
-          </h2>
+        <div className="mt-4">
+          <div className="flex items-center gap-2 flex-wrap">
+            <h2 className="text-base font-semibold hover:text-neutral-700 cursor-pointer transition-colors flex-1 min-w-0">
+              {asset.name}
+            </h2>
           {/* 상태 뱃지 - 제품명 옆에 표시 */}
           <span
             className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium flex-shrink-0 ${
@@ -96,21 +105,44 @@ export default function AssetCard({ asset, requiredRoleLabel }: AssetCardProps) 
             )}
             <span>{statusLabel[asset.status]}</span>
           </span>
+          </div>
+          {/* 모델명 */}
+          {asset.model_name && (
+            <p className="mt-1 text-xs text-neutral-500">{asset.model_name}</p>
+          )}
         </div>
       </Link>
 
-      {/* 설치 정보 및 기관 공용 표시 */}
+      {/* 상세 정보 표시 */}
       <div className="mt-3 space-y-1.5">
-        {asset.owner_scope === "organization" && (
+        {asset.category && (
           <div className="flex items-center gap-2 text-xs text-neutral-600">
-            <span className="font-medium text-neutral-500">소유</span>
-            <span>기관 공용</span>
+            <span className="font-medium text-neutral-500">카테고리</span>
+            <span>{categoryLabel[asset.category] || asset.category}</span>
           </div>
         )}
+        <div className="flex items-center gap-2 text-xs text-neutral-600">
+          <span className="font-medium text-neutral-500">소유</span>
+          <span>
+            {asset.owner_scope === "organization" ? "기관 공용" : asset.owner_department}
+          </span>
+        </div>
         <div className="flex items-center gap-2 text-xs text-neutral-600">
           <span className="font-medium text-neutral-500">설치</span>
           <span>{asset.mobility ? mobilityLabel[asset.mobility] : "이동"}</span>
         </div>
+        {asset.location && (
+          <div className="flex items-center gap-2 text-xs text-neutral-600">
+            <span className="font-medium text-neutral-500">설치(보관) 장소</span>
+            <span>{asset.location}</span>
+          </div>
+        )}
+        {asset.quantity > 1 && (
+          <div className="flex items-center gap-2 text-xs text-neutral-600">
+            <span className="font-medium text-neutral-500">수량</span>
+            <span>{asset.quantity}개</span>
+          </div>
+        )}
       </div>
 
       {/* 태그 */}
@@ -132,27 +164,6 @@ export default function AssetCard({ asset, requiredRoleLabel }: AssetCardProps) 
         </div>
       )}
 
-      {/* 승인 필요 정보 */}
-      {requiredRoleLabel && (
-        <div className="mt-3 flex items-center gap-1.5 rounded-lg bg-blue-50 px-2.5 py-1.5 border border-blue-100">
-          <svg
-            className="h-3.5 w-3.5 text-blue-600"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
-            />
-          </svg>
-          <span className="text-xs font-medium text-blue-700">
-            {requiredRoleLabel} 승인 필요
-          </span>
-        </div>
-      )}
       <Link
         href={`/assets/${asset.short_id ?? asset.id}`}
         className="mt-4 block w-full rounded-lg border border-neutral-200 px-3 py-2 text-center text-sm"

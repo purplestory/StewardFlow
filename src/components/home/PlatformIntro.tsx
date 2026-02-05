@@ -90,7 +90,17 @@ export default function PlatformIntro() {
   return (
     <div className="space-y-8">
       {/* Hero Section */}
-      <div className="text-center space-y-4">
+      <div className="text-center space-y-6">
+        {/* 로고 */}
+        <div className="flex justify-center mb-4">
+          <div className="w-24 h-24 md:w-32 md:h-32 flex items-center justify-center">
+            <img
+              src="/icon.svg"
+              alt="StewardFlow"
+              className="w-full h-full object-contain"
+            />
+          </div>
+        </div>
         <h1 className="text-4xl md:text-5xl font-bold text-neutral-900">
           교회 자원 관리 시스템
         </h1>

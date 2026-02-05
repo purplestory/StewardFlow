@@ -171,15 +171,29 @@ export async function getInviteByToken(
       return { ok: false, message: `초대 링크가 만료되었습니다. (유효기간: ${INVITE_EXPIRES_DAYS}일) 관리자에게 새로운 초대를 요청하세요.` };
     }
 
+    // organization_id 확인 (필수)
+    if (!allInvites.organization_id) {
+      return { 
+        ok: false, 
+        message: "초대 정보에 기관 ID가 없습니다. 관리자에게 문의하세요." 
+      };
+    }
+
     // 기관 이름 조회 (서버 액션에서 조회하여 클라이언트에서 RLS 문제 방지)
     let organizationName: string | undefined;
     try {
-      const { data: orgData } = await supabase
+      const { data: orgData, error: orgError } = await supabase
         .from("organizations")
         .select("name")
         .eq("id", allInvites.organization_id)
         .maybeSingle();
-      organizationName = orgData?.name;
+      
+      if (orgError) {
+        console.error("Failed to fetch organization name:", orgError);
+        // 기관 이름 조회 실패해도 초대 정보는 반환 (organization_id는 있음)
+      } else {
+        organizationName = orgData?.name;
+      }
     } catch (orgError) {
       // 기관 이름 조회 실패해도 초대 정보는 반환
       console.warn("Failed to fetch organization name:", orgError);

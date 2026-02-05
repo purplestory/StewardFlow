@@ -3,6 +3,10 @@
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { isUUID } from "@/lib/short-id";
 import type { Reservation, VehicleReservationSummary } from "@/types/database";
+import {
+  sendReservationRequestToAdmin,
+  sendReservationRequestToBorrower,
+} from "@/lib/kakao-message";
 
 type ReservationActionState = {
   ok: boolean;
@@ -346,6 +350,7 @@ export async function createReservation(
     return { ok: false, message: insertError.message };
   }
 
+  // 알림 생성
   await createNotification({
     userId: borrowerId,
     organizationId,
@@ -363,6 +368,65 @@ export async function createReservation(
       end_date: endDate,
     },
   });
+
+  // 카카오톡 알림 발송 (비동기, 실패해도 예약은 완료)
+  try {
+    // 신청자 정보 조회
+    const { data: borrowerProfile } = await supabase
+      .from("profiles")
+      .select("name,department,phone")
+      .eq("id", borrowerId)
+      .maybeSingle();
+
+    if (borrowerProfile?.phone && resourceName) {
+      // 신청자에게 알림
+      await sendReservationRequestToBorrower(
+        borrowerProfile.phone,
+        resourceName,
+        startDate,
+        endDate,
+        resourceType
+      );
+
+      // 관리자에게 알림 (승인 정책에 따라 결정)
+      if (organizationId) {
+        // 승인 정책 확인
+        const { data: policies } = await supabase
+          .from("approval_policies")
+          .select("required_role,department")
+          .eq("organization_id", organizationId)
+          .eq("scope", resourceType === "asset" ? "asset" : resourceType === "space" ? "space" : "vehicle");
+
+        // 관리자 목록 조회 (admin 또는 manager)
+        const requiredRoles = policies?.map(p => p.required_role) || ["admin"];
+        const { data: admins } = await supabase
+          .from("profiles")
+          .select("phone,name")
+          .eq("organization_id", organizationId)
+          .in("role", requiredRoles);
+
+        // 관리자들에게 알림 발송
+        if (admins && admins.length > 0) {
+          for (const admin of admins) {
+            if (admin.phone) {
+              await sendReservationRequestToAdmin(
+                admin.phone,
+                resourceName,
+                borrowerProfile.name || "이름 없음",
+                borrowerProfile.department,
+                startDate,
+                endDate,
+                resourceType
+              );
+            }
+          }
+        }
+      }
+    }
+  } catch (kakaoError) {
+    // 카카오톡 발송 실패는 로그만 남기고 예약은 계속 진행
+    console.error("카카오톡 알림 발송 실패:", kakaoError);
+  }
 
   return { ok: true, message: "대여 신청이 접수되었습니다." };
 }

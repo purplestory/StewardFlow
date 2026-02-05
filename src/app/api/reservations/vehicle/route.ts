@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import {
+  sendReservationApprovalToBorrower,
+} from "@/lib/kakao-message";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -114,6 +117,42 @@ export async function PATCH(request: Request) {
         { ok: false, message: notifyError.message },
         { status: 400 }
       );
+    }
+
+    // 승인 시 카카오톡 알림 발송 (반납 기한 포함)
+    if (status === "approved" && reservation) {
+      try {
+        // 예약 정보 조회 (start_date, end_date 필요)
+        const { data: reservationDetail } = await supabase
+          .from("vehicle_reservations")
+          .select("start_date,end_date,borrower_id")
+          .eq("id", reservationId)
+          .maybeSingle();
+
+        if (reservationDetail) {
+          // 신청자 정보 조회
+          const { data: borrowerProfile } = await supabase
+            .from("profiles")
+            .select("phone")
+            .eq("id", reservation.borrower_id)
+            .maybeSingle();
+
+          if (borrowerProfile?.phone && vehicle?.name) {
+            // 반납 기한은 end_date와 동일
+            await sendReservationApprovalToBorrower(
+              borrowerProfile.phone,
+              vehicle.name,
+              reservationDetail.start_date,
+              reservationDetail.end_date,
+              reservationDetail.end_date, // 반납 기한
+              "vehicle"
+            );
+          }
+        }
+      } catch (kakaoError) {
+        console.error("카카오톡 승인 알림 발송 실패:", kakaoError);
+        // 알림 실패해도 승인은 계속 진행
+      }
     }
   }
 

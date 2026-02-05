@@ -354,7 +354,9 @@ function JoinPageContent() {
             <div className="space-y-1 text-neutral-600">
               <div>
                 <span className="font-medium">초대하는 기관:</span>{" "}
-                {inviteInfo.organization_name || "기관명 없음"}
+                {inviteInfo.organization_name || (
+                  <span className="text-amber-600">기관명 조회 실패 (기관 ID는 정상)</span>
+                )}
               </div>
               {inviteInfo.department && (
                 <div>

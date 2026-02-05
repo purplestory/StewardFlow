@@ -400,7 +400,7 @@ export default function Header() {
   return (
     <header className="border-b border-neutral-200 bg-white">
       <div className="mx-auto flex w-full max-w-5xl items-center justify-between px-4 py-4">
-        <Link href="/" className="flex items-center gap-2.5 md:gap-3 text-xl md:text-2xl font-semibold hover:opacity-80 transition-opacity">
+        <Link href="/" className="flex items-center gap-1 text-xl md:text-2xl font-semibold hover:opacity-80 transition-opacity">
           <img
             src="/icon.svg"
             alt="StewardFlow"

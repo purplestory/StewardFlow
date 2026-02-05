@@ -3,6 +3,10 @@
 import { useState } from "react";
 import { supabase } from "@/lib/supabase";
 import Notice from "@/components/common/Notice";
+import {
+  sendReturnSubmittedToAdmin,
+  sendReturnSubmittedToBorrower,
+} from "@/lib/kakao-message";
 
 type ReturnFormProps = {
   reservationId: string;
@@ -175,6 +179,71 @@ export default function ReturnForm({
       setReturnImages([]);
       setPreviewUrls([]);
       setReturnNote("");
+
+      // 카카오톡 알림 발송 (비동기, 실패해도 반납은 완료)
+      try {
+        // 예약 정보 조회
+        const { data: reservationInfo } = await supabase
+          .from(tableName)
+          .select(
+            resourceType === "asset"
+              ? "asset_id,borrower_id,assets(name)"
+              : "space_id,borrower_id,spaces(name)"
+          )
+          .eq("id", reservationId)
+          .maybeSingle();
+
+        if (reservationInfo) {
+          const resourceName =
+            resourceType === "asset"
+              ? (reservationInfo as any).assets?.name
+              : (reservationInfo as any).spaces?.name;
+
+          // 신청자 정보 조회
+          const { data: borrowerProfile } = await supabase
+            .from("profiles")
+            .select("phone,name")
+            .eq("id", (reservationInfo as any).borrower_id)
+            .maybeSingle();
+
+          // 관리자 정보 조회
+          const { data: adminProfiles } = await supabase
+            .from("profiles")
+            .select("phone")
+            .eq("organization_id", organizationId)
+            .in("role", ["admin", "manager"]);
+
+          const returnDate = new Date().toISOString();
+
+          // 신청자에게 알림
+          if (borrowerProfile?.phone && resourceName) {
+            await sendReturnSubmittedToBorrower(
+              borrowerProfile.phone,
+              resourceName,
+              returnDate,
+              resourceType
+            );
+          }
+
+          // 관리자들에게 알림
+          if (adminProfiles && resourceName && borrowerProfile?.name) {
+            for (const admin of adminProfiles) {
+              if (admin.phone) {
+                await sendReturnSubmittedToAdmin(
+                  admin.phone,
+                  resourceName,
+                  borrowerProfile.name,
+                  returnDate,
+                  resourceType
+                );
+              }
+            }
+          }
+        }
+      } catch (kakaoError) {
+        console.error("카카오톡 반납 알림 발송 실패:", kakaoError);
+        // 알림 실패해도 반납은 계속 진행
+      }
 
       if (onReturnComplete) {
         setTimeout(() => {

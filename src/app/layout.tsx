@@ -15,8 +15,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "교회 교육부서 자산 공유 플랫폼",
-  description: "교육부서 자산을 통합 관리하고 대여하는 웹 플랫폼",
+  title: "교회 자원 관리 시스템 StewardFlow",
+  description: "교회 자원 관리 시스템 StewardFlow",
 };
 
 export default function RootLayout({

@@ -262,13 +262,13 @@ export default function FeatureSettings({ organizationId }: FeatureSettingsProps
         </div>
       </div>
 
-      <div>
-        <h3 className="text-lg font-semibold mb-4">메뉴 설정</h3>
-        <p className="text-sm text-neutral-600 mb-4">
+      <div className="rounded-lg border border-neutral-200 bg-white p-4">
+        <h4 className="text-sm font-semibold mb-3">메뉴 설정</h4>
+        <p className="text-xs text-neutral-500 mb-3">
           메뉴 이름과 표시 순서를 변경할 수 있습니다.
         </p>
 
-        <div className="space-y-3">
+        <div className="space-y-2">
           {menuOrder.map((item, index) => {
             const labelKey = item.key;
             const labelValue = menuLabels[labelKey] || 
@@ -286,7 +286,7 @@ export default function FeatureSettings({ organizationId }: FeatureSettingsProps
                 onDragOver={(e) => handleDragOver(e, index)}
                 onDragLeave={handleDragLeave}
                 onDrop={(e) => handleDrop(e, index)}
-                className={`flex items-center gap-3 p-4 border border-neutral-200 rounded-lg transition-all ${
+                className={`flex items-center justify-between p-2 rounded border border-neutral-200 bg-neutral-50 transition-all ${
                   draggedIndex === index
                     ? "opacity-50 cursor-grabbing"
                     : dragOverIndex === index
@@ -294,27 +294,27 @@ export default function FeatureSettings({ organizationId }: FeatureSettingsProps
                     : "cursor-grab"
                 }`}
               >
-                <svg
-                  className="w-5 h-5 text-neutral-400 flex-shrink-0"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M4 8h16M4 16h16"
-                  />
-                </svg>
-                <div className="flex-1">
+                <div className="flex items-center gap-2 flex-1">
+                  <svg
+                    className="w-4 h-4 text-neutral-400"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M4 8h16M4 16h16"
+                    />
+                  </svg>
                   <input
                     type="text"
                     value={labelValue}
                     onChange={(e) =>
                       setMenuLabels({ ...menuLabels, [labelKey]: e.target.value })
                     }
-                    className="form-input"
+                    className="form-input flex-1 h-10"
                     placeholder={
                       labelKey === "equipment" ? "물품" :
                       labelKey === "spaces" ? "공간" : "차량"

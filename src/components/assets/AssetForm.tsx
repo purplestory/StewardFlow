@@ -761,7 +761,7 @@ export default function AssetForm({ asset }: AssetFormProps = {}) {
       </div>
 
       <div className="form-grid">
-        <label className="flex flex-col gap-2 md:flex-col">
+        <label className="form-grid-item">
           <span className="form-label">물품명</span>
           <input
             name="name"
@@ -771,7 +771,7 @@ export default function AssetForm({ asset }: AssetFormProps = {}) {
             required
           />
         </label>
-        <label className="flex flex-col gap-2 md:flex-col">
+        <label className="form-grid-item">
           <span className="form-label">
             모델명
             <span className="form-label-optional">(선택)</span>
@@ -785,7 +785,7 @@ export default function AssetForm({ asset }: AssetFormProps = {}) {
           />
         </label>
         {canRegisterOrganizationWide && (
-          <label className="flex flex-col gap-2">
+          <label className="form-grid-item">
             <span className="form-label">소유 범위</span>
             <select
               name="owner_scope"
@@ -804,7 +804,7 @@ export default function AssetForm({ asset }: AssetFormProps = {}) {
           </label>
         )}
         {canRegisterOrganizationWide && ownerScope === "department" && (
-          <label className="flex flex-col gap-2">
+          <label className="form-grid-item">
             <span className="form-label">소유 부서</span>
             <select
               name="owner_department"
@@ -823,27 +823,29 @@ export default function AssetForm({ asset }: AssetFormProps = {}) {
           </label>
         )}
         {canRegisterOrganizationWide && ownerScope === "organization" && (
-          <label className="flex flex-col gap-2">
+          <label className="form-grid-item">
             <span className="form-label">
               관리 부서
               <span className="form-label-optional">(선택)</span>
             </span>
-            <input
-              name="managed_by_department"
-              className="form-input"
-              placeholder="예: 유년부"
-              list="department-options"
-              value={managedByDepartment}
-              onChange={(event) => setManagedByDepartment(event.target.value)}
-            />
-            <datalist id="department-options">
-              {departments.map((dept) => (
-                <option key={dept} value={dept} />
-              ))}
-            </datalist>
-            <p className="text-xs text-neutral-500 mt-1">
-              정기적으로 사용하고 관리하는 부서를 선택하세요.
-            </p>
+            <div>
+              <input
+                name="managed_by_department"
+                className="form-input"
+                placeholder="예: 유년부"
+                list="department-options"
+                value={managedByDepartment}
+                onChange={(event) => setManagedByDepartment(event.target.value)}
+              />
+              <datalist id="department-options">
+                {departments.map((dept) => (
+                  <option key={dept} value={dept} />
+                ))}
+              </datalist>
+              <p className="text-xs text-neutral-500 mt-1">
+                정기적으로 사용하고 관리하는 부서를 선택하세요.
+              </p>
+            </div>
           </label>
         )}
         {!canRegisterOrganizationWide && (
@@ -857,19 +859,19 @@ export default function AssetForm({ asset }: AssetFormProps = {}) {
             </p>
           </div>
         )}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:col-span-2">
-          <label className="flex flex-col gap-2">
-            <span className="form-label">구입일</span>
-            <input
-              name="purchase_date"
-              type="date"
-              className="form-input"
-              value={purchaseDate}
-              onChange={(e) => setPurchaseDate(e.target.value)}
-            />
-          </label>
-          <label className="flex flex-col gap-2">
-            <span className="form-label">구입 금액</span>
+        <label className="form-grid-item">
+          <span className="form-label">구입일</span>
+          <input
+            name="purchase_date"
+            type="date"
+            className="form-input"
+            value={purchaseDate}
+            onChange={(e) => setPurchaseDate(e.target.value)}
+          />
+        </label>
+        <label className="form-grid-item">
+          <span className="form-label">구입 금액</span>
+          <div>
             <input
               type="text"
               className="form-input"
@@ -892,9 +894,11 @@ export default function AssetForm({ asset }: AssetFormProps = {}) {
               name="purchase_price"
               value={purchasePriceDisplay.replace(/[^0-9]/g, "")}
             />
-          </label>
-          <label className="flex flex-col gap-2">
-            <span className="form-label">사용 수명</span>
+          </div>
+        </label>
+        <label className="form-grid-item">
+          <span className="form-label">사용 수명</span>
+          <div>
             <input
               name="useful_life_years"
               type="number"
@@ -905,9 +909,11 @@ export default function AssetForm({ asset }: AssetFormProps = {}) {
               onChange={(e) => setUsefulLifeYears(e.target.value)}
             />
             <p className="text-xs text-neutral-500 mt-1">예상 사용 연한 (년)</p>
-          </label>
-          <label className="flex flex-col gap-2">
-            <span className="form-label">사용 기한</span>
+          </div>
+        </label>
+        <label className="form-grid-item">
+          <span className="form-label">사용 기한</span>
+          <div>
             <input
               name="usable_until"
               type="date"
@@ -916,9 +922,9 @@ export default function AssetForm({ asset }: AssetFormProps = {}) {
               onChange={(e) => setUsableUntil(e.target.value)}
             />
             <p className="text-xs text-neutral-500 mt-1">사용 가능한 최종 날짜 {usefulLifeYears && purchaseDate && "(자동 계산됨)"}</p>
-          </label>
-        </div>
-        <label className="flex flex-col gap-2">
+          </div>
+        </label>
+        <label className="form-grid-item">
           <span className="form-label">설치 형태</span>
           <select
             name="mobility"
@@ -929,7 +935,7 @@ export default function AssetForm({ asset }: AssetFormProps = {}) {
             <option value="fixed">고정</option>
           </select>
         </label>
-        <label className="flex flex-col gap-2">
+        <label className="form-grid-item">
           <span className="form-label">대여 가능 여부</span>
             <select
               name="loanable"
@@ -940,7 +946,7 @@ export default function AssetForm({ asset }: AssetFormProps = {}) {
               <option value="false">대여 불가</option>
             </select>
         </label>
-        <label className="flex flex-col gap-2">
+        <label className="form-grid-item">
           <span className="form-label">카테고리</span>
           <select
             name="category"
@@ -955,7 +961,7 @@ export default function AssetForm({ asset }: AssetFormProps = {}) {
             ))}
           </select>
         </label>
-        <label className="flex flex-col gap-2">
+        <label className="form-grid-item">
           <span className="form-label">태그</span>
           <input
             name="tags"
@@ -964,7 +970,7 @@ export default function AssetForm({ asset }: AssetFormProps = {}) {
             defaultValue={asset?.tags?.join(", ") || ""}
           />
         </label>
-        <label className="flex flex-col gap-2">
+        <label className="form-grid-item">
           <span className="form-label">수량</span>
           <input
             name="quantity"

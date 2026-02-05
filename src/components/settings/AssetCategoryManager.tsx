@@ -440,10 +440,10 @@ export default function AssetCategoryManager({
       <div className="space-y-4">
         <div className="rounded-lg border border-neutral-200 bg-white p-4">
           <h4 className="text-sm font-semibold mb-3">카테고리 추가</h4>
-          <div className="flex flex-col sm:flex-row gap-2">
+          <div className="flex flex-col sm:flex-row gap-2 items-center">
             <input
               type="text"
-              className="form-input flex-1"
+              className="form-input flex-1 h-10"
               placeholder="카테고리명 (예: 음향)"
               value={newCategoryLabel}
               onChange={(e) => setNewCategoryLabel(e.target.value)}
@@ -452,7 +452,7 @@ export default function AssetCategoryManager({
               type="button"
               onClick={handleAddCategory}
               disabled={isAdding || !newCategoryLabel.trim()}
-              className="btn-primary w-auto"
+              className="btn-primary w-auto sm:w-auto"
             >
               {isAdding ? "추가 중..." : "추가"}
             </button>

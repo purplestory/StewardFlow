@@ -98,9 +98,10 @@ export default function ReservationCalendar({
   };
 
   return (
-    <div className="space-y-3">
-      <div className="flex justify-center">
-        <Calendar
+    <div className="space-y-3 w-full overflow-x-auto">
+      <div className="flex justify-center w-full max-w-full">
+        <div className="w-full max-w-full overflow-x-auto">
+          <Calendar
           locale="en-US"
           formatShortWeekday={formatShortWeekday}
           formatDay={formatDay}
@@ -154,7 +155,9 @@ export default function ReservationCalendar({
             
             return classes.length > 0 ? classes.join(" ") : null;
           }}
+          className="w-full max-w-full"
         />
+        </div>
       </div>
       <div className="flex flex-wrap justify-center gap-3 text-xs text-neutral-600">
         <span className="flex items-center gap-2">

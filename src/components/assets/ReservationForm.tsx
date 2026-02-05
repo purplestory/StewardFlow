@@ -102,16 +102,16 @@ export default function ReservationForm({
       <fieldset disabled={isDisabled} className="space-y-4">
         <div className="space-y-3">
           {/* 시작일시, 종료일시, 반복유형을 한 줄에 배치 */}
-          <div className="grid gap-3 grid-cols-1 md:grid-cols-3">
-            <div className="flex flex-col gap-2">
+          <div className="grid gap-3 grid-cols-1 md:grid-cols-3 w-full">
+            <div className="flex flex-col gap-2 w-full min-w-0">
               <label className="form-label">시작일시</label>
-              <div className="grid grid-cols-[1fr_auto] gap-2">
+              <div className="flex gap-2 w-full">
                 <input
                   type="date"
                   value={startDate}
                   onChange={(e) => setStartDate(e.target.value)}
                   max={endDate || undefined}
-                  className="form-input text-base md:text-sm"
+                  className="form-input text-base md:text-sm flex-1 min-w-0"
                   required
                   disabled={isDisabled}
                 />
@@ -119,21 +119,21 @@ export default function ReservationForm({
                   type="time"
                   value={startTime}
                   onChange={(e) => setStartTime(e.target.value)}
-                  className="form-input text-base md:text-sm min-w-[100px]"
+                  className="form-input text-base md:text-sm w-[100px] flex-shrink-0"
                   required
                   disabled={isDisabled}
                 />
               </div>
             </div>
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-2 w-full min-w-0">
               <label className="form-label">종료일시</label>
-              <div className="grid grid-cols-[1fr_auto] gap-2">
+              <div className="flex gap-2 w-full">
                 <input
                   type="date"
                   value={endDate}
                   onChange={(e) => setEndDate(e.target.value)}
                   min={startDate || undefined}
-                  className="form-input text-base md:text-sm"
+                  className="form-input text-base md:text-sm flex-1 min-w-0"
                   required
                   disabled={isDisabled}
                 />
@@ -141,13 +141,13 @@ export default function ReservationForm({
                   type="time"
                   value={endTime}
                   onChange={(e) => setEndTime(e.target.value)}
-                  className="form-input text-base md:text-sm min-w-[100px]"
+                  className="form-input text-base md:text-sm w-[100px] flex-shrink-0"
                   required
                   disabled={isDisabled}
                 />
               </div>
             </div>
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-2 w-full min-w-0">
               <label className="form-label">반복 유형</label>
               <select
                 name="recurrence_type"

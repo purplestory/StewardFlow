@@ -26,14 +26,16 @@ body {
 }
 
 .react-calendar {
-  width: 100%;
-  max-width: 100%;
+  width: 100% !important;
+  max-width: 100% !important;
   border: 1px solid #e5e5e5;
   border-radius: 12px;
   padding: 16px;
   font-family: inherit;
   font-size: 16px;
   margin: 0 auto; /* 중앙 정렬 */
+  box-sizing: border-box;
+  overflow: hidden;
 }
 
 /* 달력 팝업에서 사용할 때 더 크게 */
@@ -164,9 +166,13 @@ body {
   @apply hover:border-neutral-300;
 }
 
-/* datetime-local 입력 필드의 달력 팝업 크기 조정 */
+/* date, datetime-local 입력 필드의 달력 팝업 크기 조정 */
+input[type="date"],
 input[type="datetime-local"] {
   font-size: 16px; /* iOS에서 줌 방지 */
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 /* 브라우저 기본 달력 팝업 크기 조정 (브라우저별로 다를 수 있음) */
@@ -200,10 +206,14 @@ input[type="datetime-local"]::-webkit-datetime-edit-minute-field {
 }
 
 /* 달력 팝업 자체는 브라우저가 제어하므로, 대신 입력 필드를 더 크게 만들어 사용성을 개선 */
+input[type="date"],
 input[type="datetime-local"] {
   min-height: 48px;
   padding: 12px 16px;
   font-size: 16px;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .form-label {
@@ -221,17 +231,23 @@ input[type="datetime-local"] {
   }
   
   /* 모바일에서 form-grid 내부의 라벨을 가로 배치 */
-  .form-grid > label {
+  .form-grid > label,
+  .form-grid-item {
     @apply flex-row items-center gap-3;
   }
   
-  .form-grid > label .form-label {
+  .form-grid > label .form-label,
+  .form-grid-item .form-label {
     @apply min-w-[100px] flex-shrink-0 mb-0;
   }
   
   .form-grid > label > input,
   .form-grid > label > select,
-  .form-grid > label > textarea {
+  .form-grid > label > textarea,
+  .form-grid-item > input,
+  .form-grid-item > select,
+  .form-grid-item > textarea,
+  .form-grid-item > div {
     @apply flex-1;
   }
 }
@@ -287,6 +303,11 @@ input[type="datetime-local"] {
 
 .form-grid {
   @apply grid gap-6 md:grid-cols-2;
+}
+
+/* 데스크톱에서 form-grid-item은 세로 배치 */
+.form-grid-item {
+  @apply flex flex-col gap-2;
 }
 
 .image-upload-area {

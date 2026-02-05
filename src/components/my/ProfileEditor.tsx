@@ -365,18 +365,43 @@ export default function ProfileEditor() {
           <label htmlFor="department" className="form-label">
             소속 부서
           </label>
-          <input
-            id="department"
-            name="department"
-            type="text"
-            value={profile.department || ""}
-            disabled
-            className="form-input bg-neutral-50 text-neutral-600"
-            placeholder="예: 유년부"
-          />
+          <div className="flex items-center gap-2">
+            <input
+              id="department"
+              name="department"
+              type="text"
+              value={profile.department || ""}
+              disabled
+              className="form-input bg-neutral-50 text-neutral-600 flex-1"
+              placeholder="예: 유년부"
+            />
+            {!pendingRequest && (
+              <button
+                type="button"
+                onClick={() => setShowRequestForm(!showRequestForm)}
+                className="flex-shrink-0 p-2 rounded-lg border border-neutral-200 bg-white text-neutral-700 hover:bg-neutral-50 transition-colors"
+                title="부서 변경 요청"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  strokeWidth={1.5}
+                  stroke="currentColor"
+                  className="w-5 h-5"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10"
+                  />
+                </svg>
+              </button>
+            )}
+          </div>
           <p className="text-xs text-neutral-500">부서는 관리자가 변경할 수 있습니다.</p>
           
-          {pendingRequest ? (
+          {pendingRequest && (
             <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
               <p className="text-sm text-blue-900 font-medium">부서 변경 요청 대기 중</p>
               <p className="text-xs text-blue-700 mt-1">
@@ -394,14 +419,6 @@ export default function ProfileEditor() {
                 {requesting ? "취소 중..." : "요청 취소"}
               </button>
             </div>
-          ) : (
-            <button
-              type="button"
-              onClick={() => setShowRequestForm(!showRequestForm)}
-              className="mt-2 text-sm text-blue-600 hover:text-blue-800 underline"
-            >
-              {showRequestForm ? "요청 폼 닫기" : "부서 변경 요청"}
-            </button>
           )}
           
           {showRequestForm && !pendingRequest && (

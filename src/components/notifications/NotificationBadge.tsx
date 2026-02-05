@@ -47,10 +47,11 @@ export default function NotificationBadge() {
         "postgres_changes",
         { event: "*", schema: "public", table: "notifications" },
         (payload) => {
+          const newRecord = payload.new as { user_id?: string } | null;
           if (
-            payload.new &&
-            payload.new.user_id &&
-            payload.new.user_id === userIdRef.current
+            newRecord &&
+            newRecord.user_id &&
+            newRecord.user_id === userIdRef.current
           ) {
             load();
           }

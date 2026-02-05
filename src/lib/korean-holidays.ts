@@ -6,7 +6,7 @@
  * 2. 무료 공휴일 API (예: https://date.nager.at/api/v3/PublicHolidays/{year}/KR)
  */
 
-type Holiday = {
+export type Holiday = {
   date: string; // YYYY-MM-DD 형식
   name: string;
   localName: string;

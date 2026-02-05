@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import AssetForm from "@/components/assets/AssetForm";
 import SpaceForm from "@/components/spaces/SpaceForm";
@@ -20,7 +20,7 @@ type OrganizationMenuLabels = {
   vehicles?: string;
 };
 
-export default function NewItemPage() {
+function NewItemPageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const categoryParam = searchParams.get("category");
@@ -220,5 +220,17 @@ export default function NewItemPage() {
         {category === "vehicles" && <VehicleForm />}
       </div>
     </section>
+  );
+}
+
+export default function NewItemPage() {
+  return (
+    <Suspense fallback={
+      <section className="space-y-6">
+        <Notice>로딩 중...</Notice>
+      </section>
+    }>
+      <NewItemPageContent />
+    </Suspense>
   );
 }

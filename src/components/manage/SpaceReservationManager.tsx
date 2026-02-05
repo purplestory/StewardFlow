@@ -119,7 +119,14 @@ export default function SpaceReservationManager() {
       setMessage(error.message);
       setReservations([]);
     } else {
-      setReservations((data ?? []) as ReservationRow[]);
+      const normalizedData = (data ?? []).map((row: any) => {
+        const space = Array.isArray(row.spaces) ? row.spaces[0] : row.spaces;
+        return {
+          ...row,
+          spaces: space || null,
+        };
+      });
+      setReservations(normalizedData as ReservationRow[]);
     }
 
     setLoading(false);

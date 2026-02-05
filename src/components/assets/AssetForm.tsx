@@ -380,7 +380,7 @@ export default function AssetForm({ asset }: AssetFormProps = {}) {
     const purchasePriceRaw = formData.get("purchase_price")?.toString().trim();
     const usefulLifeRaw = usefulLifeYears || formData.get("useful_life_years")?.toString().trim();
     const purchasePrice = purchasePriceRaw ? Number(purchasePriceRaw) : null;
-    const usefulLifeYears = usefulLifeRaw ? Number(usefulLifeRaw) : null;
+    const usefulLifeYearsValue = usefulLifeRaw ? Number(usefulLifeRaw) : null;
     const tagsInput = formData.get("tags")?.toString() ?? "";
     const tags = Array.from(
       new Set(
@@ -470,9 +470,9 @@ export default function AssetForm({ asset }: AssetFormProps = {}) {
           shopping_link: formData.get("shopping_link")?.toString() || null,
           purchase_date: purchaseDateValue || null,
           purchase_price: Number.isNaN(purchasePrice) ? null : purchasePrice,
-          useful_life_years: Number.isNaN(usefulLifeYears)
+          useful_life_years: Number.isNaN(usefulLifeYearsValue)
             ? null
-            : usefulLifeYears,
+            : usefulLifeYearsValue,
           mobility: mobilityInput,
           loanable: loanableValue,
           usable_until: usableUntilValue || null,
@@ -553,9 +553,9 @@ export default function AssetForm({ asset }: AssetFormProps = {}) {
           shopping_link: formData.get("shopping_link")?.toString() || null,
           purchase_date: purchaseDateValue || null,
           purchase_price: Number.isNaN(purchasePrice) ? null : purchasePrice,
-          useful_life_years: Number.isNaN(usefulLifeYears)
+          useful_life_years: Number.isNaN(usefulLifeYearsValue)
             ? null
-            : usefulLifeYears,
+            : usefulLifeYearsValue,
           mobility: mobilityInput,
           loanable: loanableValue,
           usable_until: usableUntilValue || null,

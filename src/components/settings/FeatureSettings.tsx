@@ -157,7 +157,7 @@ export default function FeatureSettings({ organizationId }: FeatureSettingsProps
 
   if (!organizationId) {
     return (
-      <Notice variant="info" className="text-left">
+      <Notice variant="neutral" className="text-left">
         기관을 먼저 생성해주세요.
       </Notice>
     );
@@ -274,7 +274,7 @@ export default function FeatureSettings({ organizationId }: FeatureSettingsProps
             const labelValue = menuLabels[labelKey] || 
               (labelKey === "equipment" ? "물품" : 
                labelKey === "spaces" ? "공간" : "차량");
-            const isEnabled = features[labelKey] !== false || (labelKey === "vehicles" && features[labelKey] === true);
+            const isEnabled = features[labelKey] !== false;
             
             if (!isEnabled) return null;
 
@@ -329,7 +329,7 @@ export default function FeatureSettings({ organizationId }: FeatureSettingsProps
 
       {message && (
         <Notice
-          variant={message.includes("오류") ? "warning" : "info"}
+          variant={message.includes("오류") ? "warning" : "neutral"}
           className="text-left"
         >
           {message}

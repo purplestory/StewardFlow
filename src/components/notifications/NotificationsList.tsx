@@ -139,10 +139,11 @@ export default function NotificationsList() {
         "postgres_changes",
         { event: "*", schema: "public", table: "notifications" },
         (payload) => {
+          const newRecord = payload.new as { user_id?: string } | null;
           if (
-            payload.new &&
-            payload.new.user_id &&
-            payload.new.user_id === userIdRef.current
+            newRecord &&
+            newRecord.user_id &&
+            newRecord.user_id === userIdRef.current
           ) {
             load();
           }
@@ -492,7 +493,7 @@ export default function NotificationsList() {
                 </details>
               )}
           <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
-            {item.payload?.resource_id && (
+            {(item.payload?.resource_id as string | undefined) && (
               <Link
                 href={getResourcePath(item)}
                 onClick={() => markAsRead(item.id)}

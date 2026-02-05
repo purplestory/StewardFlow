@@ -90,10 +90,10 @@ export default function ReturnVerificationForm({
         if (reservationData) {
           const resourceId =
             resourceType === "asset"
-              ? reservationData.asset_id
+              ? (reservationData as { asset_id: string }).asset_id
               : resourceType === "space"
-              ? reservationData.space_id
-              : reservationData.vehicle_id;
+              ? (reservationData as { space_id: string }).space_id
+              : (reservationData as { vehicle_id: string }).vehicle_id;
           const resourceTable =
             resourceType === "asset"
               ? "assets"
@@ -175,7 +175,7 @@ export default function ReturnVerificationForm({
         </div>
       )}
 
-      {resourceType === "vehicle" && odometerReading !== null && (
+      {resourceType === "vehicle" && odometerReading != null && (
         <div>
           <label className="form-label">주행거리</label>
           <div className="mt-2 p-3 bg-neutral-50 rounded-lg">

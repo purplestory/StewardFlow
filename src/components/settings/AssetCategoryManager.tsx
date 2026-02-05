@@ -414,7 +414,7 @@ export default function AssetCategoryManager({
 
   if (userRole !== "admin") {
     return (
-      <Notice variant="info">
+      <Notice variant="neutral">
         카테고리 관리는 관리자만 할 수 있습니다.
       </Notice>
     );
@@ -432,7 +432,6 @@ export default function AssetCategoryManager({
       {message && (
         <Notice
           variant={message.includes("실패") ? "error" : "success"}
-          onClose={() => setMessage(null)}
         >
           {message}
         </Notice>

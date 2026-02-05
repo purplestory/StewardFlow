@@ -788,12 +788,13 @@ export default function SampleDataGenerator({
             resultKeys: Object.keys(result),
           });
         } catch (exception) {
+          const error = exception as Error;
           console.error(`차량 삽입 예외 발생 (${vehicle.name}):`, {
             exception,
             exceptionType: typeof exception,
-            exceptionName: exception?.constructor?.name,
-            exceptionMessage: exception?.message,
-            exceptionStack: exception?.stack,
+            exceptionName: error?.constructor?.name,
+            exceptionMessage: error?.message,
+            exceptionStack: error?.stack,
             stringified: JSON.stringify(exception, Object.getOwnPropertyNames(exception)),
           });
           vehicleInsertError = exception;
@@ -1210,7 +1211,7 @@ export default function SampleDataGenerator({
 
       {message && (
         <Notice
-          variant={message.includes("오류") ? "warning" : "info"}
+          variant={message.includes("오류") ? "warning" : "neutral"}
           className="mb-4 text-left"
         >
           {message}

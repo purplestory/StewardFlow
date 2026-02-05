@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import ReservationCalendar from "@/components/assets/ReservationCalendar";
 import ReservationForm from "@/components/assets/ReservationForm";
-import type { VehicleReservationSummary } from "@/actions/booking-actions";
+import type { VehicleReservationSummary } from "@/types/database";
 
 type VehicleReservationSectionProps = {
   vehicleId: string;

@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { getInviteByToken } from "@/actions/invite-actions";
 import Link from "next/link";
 
-export default function JoinPage() {
+function JoinPageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const tokenFromUrl = searchParams.get("token");
@@ -622,5 +622,22 @@ export default function JoinPage() {
         </p>
       </div>
     </div>
+  );
+}
+
+export default function JoinPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex min-h-screen items-center justify-center bg-white">
+        <div className="text-center">
+          <div className="space-y-2">
+            <div className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-neutral-300 border-t-neutral-600"></div>
+            <p className="text-sm text-neutral-600">로딩 중...</p>
+          </div>
+        </div>
+      </div>
+    }>
+      <JoinPageContent />
+    </Suspense>
   );
 }

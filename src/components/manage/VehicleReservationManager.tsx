@@ -119,7 +119,14 @@ export default function VehicleReservationManager() {
       setMessage(error.message);
       setReservations([]);
     } else {
-      setReservations((data ?? []) as ReservationRow[]);
+      const normalizedData = (data ?? []).map((row: any) => {
+        const vehicle = Array.isArray(row.vehicles) ? row.vehicles[0] : row.vehicles;
+        return {
+          ...row,
+          vehicles: vehicle || null,
+        };
+      });
+      setReservations(normalizedData as ReservationRow[]);
     }
 
     setLoading(false);

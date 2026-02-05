@@ -223,7 +223,7 @@ export default function OrganizationManager() {
         .eq("organization_id", orgId);
 
       if (retryError) {
-        throw new Error(`Failed to check existing policies: ${retryError.message}`);
+        throw new Error(`Failed to check existing policies: ${retryError?.message || "Unknown error"}`);
       }
 
       const existingScopes = new Set(
@@ -250,7 +250,7 @@ export default function OrganizationManager() {
           .insert(rows);
 
         if (insertError) {
-          throw new Error(`Failed to create default policies: ${insertError.message}`);
+          throw new Error(`Failed to create default policies: ${insertError?.message || "Unknown error"}`);
         }
       }
       return;
@@ -281,7 +281,7 @@ export default function OrganizationManager() {
         .insert(rows);
 
       if (insertError) {
-        throw new Error(`Failed to create default policies: ${insertError.message}`);
+        throw new Error(`Failed to create default policies: ${insertError?.message || "Unknown error"}`);
       }
     }
   };

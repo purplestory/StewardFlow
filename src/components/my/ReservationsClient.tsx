@@ -51,7 +51,14 @@ export default function ReservationsClient() {
         setMessage(error.message);
         setReservations([]);
       } else {
-        setReservations((data ?? []) as ReservationRow[]);
+        const normalizedData = (data ?? []).map((row: any) => {
+          const asset = Array.isArray(row.assets) ? row.assets[0] : row.assets;
+          return {
+            ...row,
+            assets: asset || null,
+          };
+        });
+        setReservations(normalizedData as ReservationRow[]);
       }
 
       setLoading(false);

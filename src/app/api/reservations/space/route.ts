@@ -90,6 +90,9 @@ export async function PATCH(request: Request) {
   }
 
   if (reservation?.borrower_id) {
+    const space = Array.isArray(reservation.spaces) 
+      ? reservation.spaces[0] 
+      : reservation.spaces;
     const { error: notifyError } = await supabase.from("notifications").insert({
       user_id: reservation.borrower_id,
       organization_id: reservation.organization_id ?? null,
@@ -100,8 +103,8 @@ export async function PATCH(request: Request) {
         reservation_id: reservationId,
         status,
         resource_id: reservation.space_id,
-        resource_name: reservation.spaces?.name ?? null,
-        resource_image_url: reservation.spaces?.image_url ?? null,
+        resource_name: space?.name ?? null,
+        resource_image_url: space?.image_url ?? null,
         resource_type: "space",
       },
     });

@@ -59,22 +59,75 @@ SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 
 #### 환경 변수 설정 방법
 
-1. Vercel 프로젝트 대시보드에서 **"Settings"** 클릭
-2. 왼쪽 메뉴에서 **"Environment Variables"** 선택
-3. 각 변수를 추가:
-   - **Key**: 변수 이름 (예: `NEXT_PUBLIC_SUPABASE_URL`)
-   - **Value**: 변수 값
+**단계별 가이드:**
+
+1. **Vercel 프로젝트 대시보드 접속**
+   - [vercel.com/dashboard](https://vercel.com/dashboard)에 로그인
+   - 배포한 프로젝트 클릭
+
+2. **Settings 메뉴로 이동**
+   - 프로젝트 페이지 상단의 **"Settings"** 탭 클릭
+   - 또는 프로젝트 목록에서 프로젝트 옆 **"..."** 메뉴 → **"Settings"** 선택
+
+3. **Environment Variables 섹션 찾기**
+   - 왼쪽 사이드바에서 **"Environment Variables"** 클릭
+   - 또는 Settings 페이지에서 스크롤하여 **"Environment Variables"** 섹션 찾기
+
+4. **환경 변수 추가**
+   - **"Add New"** 또는 **"Add Environment Variable"** 버튼 클릭
+   - 각 변수를 하나씩 추가:
+
+   **첫 번째 변수: `NEXT_PUBLIC_SUPABASE_URL`**
+   - **Key**: `NEXT_PUBLIC_SUPABASE_URL`
+   - **Value**: Supabase 프로젝트 URL (예: `https://xxxxx.supabase.co`)
    - **Environment**: 
-     - `Production` (프로덕션용)
-     - `Preview` (프리뷰 브랜치용)
-     - `Development` (로컬 개발용, 선택사항)
-4. **"Save"** 클릭
+     - ✅ `Production` 체크
+     - ✅ `Preview` 체크 (선택사항이지만 권장)
+     - ❌ `Development`는 체크하지 않음 (로컬에서만 사용)
+   - **"Save"** 클릭
+
+   **두 번째 변수: `NEXT_PUBLIC_SUPABASE_ANON_KEY`**
+   - **Key**: `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+   - **Value**: Supabase `anon public` 키
+   - **Environment**: 
+     - ✅ `Production` 체크
+     - ✅ `Preview` 체크
+   - **"Save"** 클릭
+
+   **세 번째 변수: `SUPABASE_SERVICE_ROLE_KEY`**
+   - **Key**: `SUPABASE_SERVICE_ROLE_KEY`
+   - **Value**: Supabase `service_role` 키 (⚠️ 보안 주의)
+   - **Environment**: 
+     - ✅ `Production` 체크
+     - ✅ `Preview` 체크
+   - **"Save"** 클릭
+
+5. **환경 변수 확인**
+   - 추가한 변수들이 목록에 표시되는지 확인
+   - 각 변수의 Environment 설정이 올바른지 확인
 
 > 💡 **Supabase 키 확인 방법**:
-> 1. Supabase 대시보드 접속
-> 2. **Project Settings → API** 메뉴
-> 3. `Project URL`과 `anon public` 키 복사
-> 4. `service_role` 키는 **주의해서 사용** (서버 사이드에서만 사용)
+> 
+> 1. **Supabase 대시보드 접속**
+>    - [supabase.com/dashboard](https://supabase.com/dashboard)에 로그인
+>    - 프로젝트 선택
+> 
+> 2. **API 설정 페이지로 이동**
+>    - 왼쪽 사이드바에서 **"Project Settings"** (⚙️ 아이콘) 클릭
+>    - **"API"** 메뉴 클릭
+> 
+> 3. **키 복사**
+>    - **Project URL**: `https://xxxxx.supabase.co` 형식
+>      - `NEXT_PUBLIC_SUPABASE_URL`에 사용
+>    - **anon public** 키: `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...` 형식
+>      - `NEXT_PUBLIC_SUPABASE_ANON_KEY`에 사용
+>    - **service_role** 키: **"Reveal"** 버튼 클릭하여 표시
+>      - `SUPABASE_SERVICE_ROLE_KEY`에 사용
+>      - ⚠️ **주의**: 이 키는 서버 사이드에서만 사용하며, 클라이언트에 노출되면 안 됩니다!
+> 
+> 4. **키 복사 팁**
+>    - 각 키 옆의 **복사 아이콘** (📋) 클릭하여 복사
+>    - 전체 키를 정확히 복사했는지 확인 (매우 긴 문자열입니다)
 
 ### 5단계: 배포 실행
 

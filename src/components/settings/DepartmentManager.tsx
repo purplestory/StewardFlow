@@ -346,7 +346,7 @@ export default function DepartmentManager({ organizationId }: DepartmentManagerP
       <div className="rounded-xl border border-neutral-200 bg-white p-6">
         <h4 className="font-medium mb-4">부서 목록</h4>
         {departments.length === 0 ? (
-          <Notice variant="info" className="text-left">
+          <Notice variant="neutral" className="text-left">
             등록된 부서가 없습니다.
           </Notice>
         ) : (

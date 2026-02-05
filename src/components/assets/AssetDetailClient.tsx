@@ -421,11 +421,27 @@ export default function AssetDetailClient() {
         requiredRole={requiredRole}
       />
 
-      <AssetAdminActions asset={asset} />
+      <AssetAdminActions
+        assetId={asset.id}
+        assetStatus={asset.status}
+        ownerScope={asset.owner_scope}
+        ownerDepartment={asset.owner_department}
+      />
 
-      <AssetTransferRequest asset={asset} />
+      <AssetTransferRequest
+        assetId={asset.id}
+        organizationId={asset.organization_id}
+        assetStatus={asset.status}
+        ownerDepartment={asset.owner_department}
+        assetName={asset.name}
+      />
 
-      <AssetTransferRequestsPanel assetId={asset.id} />
+      <AssetTransferRequestsPanel
+        assetId={asset.id}
+        assetName={asset.name}
+        ownerDepartment={asset.owner_department}
+        ownerScope={asset.owner_scope}
+      />
     </section>
   );
 }

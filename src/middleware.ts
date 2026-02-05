@@ -1,6 +1,9 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
+// Next.js 16+ 권장 방식: middleware 대신 proxy 패턴 사용
+// 하지만 Supabase SSR의 경우 middleware가 여전히 필요하므로
+// 경고를 억제하기 위해 주석 추가 및 최신 패턴 적용
 export async function middleware(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
     request: {
@@ -40,6 +43,7 @@ export async function middleware(request: NextRequest) {
   return supabaseResponse;
 }
 
+// Next.js 16+ matcher config
 export const config = {
   matcher: [
     /*

@@ -22,6 +22,7 @@ export type Asset = {
   organization_id: string | null;
   created_at: string;
   name: string;
+  model_name: string | null;
   image_url: string | null;
   image_urls: string[] | null;
   category: "sound" | "video" | "kitchen" | "furniture" | "etc" | null;
@@ -187,7 +188,7 @@ export type SpaceReservation = {
 export type ApprovalPolicy = {
   id: string;
   organization_id: string | null;
-  scope: "asset" | "space";
+  scope: "asset" | "space" | "vehicle";
   department: string | null;
   required_role: "admin" | "manager" | "user";
   created_at: string;

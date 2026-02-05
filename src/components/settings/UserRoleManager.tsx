@@ -350,7 +350,7 @@ export default function UserRoleManager() {
     setInvitationDepartment("");
 
     await supabase.from("audit_logs").insert({
-      organization_id,
+      organization_id: organizationId,
       actor_id: currentUserId,
       action: "invite_sent",
       target_type: "email",
@@ -428,7 +428,7 @@ export default function UserRoleManager() {
     }
 
     await supabase.from("audit_logs").insert({
-      organization_id,
+      organization_id: organizationId,
       actor_id: currentUserId,
       action: "invite_resent",
       target_type: "email",
@@ -474,7 +474,7 @@ export default function UserRoleManager() {
     setInvites((prev) => prev.filter((item) => item.id !== invite.id));
 
     await supabase.from("audit_logs").insert({
-      organization_id,
+      organization_id: organizationId,
       actor_id: currentUserId,
       action: "invite_revoked",
       target_type: "organization_invite",

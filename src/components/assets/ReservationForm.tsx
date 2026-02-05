@@ -214,7 +214,7 @@ export default function ReservationForm({
                         onChange={(e) => setRecurrenceEndDate(e.target.value)}
                         className="form-input"
                         min={startDate}
-                        required={recurrenceType !== "none"}
+                        required={true}
                         disabled={isDisabled}
                       />
                     </label>
@@ -267,7 +267,7 @@ export default function ReservationForm({
                     </label>
                   )}
 
-                  {recurrenceType !== "none" && recurrenceEndDate && (
+                  {recurrenceEndDate && (
                     <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
                       <p className="text-sm font-semibold text-blue-900 mb-2">반복 일정 미리보기</p>
                       <p className="text-sm text-blue-700">

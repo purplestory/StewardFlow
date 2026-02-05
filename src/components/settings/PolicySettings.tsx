@@ -286,7 +286,7 @@ export default function PolicySettings({ organizationId }: PolicySettingsProps) 
 
       {message && (
         <Notice
-          variant={message.includes("오류") ? "warning" : "info"}
+          variant={message.includes("오류") ? "warning" : "neutral"}
           className="text-left"
         >
           {message}

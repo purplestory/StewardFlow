@@ -72,15 +72,15 @@ export async function createReservation(
   let actualResourceUuid: string | null = null; // 실제 UUID 저장
 
   if (resourceType === "space") {
-    const isUuid = isUUID(assetId);
+    const isUuid = isUUID(actualResourceId);
     let spaceQuery = supabase
       .from("spaces")
       .select("id,name,image_url,organization_id");
     
     if (isUuid) {
-      spaceQuery = spaceQuery.eq("id", assetId);
+      spaceQuery = spaceQuery.eq("id", actualResourceId);
     } else {
-      spaceQuery = spaceQuery.eq("short_id", assetId);
+      spaceQuery = spaceQuery.eq("short_id", actualResourceId);
     }
     
     const { data } = await spaceQuery.maybeSingle();
@@ -440,19 +440,22 @@ export async function listReservationsByAsset(
     throw new Error(error.message);
   }
 
-  return (data ?? []).map((row) => ({
-    id: row.id,
-    status: row.status,
-    start_date: row.start_date,
-    end_date: row.end_date,
-    borrower_id: row.borrower_id,
-    note: row.note,
-    borrower: row.profiles ? {
-      id: row.profiles.id,
-      name: row.profiles.name,
-      department: row.profiles.department,
-    } : null,
-  })) as AssetReservationSummary[];
+  return (data ?? []).map((row: any) => {
+    const profile = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles;
+    return {
+      id: row.id,
+      status: row.status,
+      start_date: row.start_date,
+      end_date: row.end_date,
+      borrower_id: row.borrower_id,
+      note: row.note,
+      borrower: profile ? {
+        id: profile.id,
+        name: profile.name,
+        department: profile.department,
+      } : null,
+    };
+  }) as AssetReservationSummary[];
 }
 
 export type SpaceReservationSummary = {
@@ -483,19 +486,22 @@ export async function listReservationsBySpace(
     throw new Error(error.message);
   }
 
-  return (data ?? []).map((row) => ({
-    id: row.id,
-    status: row.status,
-    start_date: row.start_date,
-    end_date: row.end_date,
-    borrower_id: row.borrower_id,
-    note: row.note,
-    borrower: row.profiles ? {
-      id: row.profiles.id,
-      name: row.profiles.name,
-      department: row.profiles.department,
-    } : null,
-  })) as SpaceReservationSummary[];
+  return (data ?? []).map((row: any) => {
+    const profile = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles;
+    return {
+      id: row.id,
+      status: row.status,
+      start_date: row.start_date,
+      end_date: row.end_date,
+      borrower_id: row.borrower_id,
+      note: row.note,
+      borrower: profile ? {
+        id: profile.id,
+        name: profile.name,
+        department: profile.department,
+      } : null,
+    };
+  }) as SpaceReservationSummary[];
 }
 
 export async function listReservationsByVehicle(
@@ -512,19 +518,22 @@ export async function listReservationsByVehicle(
     throw new Error(error.message);
   }
 
-  return (data ?? []).map((row) => ({
-    id: row.id,
-    status: row.status,
-    start_date: row.start_date,
-    end_date: row.end_date,
-    borrower_id: row.borrower_id,
-    note: row.note,
-    borrower: row.profiles ? {
-      id: row.profiles.id,
-      name: row.profiles.name,
-      department: row.profiles.department,
-    } : null,
-  })) as VehicleReservationSummary[];
+  return (data ?? []).map((row: any) => {
+    const profile = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles;
+    return {
+      id: row.id,
+      status: row.status,
+      start_date: row.start_date,
+      end_date: row.end_date,
+      borrower_id: row.borrower_id,
+      note: row.note,
+      borrower: profile ? {
+        id: profile.id,
+        name: profile.name,
+        department: profile.department,
+      } : null,
+    };
+  }) as VehicleReservationSummary[];
 }
 
 const isBeyondUsableUntil = (usableUntil: string, endDate: string) => {

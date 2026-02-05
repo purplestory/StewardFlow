@@ -159,8 +159,8 @@ export default function ReturnForm({
         if (reservationData) {
           const resourceId =
             resourceType === "asset"
-              ? reservationData.asset_id
-              : reservationData.space_id;
+              ? (reservationData as { asset_id: string }).asset_id
+              : (reservationData as { space_id: string }).space_id;
           const resourceTable = resourceType === "asset" ? "assets" : "spaces";
 
           await supabase

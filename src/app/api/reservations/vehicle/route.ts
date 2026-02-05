@@ -90,6 +90,9 @@ export async function PATCH(request: Request) {
   }
 
   if (reservation?.borrower_id) {
+    const vehicle = Array.isArray(reservation.vehicles) 
+      ? reservation.vehicles[0] 
+      : reservation.vehicles;
     const { error: notifyError } = await supabase.from("notifications").insert({
       user_id: reservation.borrower_id,
       organization_id: reservation.organization_id ?? null,
@@ -100,8 +103,8 @@ export async function PATCH(request: Request) {
         reservation_id: reservationId,
         status,
         resource_id: reservation.vehicle_id,
-        resource_name: reservation.vehicles?.name ?? null,
-        resource_image_url: reservation.vehicles?.image_url ?? null,
+        resource_name: vehicle?.name ?? null,
+        resource_image_url: vehicle?.image_url ?? null,
         resource_type: "vehicle",
       },
     });

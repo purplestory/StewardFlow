@@ -8,8 +8,8 @@ import { isUUID } from "@/lib/short-id";
 import type { Vehicle } from "@/types/database";
 import {
   listReservationsByVehicle,
-  type VehicleReservationSummary,
 } from "@/actions/booking-actions";
+import type { VehicleReservationSummary } from "@/types/database";
 import { listApprovalPoliciesByOrg } from "@/actions/approval-actions";
 import VehicleReservationSection from "@/components/vehicles/VehicleReservationSection";
 import ImageSlider from "@/components/common/ImageSlider";

@@ -1,4 +1,4 @@
-# 교회 자원 관리 시스템 - Steward Flow
+# 교회 자원 관리 시스템 - StewardFlow
 
 교회 내 물품, 공간, 차량을 통합 관리하고 효율적으로 공유하는 웹 플랫폼입니다.
 
@@ -90,7 +90,7 @@ StewardFlow/
 
 ### Vercel 배포
 
-Steward Flow를 Vercel에 배포하여 웹에서 접근 가능하게 만들 수 있습니다.
+StewardFlow를 Vercel에 배포하여 웹에서 접근 가능하게 만들 수 있습니다.
 
 **빠른 배포:**
 1. GitHub 저장소에 푸시

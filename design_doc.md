@@ -1,4 +1,4 @@
-# ⛪ Steward Flow Design Document
+# ⛪ StewardFlow Design Document
 
 ## 1. 프로젝트 개요 (Overview)
 * **목표:** 교회 내 여러 교육부서(유년부, 중고등부, 청년부 등)가 보유한 자산(음향, 영상, 조리도구 등)을 통합 관리하고, 유휴 물품을 서로 대여할 수 있는 웹 플랫폼 구축.

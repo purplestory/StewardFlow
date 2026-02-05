@@ -3,7 +3,7 @@
 ## 1단계: Supabase 대시보드 접속
 
 1. 브라우저에서 [Supabase Dashboard](https://app.supabase.com) 접속
-2. 프로젝트 선택 (예: "purplestory" 또는 "Steward Flow")
+2. 프로젝트 선택 (예: "purplestory" 또는 "StewardFlow")
 
 ## 2단계: SQL Editor 열기
 

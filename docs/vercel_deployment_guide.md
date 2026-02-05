@@ -1,6 +1,6 @@
 # Vercel 배포 가이드
 
-Steward Flow를 Vercel에 배포하여 웹에서 접근 가능하게 만드는 방법입니다.
+StewardFlow를 Vercel에 배포하여 웹에서 접근 가능하게 만드는 방법입니다.
 
 ## 사전 준비사항
 

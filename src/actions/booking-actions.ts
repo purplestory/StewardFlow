@@ -379,13 +379,16 @@ export async function createReservation(
       .maybeSingle();
 
     if (borrowerProfile?.phone && resourceName) {
+      // resourceType을 타입 단언으로 변환
+      const typedResourceType = resourceType as "asset" | "space" | "vehicle";
+      
       // 신청자에게 알림
       await sendReservationRequestToBorrower(
         borrowerProfile.phone,
         resourceName,
         startDate,
         endDate,
-        resourceType
+        typedResourceType
       );
 
       // 관리자에게 알림 (승인 정책에 따라 결정)
@@ -416,7 +419,7 @@ export async function createReservation(
                 borrowerProfile.department,
                 startDate,
                 endDate,
-                resourceType
+                typedResourceType
               );
             }
           }

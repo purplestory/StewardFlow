@@ -37,8 +37,8 @@ export const metadata: Metadata = {
     title: "StewardFlow",
   },
   openGraph: {
-    title: "교회 자원 관리 시스템 StewardFlow",
-    description: "교회 자원 관리 시스템 StewardFlow",
+    title: "StewardFlow",
+    description: "교회 자원 관리 시스템",
     url: "https://steward-flow.vercel.app",
     siteName: "StewardFlow",
     images: [
@@ -54,8 +54,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "교회 자원 관리 시스템 StewardFlow",
-    description: "교회 자원 관리 시스템 StewardFlow",
+    title: "StewardFlow",
+    description: "교회 자원 관리 시스템",
     images: ["/opengraph-image"],
   },
 };

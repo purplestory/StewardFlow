@@ -69,7 +69,7 @@ function JoinPageContent() {
 
       setInviteInfo({
         email: result.invite.email,
-        organization_name: result.invite.organization_name ?? "기관",
+        organization_name: result.invite.organization_name || "",
         role: result.invite.role,
         department: result.invite.department || null,
         name: result.invite.name || null,
@@ -123,7 +123,7 @@ function JoinPageContent() {
 
     setInviteInfo({
       email: result.invite.email,
-      organization_name: result.invite.organization_name ?? "기관",
+      organization_name: result.invite.organization_name || "",
       role: result.invite.role,
       department: result.invite.department || null,
       name: result.invite.name || null,
@@ -315,10 +315,19 @@ function JoinPageContent() {
     <div className="flex min-h-screen items-center justify-center p-4">
       <div className="w-full max-w-md space-y-6 rounded-xl border border-neutral-200 bg-white p-8">
         <div>
-          <h1 className="text-2xl font-semibold">가입하기</h1>
-          <p className="mt-2 text-sm text-neutral-600">
-            {inviteInfo.organization_name}에 초대되었습니다.
-          </p>
+          {/* 로고 */}
+          <div className="flex justify-center mb-4">
+            <div className="w-16 h-16 flex items-center justify-center">
+              <img
+                src="/icon.svg"
+                alt="StewardFlow"
+                className="w-full h-full object-contain"
+              />
+            </div>
+          </div>
+          <h1 className="text-xl md:text-2xl font-semibold text-center mb-2">
+            교회 자원관리 시스템에 초대합니다.
+          </h1>
           
           {/* 초대 정보 상세 표시 */}
           <div className="mt-4 space-y-2 rounded-lg border border-neutral-200 bg-neutral-50 p-4 text-sm">
@@ -341,11 +350,11 @@ function JoinPageContent() {
               </div>
             )}
             
-            {/* 초대받는 기관 정보 */}
+            {/* 초대하는 기관 정보 */}
             <div className="space-y-1 text-neutral-600">
               <div>
-                <span className="font-medium">초대받는 기관:</span>{" "}
-                {inviteInfo.organization_name}
+                <span className="font-medium">초대하는 기관:</span>{" "}
+                {inviteInfo.organization_name || "기관명 없음"}
               </div>
               {inviteInfo.department && (
                 <div>
@@ -510,7 +519,7 @@ function JoinPageContent() {
                   <select
                     value={department}
                     onChange={(e) => setDepartment(e.target.value)}
-                    className="w-full rounded-lg border border-neutral-200 px-3 py-2"
+                    className="form-select w-full"
                   >
                     <option value="">부서 선택</option>
                     {availableDepartments.map((dept) => (
@@ -524,7 +533,7 @@ function JoinPageContent() {
                     type="text"
                     value={department}
                     onChange={(e) => setDepartment(e.target.value)}
-                    className="w-full rounded-lg border border-neutral-200 px-3 py-2"
+                    className="form-input w-full"
                     placeholder="예: 유년부"
                   />
                 )}

@@ -405,6 +405,7 @@ export default function Header() {
             src="/icon.svg"
             alt="StewardFlow"
             className="w-10 h-10 md:w-12 md:h-12 flex-shrink-0"
+            style={{ background: 'transparent' }}
           />
           <span>Steward Flow</span>
         </Link>

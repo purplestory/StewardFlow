@@ -93,11 +93,12 @@ export default function PlatformIntro() {
       <div className="text-center space-y-6">
         {/* 로고 */}
         <div className="flex justify-center mb-4">
-          <div className="w-24 h-24 md:w-32 md:h-32 flex items-center justify-center">
+          <div className="w-24 h-24 md:w-32 md:h-32 flex items-center justify-center bg-transparent">
             <img
               src="/icon.svg"
               alt="StewardFlow"
               className="w-full h-full object-contain"
+              style={{ background: 'transparent' }}
             />
           </div>
         </div>

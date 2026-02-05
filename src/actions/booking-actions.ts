@@ -54,6 +54,9 @@ export async function createReservation(
     return { ok: false, message: "필수 정보를 모두 입력해주세요." };
   }
 
+  // TypeScript 타입 가드: actualResourceId가 string임을 보장
+  const resourceId: string = actualResourceId;
+
   const supabase = await createSupabaseServerClient();
   
   // 세션에서 사용자 ID 가져오기 (borrower_id는 hidden input에서 전달되지만, 세션에서도 확인)
@@ -71,15 +74,15 @@ export async function createReservation(
   let actualResourceUuid: string | null = null; // 실제 UUID 저장
 
   if (resourceType === "space") {
-    const isUuid = isUUID(actualResourceId);
+    const isUuid = isUUID(resourceId);
     let spaceQuery = supabase
       .from("spaces")
       .select("id,name,image_url,organization_id");
     
     if (isUuid) {
-      spaceQuery = spaceQuery.eq("id", actualResourceId);
+      spaceQuery = spaceQuery.eq("id", resourceId);
     } else {
-      spaceQuery = spaceQuery.eq("short_id", actualResourceId);
+      spaceQuery = spaceQuery.eq("short_id", resourceId);
     }
     
     const { data } = await spaceQuery.maybeSingle();
@@ -89,15 +92,15 @@ export async function createReservation(
     actualResourceUuid = data?.id ?? null;
   } else if (resourceType === "vehicle") {
     // vehicle ID가 UUID인지 short_id인지 확인
-    const isUuid = isUUID(actualResourceId);
+    const isUuid = isUUID(resourceId);
     let vehicleQuery = supabase
       .from("vehicles")
       .select("id,name,image_url,status,organization_id");
     
     if (isUuid) {
-      vehicleQuery = vehicleQuery.eq("id", actualResourceId);
+      vehicleQuery = vehicleQuery.eq("id", resourceId);
     } else {
-      vehicleQuery = vehicleQuery.eq("short_id", actualResourceId);
+      vehicleQuery = vehicleQuery.eq("short_id", resourceId);
     }
     
     const { data } = await vehicleQuery.maybeSingle();
@@ -110,15 +113,15 @@ export async function createReservation(
       return { ok: false, message: "현재 예약할 수 없는 상태입니다." };
     }
   } else {
-    const isUuid = isUUID(actualResourceId);
+    const isUuid = isUUID(resourceId);
     let assetQuery = supabase
       .from("assets")
       .select("id,name,image_url,status,loanable,usable_until,organization_id");
     
     if (isUuid) {
-      assetQuery = assetQuery.eq("id", actualResourceId);
+      assetQuery = assetQuery.eq("id", resourceId);
     } else {
-      assetQuery = assetQuery.eq("short_id", actualResourceId);
+      assetQuery = assetQuery.eq("short_id", resourceId);
     }
     
     const { data } = await assetQuery.maybeSingle();
@@ -167,7 +170,7 @@ export async function createReservation(
     : resourceType === "vehicle" ? "vehicle_id"
     : "asset_id";
   // 실제 UUID 사용 (short_id가 전달된 경우 조회한 UUID 사용)
-  const resourceId = actualResourceUuid || (resourceType === "vehicle" ? vehicleId : assetId);
+  const finalResourceId = actualResourceUuid || resourceId;
   
   // 차량 대여 시 초기 주행거리 파싱
   const startOdometerReading = resourceType === "vehicle" 
@@ -179,7 +182,7 @@ export async function createReservation(
   const { data: conflicts, error: conflictError } = await supabase
     .from(reservationTable)
     .select("id")
-    .eq(resourceColumn, resourceId)
+    .eq(resourceColumn, finalResourceId)
     .in("status", ["pending", "approved"])
     .lte("start_date", endDate)
     .gte("end_date", startDate);
@@ -207,7 +210,7 @@ export async function createReservation(
       const { data: instanceConflicts, error: instanceConflictError } = await supabase
         .from(reservationTable)
         .select("id")
-        .eq(resourceColumn, resourceId)
+        .eq(resourceColumn, finalResourceId)
         .in("status", ["pending", "approved"])
         .lte("start_date", instanceEnd)
         .gte("end_date", instanceStart);
@@ -228,7 +231,7 @@ export async function createReservation(
     // 먼저 첫 번째 예약(부모)을 생성
     const firstReservationData: Record<string, unknown> = {
       organization_id: organizationId,
-      [resourceColumn]: resourceId,
+      [resourceColumn]: finalResourceId,
       borrower_id: borrowerId,
       start_date: instances[0].start.toISOString(),
       end_date: instances[0].end.toISOString(),
@@ -262,7 +265,7 @@ export async function createReservation(
       const remainingReservations = instances.slice(1).map((instance) => {
         const reservation: Record<string, unknown> = {
           organization_id: organizationId,
-          [resourceColumn]: resourceId,
+          [resourceColumn]: finalResourceId,
           borrower_id: borrowerId,
           start_date: instance.start.toISOString(),
           end_date: instance.end.toISOString(),
@@ -324,7 +327,7 @@ export async function createReservation(
 
   const reservationData: Record<string, unknown> = {
     organization_id: organizationId,
-    [resourceColumn]: resourceId,
+    [resourceColumn]: finalResourceId,
     borrower_id: borrowerId,
     start_date: startDate,
     end_date: endDate,

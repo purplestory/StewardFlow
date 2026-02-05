@@ -117,13 +117,27 @@ SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 >    - **"API"** 메뉴 클릭
 > 
 > 3. **키 복사**
->    - **Project URL**: `https://xxxxx.supabase.co` 형식
->      - `NEXT_PUBLIC_SUPABASE_URL`에 사용
->    - **anon public** 키: `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...` 형식
->      - `NEXT_PUBLIC_SUPABASE_ANON_KEY`에 사용
->    - **service_role** 키: **"Reveal"** 버튼 클릭하여 표시
->      - `SUPABASE_SERVICE_ROLE_KEY`에 사용
->      - ⚠️ **주의**: 이 키는 서버 사이드에서만 사용하며, 클라이언트에 노출되면 안 됩니다!
+> 
+>    **Project URL** (프로젝트 URL):
+>    - 형식: `https://xxxxx.supabase.co` (예: `https://abcdefghijklmnop.supabase.co`)
+>    - **어디서 찾나요?**: API 설정 페이지 상단의 **"Project URL"** 섹션
+>    - **사용처**: Vercel 환경 변수 `NEXT_PUBLIC_SUPABASE_URL`에 입력
+>    - **복사 방법**: URL 옆의 복사 아이콘(📋) 클릭
+> 
+>    **anon public** 키:
+>    - 형식: `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...` (매우 긴 문자열)
+>    - **어디서 찾나요?**: API 설정 페이지의 **"Project API keys"** 섹션 → **"anon"** 또는 **"public"** 라벨
+>    - **사용처**: Vercel 환경 변수 `NEXT_PUBLIC_SUPABASE_ANON_KEY`에 입력
+>    - **복사 방법**: 키 옆의 복사 아이콘(📋) 클릭
+> 
+>    **service_role** 키:
+>    - 형식: `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...` (매우 긴 문자열)
+>    - **어디서 찾나요?**: API 설정 페이지의 **"Project API keys"** 섹션 → **"service_role"** 라벨
+>    - **사용처**: Vercel 환경 변수 `SUPABASE_SERVICE_ROLE_KEY`에 입력
+>    - **복사 방법**: 
+>      1. **"Reveal"** 버튼 클릭하여 키 표시
+>      2. 키 옆의 복사 아이콘(📋) 클릭
+>    - ⚠️ **보안 주의**: 이 키는 서버 사이드에서만 사용하며, 클라이언트에 노출되면 안 됩니다!
 > 
 > 4. **키 복사 팁**
 >    - 각 키 옆의 **복사 아이콘** (📋) 클릭하여 복사
@@ -199,6 +213,22 @@ Supabase에서 프로덕션 URL을 허용해야 합니다:
 
 - **`main` (또는 `master`) 브랜치**: 프로덕션 배포
 - **다른 브랜치**: 프리뷰 배포 (자동 생성)
+
+### 배포 URL 확인
+
+배포가 완료되면 프로젝트 URL을 확인할 수 있습니다:
+
+1. **프로젝트 대시보드에서 확인**
+   - Vercel 대시보드 → 프로젝트 클릭
+   - 상단에 배포 URL이 표시됩니다: `https://your-project-name.vercel.app`
+
+2. **Deployments 탭에서 확인**
+   - "Deployments" 탭 → 최신 배포 클릭
+   - 우측 상단에 배포 URL이 표시됩니다
+
+3. **Settings → Domains에서 확인**
+   - "Settings" → "Domains" 탭
+   - 등록된 도메인 목록 확인 가능
 
 ### 배포 알림
 

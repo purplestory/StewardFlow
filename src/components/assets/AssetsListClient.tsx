@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
-import { supabase } from "@/lib/supabase";
 import Notice from "@/components/common/Notice";
 import type { Asset } from "@/types/database";
 import AssetCard from "@/components/assets/AssetCard";
 import AssetForm from "@/components/assets/AssetForm";
+import { useAssets, useUserProfile, useApprovalPolicies } from "@/hooks/useAssets";
 
 const categoryOptions = [
   { value: "", label: "전체" },
@@ -27,100 +28,53 @@ const statusOptions: Array<{ value: Asset["status"] | ""; label: string }> = [
 ];
 
 export default function AssetsListClient() {
-  const [assets, setAssets] = useState<Asset[]>([]);
-  const [policyLabels, setPolicyLabels] = useState<Record<string, string>>({});
-  const [loading, setLoading] = useState(true);
-  const [message, setMessage] = useState<string | null>(null);
-  const [hasOrganization, setHasOrganization] = useState<boolean | null>(null);
-  const [isManager, setIsManager] = useState(false);
+  const queryClient = useQueryClient();
   const [showRegisterForm, setShowRegisterForm] = useState(false);
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("");
   const [status, setStatus] = useState<Asset["status"] | "">("");
-  const isMountedRef = useRef(true);
 
-  const loadAssets = async () => {
-    setLoading(true);
-    setMessage(null);
+  // React Query를 사용한 데이터 페칭
+  const { data: assets = [], isLoading: assetsLoading, error: assetsError } = useAssets();
+  const { data: userProfile, isLoading: profileLoading } = useUserProfile();
+  const { data: policyData } = useApprovalPolicies(userProfile?.orgId ?? null);
 
-    const { data, error } = await supabase
-      .from("assets")
-      .select("*")
-      .is("deleted_at", null)
-      .order("created_at", { ascending: false });
+  // Policy labels 계산
+  const policyLabels = useMemo(() => {
+    if (!policyData || !assets.length) return {};
 
-    if (!isMountedRef.current) return;
-
-    if (error) {
-      setMessage(error.message);
-      setAssets([]);
-    } else {
-      setAssets((data ?? []) as Asset[]);
-    }
-
-    const { data: sessionData } = await supabase.auth.getSession();
-    const user = sessionData.session?.user ?? null;
-
-    if (user) {
-      const { data: profileData } = await supabase
-        .from("profiles")
-        .select("organization_id,role")
-        .eq("id", user.id)
-        .maybeSingle();
-
-      const orgId = profileData?.organization_id ?? null;
-      setHasOrganization(Boolean(orgId));
-      setIsManager(
-        profileData?.role === "admin" || profileData?.role === "manager"
-      );
-      if (orgId) {
-        const { data: policyData } = await supabase
-          .from("approval_policies")
-          .select("scope,department,required_role")
-          .eq("organization_id", orgId)
-          .eq("scope", "asset");
-
-        if (policyData) {
-          const labelMap: Record<string, string> = {};
-          const roleLabel: Record<string, string> = {
-            admin: "관리자",
-            manager: "부서 관리자",
-            user: "일반 사용자",
-          };
-
-          (data ?? []).forEach((asset) => {
-            const department =
-              asset.owner_scope === "organization"
-                ? null
-                : asset.owner_department;
-            const exactPolicy = policyData.find(
-              (policy) => policy.department === department
-            );
-            const fallbackPolicy = policyData.find(
-              (policy) => policy.department === null
-            );
-            const requiredRole =
-              exactPolicy?.required_role ??
-              fallbackPolicy?.required_role ??
-              "manager";
-            labelMap[asset.id] = roleLabel[requiredRole] ?? "부서 관리자";
-          });
-
-          setPolicyLabels(labelMap);
-        }
-      }
-    }
-
-    setLoading(false);
-  };
-
-  useEffect(() => {
-    isMountedRef.current = true;
-    loadAssets();
-    return () => {
-      isMountedRef.current = false;
+    const labelMap: Record<string, string> = {};
+    const roleLabel: Record<string, string> = {
+      admin: "관리자",
+      manager: "부서 관리자",
+      user: "일반 사용자",
     };
-  }, []);
+
+    assets.forEach((asset) => {
+      const department =
+        asset.owner_scope === "organization"
+          ? null
+          : asset.owner_department;
+      const exactPolicy = policyData.find(
+        (policy) => policy.department === department
+      );
+      const fallbackPolicy = policyData.find(
+        (policy) => policy.department === null
+      );
+      const requiredRole =
+        exactPolicy?.required_role ??
+        fallbackPolicy?.required_role ??
+        "manager";
+      labelMap[asset.id] = roleLabel[requiredRole] ?? "부서 관리자";
+    });
+
+    return labelMap;
+  }, [policyData, assets]);
+
+  const loading = assetsLoading || profileLoading;
+  const hasOrganization = Boolean(userProfile?.orgId);
+  const isManager = userProfile?.isManager ?? false;
+  const message = assetsError ? assetsError.message : null;
 
   const filteredAssets = useMemo(() => {
     const normalized = query.trim().toLowerCase();

@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { generateShortId } from "@/lib/short-id";
@@ -40,6 +41,7 @@ type AssetFormProps = {
 };
 
 export default function AssetForm({ asset }: AssetFormProps = {}) {
+  const queryClient = useQueryClient();
   const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [previewUrls, setPreviewUrls] = useState<string[]>([]);
   const [existingImageUrls, setExistingImageUrls] = useState<string[]>([]); // 기존에 업로드된 이미지 URL들
@@ -528,6 +530,10 @@ export default function AssetForm({ asset }: AssetFormProps = {}) {
         }
 
         setMessage("물품이 수정되었습니다.");
+        
+        // React Query 캐시 무효화하여 목록 갱신
+        queryClient.invalidateQueries({ queryKey: ["assets"] });
+        
         // 수정 후 상세 페이지로 이동
         setTimeout(() => {
           window.location.href = `/assets/${asset.short_id || asset.id}`;
@@ -626,6 +632,9 @@ export default function AssetForm({ asset }: AssetFormProps = {}) {
         setPreviewUrls([]);
         setExistingImageUrls([]);
         setMessage("물품이 등록되었습니다.");
+        
+        // React Query 캐시 무효화하여 목록 갱신
+        queryClient.invalidateQueries({ queryKey: ["assets"] });
         
         // 등록 후 자원 관리 페이지로 이동
         setTimeout(() => {
@@ -1169,6 +1178,10 @@ export default function AssetForm({ asset }: AssetFormProps = {}) {
                     }
 
                     setMessage("물품이 삭제되었습니다.");
+                    
+                    // React Query 캐시 무효화하여 목록 갱신
+                    queryClient.invalidateQueries({ queryKey: ["assets"] });
+                    
                     setShowDeleteConfirm(false);
                     setDeletionReason("");
                     setDeletionReasonOther("");

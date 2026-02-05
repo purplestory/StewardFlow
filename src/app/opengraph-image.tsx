@@ -48,8 +48,8 @@ export default async function Image() {
           }}
         >
           <svg
-            width="200"
-            height="200"
+            width="250"
+            height="250"
             viewBox="0 0 1024 1024"
             xmlns="http://www.w3.org/2000/svg"
           >
@@ -73,7 +73,7 @@ export default async function Image() {
         >
           <div
             style={{
-              fontSize: 64,
+              fontSize: 80,
               fontWeight: "bold",
               color: "#234689",
             }}
@@ -82,7 +82,7 @@ export default async function Image() {
           </div>
           <div
             style={{
-              fontSize: 36,
+              fontSize: 44,
               color: "#666",
             }}
           >

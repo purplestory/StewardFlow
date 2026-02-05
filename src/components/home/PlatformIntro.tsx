@@ -105,7 +105,7 @@ export default function PlatformIntro() {
           교회 자원 관리 시스템
         </h1>
         <p className="text-2xl text-neutral-700">Steward Flow</p>
-        <p className="text-neutral-500 max-w-2xl mx-auto break-words">
+        <p className="text-neutral-500 max-w-2xl mx-auto" style={{ wordBreak: "keep-all" }}>
           물품, 공간, 차량을 통합 관리하고 효율적으로 공유하는 스튜어드십 플랫폼
         </p>
       </div>

@@ -189,14 +189,23 @@ export async function getInviteByToken(
         .maybeSingle();
       
       if (orgError) {
-        console.error("Failed to fetch organization name:", orgError);
+        console.error("Failed to fetch organization name:", {
+          error: orgError,
+          code: orgError.code,
+          message: orgError.message,
+          details: orgError.details,
+          hint: orgError.hint,
+          organization_id: allInvites.organization_id,
+        });
         // 기관 이름 조회 실패해도 초대 정보는 반환 (organization_id는 있음)
+      } else if (orgData) {
+        organizationName = orgData.name;
       } else {
-        organizationName = orgData?.name;
+        console.warn("Organization not found:", allInvites.organization_id);
       }
     } catch (orgError) {
       // 기관 이름 조회 실패해도 초대 정보는 반환
-      console.warn("Failed to fetch organization name:", orgError);
+      console.error("Exception while fetching organization name:", orgError);
     }
 
     // 초대한 사람 정보 조회 (audit_logs에서 찾기)

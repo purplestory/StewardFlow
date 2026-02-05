@@ -130,21 +130,34 @@ export default function AuthCard() {
 
         if (!isMounted) return;
 
-        // 초대가 있으면 프로필 생성
+        // Check if profile already exists
+        const { data: existingProfile } = await supabase
+          .from("profiles")
+          .select("id,role,organization_id")
+          .eq("id", currentUser.id)
+          .maybeSingle();
+
+        // If profile exists and already has organization_id, preserve existing role
+        // Only use invite role if user is joining a new organization
+        const finalRole = existingProfile?.organization_id 
+          ? existingProfile.role 
+          : invite.role ?? "user";
+
+        // 초대가 있으면 프로필 생성 또는 업데이트
         const userName = currentUser.user_metadata?.name || currentUser.user_metadata?.full_name || null;
 
-        const { error: insertError } = await supabase.from("profiles").insert({
+        const { error: insertError } = await supabase.from("profiles").upsert({
           id: currentUser.id,
           email: userEmail,
-          name: userName,
+          name: userName || existingProfile?.name || null,
           organization_id: invite.organization_id,
-          role: invite.role ?? "user",
+          role: finalRole,
         });
 
         if (!isMounted) return;
 
         if (insertError) {
-          console.error("Profile insert error:", insertError);
+          console.error("Profile insert/update error:", insertError);
           setMessage(insertError.message);
           setProfileLoading(false);
           return;

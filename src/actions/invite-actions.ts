@@ -117,6 +117,11 @@ export async function getInviteByToken(
     department: string | null;
     name: string | null;
     created_at: string;
+    inviter?: {
+      name: string | null;
+      department: string | null;
+      organization_name: string | null;
+    };
   };
   message?: string;
 }> {
@@ -180,9 +185,67 @@ export async function getInviteByToken(
       console.warn("Failed to fetch organization name:", orgError);
     }
 
+    // 초대한 사람 정보 조회 (audit_logs에서 찾기)
+    let inviterInfo: {
+      name: string | null;
+      department: string | null;
+      organization_name: string | null;
+    } | undefined;
+    
+    try {
+      // audit_logs에서 초대를 생성한 사람 찾기
+      const { data: auditLog } = await supabase
+        .from("audit_logs")
+        .select("actor_id")
+        .eq("action", "invite_created")
+        .eq("target_type", "invite")
+        .eq("target_id", allInvites.id)
+        .order("created_at", { ascending: true })
+        .limit(1)
+        .maybeSingle();
+
+      if (auditLog?.actor_id) {
+        // 초대한 사람의 프로필 정보 가져오기
+        const { data: inviterProfile } = await supabase
+          .from("profiles")
+          .select("name,department,organization_id")
+          .eq("id", auditLog.actor_id)
+          .maybeSingle();
+
+        if (inviterProfile) {
+          // 초대한 사람의 기관 이름 가져오기
+          let inviterOrgName: string | null = null;
+          if (inviterProfile.organization_id) {
+            const { data: inviterOrg } = await supabase
+              .from("organizations")
+              .select("name")
+              .eq("id", inviterProfile.organization_id)
+              .maybeSingle();
+            inviterOrgName = inviterOrg?.name ?? null;
+          }
+
+          inviterInfo = {
+            name: inviterProfile.name,
+            department: inviterProfile.department,
+            organization_name: inviterOrgName,
+          };
+        }
+      }
+    } catch (inviterError) {
+      // 초대한 사람 정보 조회 실패해도 초대 정보는 반환
+      console.warn("Failed to fetch inviter info:", inviterError);
+    }
+
     // 유효한 초대 반환
     const { accepted_at, revoked_at, ...invite } = allInvites;
-    return { ok: true, invite: { ...invite, organization_name: organizationName } };
+    return { 
+      ok: true, 
+      invite: { 
+        ...invite, 
+        organization_name: organizationName,
+        inviter: inviterInfo,
+      } 
+    };
   } catch (error) {
     return {
       ok: false,

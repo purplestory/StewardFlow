@@ -24,6 +24,11 @@ function JoinPageContent() {
     role: string;
     department: string | null;
     name: string | null;
+    inviter?: {
+      name: string | null;
+      department: string | null;
+      organization_name: string | null;
+    };
   } | null>(null);
   const [availableDepartments, setAvailableDepartments] = useState<string[]>([]);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -68,6 +73,7 @@ function JoinPageContent() {
         role: result.invite.role,
         department: result.invite.department || null,
         name: result.invite.name || null,
+        inviter: result.invite.inviter,
       });
       // 초대 시 지정한 이메일이 있으면 기본값으로 설정 (변경 가능)
       if (result.invite.email) {
@@ -121,6 +127,7 @@ function JoinPageContent() {
       role: result.invite.role,
       department: result.invite.department || null,
       name: result.invite.name || null,
+      inviter: result.invite.inviter,
     });
     
     // 초대 시 지정한 이메일이 있으면 기본값으로 설정 (변경 가능)
@@ -176,60 +183,7 @@ function JoinPageContent() {
     setSigningUp(false);
   };
 
-  useEffect(() => {
-    // Check if user is already authenticated after email click
-    const checkAuth = async () => {
-      const { data: sessionData } = await supabase.auth.getSession();
-      const user = sessionData.session?.user;
-
-      if (user && token) {
-        // User clicked email link, now complete signup
-        const inviteResult = await getInviteByToken(token);
-        if (inviteResult.ok && inviteResult.invite) {
-          // Create/update profile
-          const { error: profileError } = await supabase
-            .from("profiles")
-            .upsert({
-              id: user.id,
-              email: user.email ?? inviteResult.invite.email,
-              organization_id: inviteResult.invite.organization_id,
-              role: inviteResult.invite.role,
-              name: name || null,
-              department: department || null,
-              phone: phone || null,
-            });
-
-          if (profileError) {
-            setMessage(profileError.message);
-            return;
-          }
-
-          // Mark invite as accepted
-          await supabase
-            .from("organization_invites")
-            .update({ accepted_at: new Date().toISOString() })
-            .eq("token", token);
-
-          // Record audit log
-          await supabase.from("audit_logs").insert({
-            organization_id: inviteResult.invite.organization_id,
-            actor_id: user.id,
-            action: "invite_accepted",
-            target_type: "organization_invite",
-            target_id: inviteResult.invite.id,
-            metadata: {
-              email: inviteResult.invite.email,
-              role: inviteResult.invite.role,
-            },
-          });
-
-          router.push("/");
-        }
-      }
-    };
-
-    checkAuth();
-  }, [token, name, department, phone, router]);
+  // 자동 수락 로직 제거: 사용자가 명시적으로 "초대 수락" 버튼을 눌러야 함
 
   if (loading) {
     return (
@@ -365,14 +319,56 @@ function JoinPageContent() {
           <p className="mt-2 text-sm text-neutral-600">
             {inviteInfo.organization_name}에 초대되었습니다.
           </p>
+          
+          {/* 초대 정보 상세 표시 */}
+          <div className="mt-4 space-y-2 rounded-lg border border-neutral-200 bg-neutral-50 p-4 text-sm">
+            <div className="font-medium text-neutral-900">초대 정보</div>
+            
+            {/* 초대한 사람 정보 */}
+            {inviteInfo.inviter && (
+              <div className="space-y-1 text-neutral-600">
+                <div>
+                  <span className="font-medium">초대한 사람:</span>{" "}
+                  {inviteInfo.inviter.name || "이름 없음"}
+                  {inviteInfo.inviter.department && ` (${inviteInfo.inviter.department})`}
+                </div>
+                {inviteInfo.inviter.organization_name && (
+                  <div>
+                    <span className="font-medium">초대한 사람의 기관:</span>{" "}
+                    {inviteInfo.inviter.organization_name}
+                  </div>
+                )}
+              </div>
+            )}
+            
+            {/* 초대받는 기관 정보 */}
+            <div className="space-y-1 text-neutral-600">
+              <div>
+                <span className="font-medium">초대받는 기관:</span>{" "}
+                {inviteInfo.organization_name}
+              </div>
+              {inviteInfo.department && (
+                <div>
+                  <span className="font-medium">초대받는 부서:</span>{" "}
+                  {inviteInfo.department}
+                </div>
+              )}
+              <div>
+                <span className="font-medium">역할:</span>{" "}
+                {inviteInfo.role === "admin" ? "관리자" : inviteInfo.role === "manager" ? "부서 관리자" : "일반 사용자"}
+              </div>
+            </div>
+          </div>
         </div>
 
-        {/* 이미 로그인된 사용자는 프로필 생성 폼, 로그인되지 않은 사용자는 이메일 가입 폼 */}
+        {/* 이미 로그인된 사용자는 초대 수락 버튼, 로그인되지 않은 사용자는 이메일 가입 폼 */}
         {isAuthenticated ? (
           <div className="space-y-4">
             <p className="text-sm text-neutral-600">
-              초대 정보를 확인했습니다. 아래 정보를 확인하고 수정한 후 가입을 완료하세요.
+              초대 정보를 확인했습니다. 아래 정보를 확인한 후 "초대 수락" 버튼을 눌러 가입을 완료하세요.
             </p>
+            
+            {/* 현재 사용자 정보 표시 (선택적 수정) */}
             <form
               onSubmit={async (e) => {
                 e.preventDefault();
@@ -394,17 +390,41 @@ function JoinPageContent() {
                   return;
                 }
 
+                // Check if profile already exists
+                const { data: existingProfile } = await supabase
+                  .from("profiles")
+                  .select("id,role,organization_id,name,department,phone")
+                  .eq("id", user.id)
+                  .maybeSingle();
+
+                // If profile exists and already has organization_id, preserve existing role
+                // Only update role if user is joining a new organization
+                const finalRole = existingProfile?.organization_id 
+                  ? existingProfile.role 
+                  : inviteResult.invite.role;
+
+                // Ensure organization_id is always set from invite
+                const finalOrganizationId = inviteResult.invite.organization_id;
+
+                if (!finalOrganizationId) {
+                  setMessage("초대 정보에 기관 ID가 없습니다. 관리자에게 문의하세요.");
+                  setSigningUp(false);
+                  return;
+                }
+
                 // Create/update profile
                 const { error: profileError } = await supabase
                   .from("profiles")
                   .upsert({
                     id: user.id,
                     email: (user.email ?? email) || inviteResult.invite.email,
-                    organization_id: inviteResult.invite.organization_id,
-                    role: inviteResult.invite.role,
-                    name: name || inviteResult.invite.name || null,
-                    department: department || inviteResult.invite.department || null,
-                    phone: phone || null,
+                    organization_id: finalOrganizationId,
+                    role: finalRole,
+                    name: name || inviteResult.invite.name || existingProfile?.name || null,
+                    department: department || inviteResult.invite.department || existingProfile?.department || null,
+                    phone: phone || existingProfile?.phone || null,
+                  }, {
+                    onConflict: 'id'
                   });
 
                 if (profileError) {
@@ -414,13 +434,24 @@ function JoinPageContent() {
                 }
 
                 // Mark invite as accepted
-                await supabase
+                const { error: acceptError } = await supabase
                   .from("organization_invites")
                   .update({ accepted_at: new Date().toISOString() })
                   .eq("token", token);
 
+                if (acceptError) {
+                  console.error("Failed to mark invite as accepted:", acceptError);
+                  // 프로필은 생성되었지만 초대 상태 업데이트 실패
+                  // 사용자에게 알림하되 가입은 완료된 것으로 처리
+                  setMessage(
+                    "가입은 완료되었지만 초대 상태 업데이트에 실패했습니다. 관리자에게 문의하세요."
+                  );
+                  setSigningUp(false);
+                  return;
+                }
+
                 // Record audit log
-                await supabase.from("audit_logs").insert({
+                const { error: auditError } = await supabase.from("audit_logs").insert({
                   organization_id: inviteResult.invite.organization_id,
                   actor_id: user.id,
                   action: "invite_accepted",
@@ -431,6 +462,11 @@ function JoinPageContent() {
                     role: inviteResult.invite.role,
                   },
                 });
+
+                if (auditError) {
+                  console.error("Failed to record audit log:", auditError);
+                  // 감사 로그 실패는 치명적이지 않으므로 계속 진행
+                }
 
                 router.push("/");
               }}
@@ -518,7 +554,7 @@ function JoinPageContent() {
                 disabled={signingUp}
                 className="btn-primary w-full"
               >
-                {signingUp ? "처리 중..." : "가입 완료"}
+                {signingUp ? "처리 중..." : "초대 수락"}
               </button>
             </form>
           </div>

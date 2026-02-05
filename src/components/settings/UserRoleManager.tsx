@@ -164,10 +164,14 @@ export default function UserRoleManager() {
     }
 
     if (error) {
+      console.error("Error loading profiles:", error);
       setMessage(error.message);
       setProfiles([]);
     } else {
       setProfiles((data ?? []) as ProfileRow[]);
+      if (data && data.length === 0) {
+        console.warn("No profiles found for organization:", profileData.organization_id);
+      }
     }
 
     if (inviteError) {
@@ -175,7 +179,37 @@ export default function UserRoleManager() {
       setInvites([]);
     } else {
       const pendingInvites = (inviteData ?? []) as InviteRow[];
-      const expiredIds = pendingInvites
+      
+      // 이미 가입한 사용자(프로필이 존재하는 사용자) 필터링
+      // 이메일 또는 이름으로 프로필이 존재하는 초대는 제외
+      const profileEmails = new Set((data ?? []).map((p: ProfileRow) => p.email.toLowerCase()));
+      const profileNames = new Set((data ?? []).map((p: ProfileRow) => p.name?.toLowerCase()).filter(Boolean));
+      
+      // 이미 가입한 사용자의 초대는 accepted_at 업데이트
+      const invitesToAccept: string[] = [];
+      const filteredInvites = pendingInvites.filter((invite) => {
+        // 이미 가입한 사용자는 제외하고 accepted_at 업데이트
+        if (invite.email && profileEmails.has(invite.email.toLowerCase())) {
+          invitesToAccept.push(invite.id);
+          return false;
+        }
+        if (invite.name && profileNames.has(invite.name.toLowerCase())) {
+          invitesToAccept.push(invite.id);
+          return false;
+        }
+        return true;
+      });
+      
+      // 이미 가입한 사용자의 초대는 자동으로 accepted_at 업데이트
+      if (invitesToAccept.length > 0) {
+        const nowIso = new Date().toISOString();
+        await supabase
+          .from("organization_invites")
+          .update({ accepted_at: nowIso })
+          .in("id", invitesToAccept);
+      }
+      
+      const expiredIds = filteredInvites
         .filter((invite) => isInviteExpired(invite.created_at))
         .map((invite) => invite.id);
 
@@ -188,7 +222,7 @@ export default function UserRoleManager() {
       }
 
       setInvites(
-        pendingInvites.filter((invite) => !isInviteExpired(invite.created_at))
+        filteredInvites.filter((invite) => !isInviteExpired(invite.created_at))
       );
     }
 
@@ -272,6 +306,21 @@ export default function UserRoleManager() {
       setMessage(inviteError?.message ?? "초대 생성에 실패했습니다.");
       return;
     }
+
+    // audit_logs에 초대 생성 기록 (초대한 사람 정보 추적용)
+    await supabase.from("audit_logs").insert({
+      organization_id: organizationId,
+      actor_id: currentUserId,
+      action: "invite_created",
+      target_type: "invite",
+      target_id: invite.id,
+      metadata: { 
+        email: email || null, 
+        role: invitationRole,
+        department: invitationDepartment.trim() || null,
+        name: invitationName.trim() || null,
+      },
+    });
 
     const inviteLink = `${window.location.origin}/join?token=${token}`;
 
@@ -688,9 +737,6 @@ export default function UserRoleManager() {
                 </p>
               </div>
               <div className="flex flex-col items-end gap-2">
-                <span className="text-sm font-medium text-neutral-900">
-                  {roleLabel[profile.role]}
-                </span>
                 <select
                   className="form-select"
                   value={profile.role}

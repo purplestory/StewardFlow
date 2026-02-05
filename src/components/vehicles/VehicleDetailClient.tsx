@@ -3,8 +3,7 @@
 import { useMemo } from "react";
 import { useParams, notFound } from "next/navigation";
 import Link from "next/link";
-import type { Vehicle } from "@/types/database";
-import type { ReservationSummary } from "@/types/database";
+import type { Vehicle, VehicleReservationSummary } from "@/types/database";
 import VehicleReservationSection from "@/components/vehicles/VehicleReservationSection";
 import ImageSlider from "@/components/common/ImageSlider";
 import { useVehicle, useVehicleReservations, useVehicleApprovalPolicies } from "@/hooks/useVehicles";

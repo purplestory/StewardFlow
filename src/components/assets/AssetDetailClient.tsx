@@ -1,21 +1,17 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useMemo } from "react";
 import { useParams, notFound } from "next/navigation";
 import Link from "next/link";
-import { supabase } from "@/lib/supabase";
-import { isUUID } from "@/lib/short-id";
 import type { Asset } from "@/types/database";
 import ImageSlider from "@/components/common/ImageSlider";
-import {
-  listReservationsByAsset,
-  type AssetReservationSummary,
-} from "@/actions/booking-actions";
+import type { AssetReservationSummary } from "@/actions/booking-actions";
 import { listApprovalPoliciesByOrg } from "@/actions/approval-actions";
 import AssetReservationSection from "@/components/assets/AssetReservationSection";
 import AssetAdminActions from "@/components/assets/AssetAdminActions";
 import AssetTransferRequest from "@/components/assets/AssetTransferRequest";
 import AssetTransferRequestsPanel from "@/components/assets/AssetTransferRequestsPanel";
+import { useAsset, useAssetReservations, useUserRole, useUserProfile, useApprovalPolicies } from "@/hooks/useAssets";
 
 const statusLabel: Record<AssetReservationSummary["status"], string> = {
   pending: "승인 대기",
@@ -61,151 +57,36 @@ function formatDateTime(dateString: string): string {
 export default function AssetDetailClient() {
   const params = useParams();
   const id = params.id as string;
-  const [asset, setAsset] = useState<Asset | null>(null);
-  const [reservations, setReservations] = useState<AssetReservationSummary[]>([]);
-  const [requiredRole, setRequiredRole] = useState<"admin" | "manager" | "user">("manager");
-  const [userRole, setUserRole] = useState<"admin" | "manager" | "user" | null>(null);
-  const [userDepartment, setUserDepartment] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    let isMounted = true;
+  // React Query를 사용한 데이터 페칭
+  const { data: asset, isLoading: assetLoading, error: assetError } = useAsset(id);
+  const { data: reservations = [] } = useAssetReservations(asset?.id ?? null);
+  const { data: userRoleData } = useUserRole();
+  const { data: userProfile } = useUserProfile();
+  const { data: policyData } = useApprovalPolicies(asset?.organization_id ?? null);
 
-    const loadAsset = async () => {
-      if (!id || typeof id !== "string") {
-        if (isMounted) {
-          setLoading(false);
-        }
-        return;
-      }
+  // Required role 계산
+  const requiredRole = useMemo(() => {
+    if (!policyData || !asset) return "manager" as const;
 
-      try {
-        const supabaseClient = supabase;
+    const department =
+      asset.owner_scope === "organization" ? null : asset.owner_department;
+    const exactPolicy = policyData.find(
+      (policy) => policy.department === department
+    );
+    const fallbackPolicy = policyData.find(
+      (policy) => policy.department === null
+    );
+    return (
+      (exactPolicy?.required_role ??
+        fallbackPolicy?.required_role ??
+        "manager") as "admin" | "manager" | "user"
+    );
+  }, [policyData, asset]);
 
-        // Check if id is UUID or short_id
-        const isUuid = isUUID(id);
-        
-        let query = supabaseClient
-          .from("assets")
-          .select("*")
-          .is("deleted_at", null);
-        
-        if (isUuid) {
-          query = query.eq("id", id);
-        } else {
-          query = query.eq("short_id", id);
-        }
-        
-        const { data, error } = await query.maybeSingle();
-
-        if (error) {
-          console.error("Error fetching asset:", error);
-          // If short_id lookup failed and it's not a UUID, try UUID as fallback
-          if (!isUuid) {
-            const { data: fallbackData, error: fallbackError } = await supabaseClient
-              .from("assets")
-              .select("*")
-              .is("deleted_at", null)
-              .eq("id", id)
-              .maybeSingle();
-            
-            if (!fallbackError && fallbackData) {
-              if (isMounted) {
-                setAsset(fallbackData as Asset);
-                // Load reservations and approval policies
-                const res = await listReservationsByAsset(fallbackData.id);
-                const policies = await listApprovalPoliciesByOrg(
-                  "asset",
-                  fallbackData.organization_id
-                );
-                const role = resolveRequiredRole(
-                  policies,
-                  fallbackData.owner_scope,
-                  fallbackData.owner_department
-                );
-                setReservations(res);
-                setRequiredRole(role);
-                
-                // Load current user role and department
-                const { data: sessionData } = await supabase.auth.getSession();
-                const user = sessionData.session?.user;
-                if (user) {
-                  const { data: profileData } = await supabase
-                    .from("profiles")
-                    .select("role,department")
-                    .eq("id", user.id)
-                    .maybeSingle();
-                  if (profileData?.role) {
-                    setUserRole(profileData.role as "admin" | "manager" | "user");
-                    setUserDepartment(profileData.department ?? null);
-                  }
-                }
-                
-                setLoading(false);
-              }
-              return;
-            }
-          }
-          if (isMounted) {
-            setLoading(false);
-          }
-          return;
-        }
-
-        if (!data) {
-          if (isMounted) {
-            setLoading(false);
-          }
-          return;
-        }
-
-        if (isMounted) {
-          setAsset(data as Asset);
-          // Load reservations and approval policies
-          const res = await listReservationsByAsset(data.id);
-          const policies = await listApprovalPoliciesByOrg(
-            "asset",
-            data.organization_id
-          );
-          const role = resolveRequiredRole(
-            policies,
-            data.owner_scope,
-            data.owner_department
-          );
-          setReservations(res);
-          setRequiredRole(role);
-          
-          // Load current user role and department
-          const { data: sessionData } = await supabase.auth.getSession();
-          const user = sessionData.session?.user;
-          if (user) {
-            const { data: profileData } = await supabase
-              .from("profiles")
-              .select("role,department")
-              .eq("id", user.id)
-              .maybeSingle();
-            if (profileData?.role) {
-              setUserRole(profileData.role as "admin" | "manager" | "user");
-              setUserDepartment(profileData.department ?? null);
-            }
-          }
-          
-          setLoading(false);
-        }
-      } catch (error) {
-        console.error("Error loading asset:", error);
-        if (isMounted) {
-          setLoading(false);
-        }
-      }
-    };
-
-    loadAsset();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [id]);
+  const loading = assetLoading;
+  const userRole = userRoleData?.role ?? null;
+  const userDepartment = userRoleData?.department ?? null;
 
   if (loading) {
     return (
@@ -217,7 +98,7 @@ export default function AssetDetailClient() {
     );
   }
 
-  if (!asset) {
+  if (assetError || !asset) {
     notFound();
   }
 

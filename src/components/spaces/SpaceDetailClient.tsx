@@ -1,18 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useMemo } from "react";
 import { useParams, notFound, useRouter } from "next/navigation";
 import Link from "next/link";
-import { supabase } from "@/lib/supabase";
-import { isUUID } from "@/lib/short-id";
 import type { Space } from "@/types/database";
-import {
-  listReservationsBySpace,
-  type SpaceReservationSummary,
-} from "@/actions/booking-actions";
-import { listApprovalPoliciesByOrg } from "@/actions/approval-actions";
+import type { SpaceReservationSummary } from "@/actions/booking-actions";
 import SpaceReservationSection from "@/components/spaces/SpaceReservationSection";
 import ImageSlider from "@/components/common/ImageSlider";
+import { useSpace, useSpaceReservations, useSpaceApprovalPolicies } from "@/hooks/useSpaces";
+import { useUserRole } from "@/hooks/useAssets";
 
 const statusLabel: Record<SpaceReservationSummary["status"], string> = {
   pending: "승인 대기",
@@ -21,168 +17,39 @@ const statusLabel: Record<SpaceReservationSummary["status"], string> = {
   rejected: "반려",
 };
 
-function resolveRequiredRole(
-  policies: Array<{ department: string | null; required_role: string }>,
-  ownerScope: "organization" | "department",
-  department: string
-): "admin" | "manager" | "user" {
-  const targetDepartment = ownerScope === "organization" ? null : department;
-  const exactPolicy = policies.find(
-    (policy) => policy.department === targetDepartment
-  );
-  const fallbackPolicy = policies.find((policy) => policy.department === null);
-  return (exactPolicy?.required_role ??
-    fallbackPolicy?.required_role ??
-    "manager") as "admin" | "manager" | "user";
-}
-
 export default function SpaceDetailClient() {
   const params = useParams();
   const router = useRouter();
   const id = params.id as string;
-  const [space, setSpace] = useState<Space | null>(null);
-  const [reservations, setReservations] = useState<SpaceReservationSummary[]>([]);
-  const [requiredRole, setRequiredRole] = useState<"admin" | "manager" | "user">("manager");
-  const [userRole, setUserRole] = useState<"admin" | "manager" | "user" | null>(null);
-  const [userDepartment, setUserDepartment] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    let isMounted = true;
+  // React Query를 사용한 데이터 페칭
+  const { data: space, isLoading: spaceLoading, error: spaceError } = useSpace(id);
+  const { data: reservations = [] } = useSpaceReservations(space?.id ?? null);
+  const { data: userRoleData } = useUserRole();
+  const { data: policyData } = useSpaceApprovalPolicies(space?.organization_id ?? null);
 
-    const loadSpace = async () => {
-      if (!id || typeof id !== "string") {
-        if (isMounted) {
-          setLoading(false);
-        }
-        return;
-      }
+  // Required role 계산
+  const requiredRole = useMemo(() => {
+    if (!policyData || !space) return "manager" as const;
 
-      try {
-        const supabaseClient = supabase;
+    const department =
+      space.owner_scope === "organization" ? null : space.owner_department;
+    const exactPolicy = policyData.find(
+      (policy) => policy.department === department
+    );
+    const fallbackPolicy = policyData.find(
+      (policy) => policy.department === null
+    );
+    return (
+      (exactPolicy?.required_role ??
+        fallbackPolicy?.required_role ??
+        "manager") as "admin" | "manager" | "user"
+    );
+  }, [policyData, space]);
 
-        // Check if id is UUID or short_id
-        const isUuid = isUUID(id);
-        
-        let query = supabaseClient
-          .from("spaces")
-          .select("*");
-        
-        if (isUuid) {
-          query = query.eq("id", id);
-        } else {
-          query = query.eq("short_id", id);
-        }
-        
-        const { data, error } = await query.maybeSingle();
-
-        if (error) {
-          console.error("Error fetching space:", error);
-          // If short_id lookup failed and it's not a UUID, try UUID as fallback
-          if (!isUuid) {
-            const { data: fallbackData, error: fallbackError } = await supabaseClient
-              .from("spaces")
-              .select("*")
-              .eq("id", id)
-              .maybeSingle();
-            
-            if (!fallbackError && fallbackData) {
-              if (isMounted) {
-                setSpace(fallbackData as Space);
-                // Load reservations and approval policies
-                const res = await listReservationsBySpace(fallbackData.id);
-                const policies = await listApprovalPoliciesByOrg(
-                  "space",
-                  fallbackData.organization_id
-                );
-                const role = resolveRequiredRole(
-                  policies,
-                  fallbackData.owner_scope,
-                  fallbackData.owner_department
-                );
-                setReservations(res);
-                setRequiredRole(role);
-                
-                // Load current user role and department
-                const { data: sessionData } = await supabase.auth.getSession();
-                const user = sessionData.session?.user;
-                if (user) {
-                  const { data: profileData } = await supabase
-                    .from("profiles")
-                    .select("role,department")
-                    .eq("id", user.id)
-                    .maybeSingle();
-                  if (profileData?.role) {
-                    setUserRole(profileData.role as "admin" | "manager" | "user");
-                    setUserDepartment(profileData.department ?? null);
-                  }
-                }
-                
-                setLoading(false);
-              }
-              return;
-            }
-          }
-          if (isMounted) {
-            setLoading(false);
-          }
-          return;
-        }
-
-        if (!data) {
-          if (isMounted) {
-            setLoading(false);
-          }
-          return;
-        }
-
-        if (isMounted) {
-          setSpace(data as Space);
-          // Load reservations and approval policies
-          const res = await listReservationsBySpace(data.id);
-          const policies = await listApprovalPoliciesByOrg(
-            "space",
-            data.organization_id
-          );
-          const role = resolveRequiredRole(
-            policies,
-            data.owner_scope,
-            data.owner_department
-          );
-          setReservations(res);
-          setRequiredRole(role);
-          
-          // Load current user role and department
-          const { data: sessionData } = await supabase.auth.getSession();
-          const user = sessionData.session?.user;
-          if (user) {
-            const { data: profileData } = await supabase
-              .from("profiles")
-              .select("role,department")
-              .eq("id", user.id)
-              .maybeSingle();
-            if (profileData?.role) {
-              setUserRole(profileData.role as "admin" | "manager" | "user");
-              setUserDepartment(profileData.department ?? null);
-            }
-          }
-          
-          setLoading(false);
-        }
-      } catch (error) {
-        console.error("Error loading space:", error);
-        if (isMounted) {
-          setLoading(false);
-        }
-      }
-    };
-
-    loadSpace();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [id]);
+  const loading = spaceLoading;
+  const userRole = userRoleData?.role ?? null;
+  const userDepartment = userRoleData?.department ?? null;
 
   if (loading) {
     return (
@@ -194,7 +61,7 @@ export default function SpaceDetailClient() {
     );
   }
 
-  if (!space) {
+  if (spaceError || !space) {
     notFound();
   }
 

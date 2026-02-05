@@ -1,176 +1,47 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useMemo } from "react";
 import { useParams, notFound } from "next/navigation";
 import Link from "next/link";
-import { supabase } from "@/lib/supabase";
-import { isUUID } from "@/lib/short-id";
 import type { Vehicle } from "@/types/database";
-import {
-  listReservationsByVehicle,
-} from "@/actions/booking-actions";
-import type { VehicleReservationSummary } from "@/types/database";
-import { listApprovalPoliciesByOrg } from "@/actions/approval-actions";
+import type { ReservationSummary } from "@/types/database";
 import VehicleReservationSection from "@/components/vehicles/VehicleReservationSection";
 import ImageSlider from "@/components/common/ImageSlider";
-
-function resolveRequiredRole(
-  policies: Array<{ department: string | null; required_role: string }>,
-  ownerScope: "organization" | "department",
-  department: string
-): "admin" | "manager" | "user" {
-  const targetDepartment = ownerScope === "organization" ? null : department;
-  const exactPolicy = policies.find(
-    (policy) => policy.department === targetDepartment
-  );
-  const fallbackPolicy = policies.find((policy) => policy.department === null);
-  return (exactPolicy?.required_role ??
-    fallbackPolicy?.required_role ??
-    "manager") as "admin" | "manager" | "user";
-}
+import { useVehicle, useVehicleReservations, useVehicleApprovalPolicies } from "@/hooks/useVehicles";
+import { useUserRole } from "@/hooks/useAssets";
 
 export default function VehicleDetailClient() {
   const params = useParams();
   const id = params.id as string;
-  const [vehicle, setVehicle] = useState<Vehicle | null>(null);
-  const [reservations, setReservations] = useState<VehicleReservationSummary[]>([]);
-  const [requiredRole, setRequiredRole] = useState<"admin" | "manager" | "user">("manager");
-  const [userRole, setUserRole] = useState<"admin" | "manager" | "user" | null>(null);
-  const [userDepartment, setUserDepartment] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    let isMounted = true;
+  // React Query를 사용한 데이터 페칭
+  const { data: vehicle, isLoading: vehicleLoading, error: vehicleError } = useVehicle(id);
+  const { data: reservations = [] } = useVehicleReservations(vehicle?.id ?? null);
+  const { data: userRoleData } = useUserRole();
+  const { data: policyData } = useVehicleApprovalPolicies(vehicle?.organization_id ?? null);
 
-    const loadVehicle = async () => {
-      if (!id || typeof id !== "string") {
-        if (isMounted) {
-          setLoading(false);
-        }
-        return;
-      }
+  // Required role 계산
+  const requiredRole = useMemo(() => {
+    if (!policyData || !vehicle) return "manager" as const;
 
-      try {
-        const supabaseClient = supabase;
+    const department =
+      vehicle.owner_scope === "organization" ? null : vehicle.owner_department;
+    const exactPolicy = policyData.find(
+      (policy) => policy.department === department
+    );
+    const fallbackPolicy = policyData.find(
+      (policy) => policy.department === null
+    );
+    return (
+      (exactPolicy?.required_role ??
+        fallbackPolicy?.required_role ??
+        "manager") as "admin" | "manager" | "user"
+    );
+  }, [policyData, vehicle]);
 
-        const isUuid = isUUID(id);
-        
-        let query = supabaseClient
-          .from("vehicles")
-          .select("*");
-        
-        if (isUuid) {
-          query = query.eq("id", id);
-        } else {
-          query = query.eq("short_id", id);
-        }
-        
-        const { data, error } = await query.maybeSingle();
-
-        if (error) {
-          console.error("Error fetching vehicle:", error);
-          if (!isUuid) {
-            const { data: fallbackData, error: fallbackError } = await supabaseClient
-              .from("vehicles")
-              .select("*")
-              .eq("id", id)
-              .maybeSingle();
-            
-            if (!fallbackError && fallbackData) {
-              if (isMounted) {
-                setVehicle(fallbackData as Vehicle);
-                const res = await listReservationsByVehicle(fallbackData.id);
-                const policies = await listApprovalPoliciesByOrg(
-                  "vehicle",
-                  fallbackData.organization_id
-                );
-                const role = resolveRequiredRole(
-                  policies,
-                  fallbackData.owner_scope,
-                  fallbackData.owner_department
-                );
-                setReservations(res);
-                setRequiredRole(role);
-                
-                // Load current user role and department
-                const { data: sessionData } = await supabase.auth.getSession();
-                const user = sessionData.session?.user;
-                if (user) {
-                  const { data: profileData } = await supabase
-                    .from("profiles")
-                    .select("role,department")
-                    .eq("id", user.id)
-                    .maybeSingle();
-                  if (profileData?.role) {
-                    setUserRole(profileData.role as "admin" | "manager" | "user");
-                    setUserDepartment(profileData.department ?? null);
-                  }
-                }
-                
-                setLoading(false);
-              }
-              return;
-            }
-          }
-          if (isMounted) {
-            setLoading(false);
-          }
-          return;
-        }
-
-        if (!data) {
-          if (isMounted) {
-            setLoading(false);
-          }
-          return;
-        }
-
-        if (isMounted) {
-          setVehicle(data as Vehicle);
-          const res = await listReservationsByVehicle(data.id);
-          const policies = await listApprovalPoliciesByOrg(
-            "vehicle",
-            data.organization_id
-          );
-          const role = resolveRequiredRole(
-            policies,
-            data.owner_scope,
-            data.owner_department
-          );
-          setReservations(res);
-          setRequiredRole(role);
-          
-          // Load current user role and department
-          const { data: sessionData } = await supabase.auth.getSession();
-          const user = sessionData.session?.user;
-          if (user) {
-            const { data: profileData } = await supabase
-              .from("profiles")
-              .select("role,department")
-              .eq("id", user.id)
-              .maybeSingle();
-            if (profileData?.role) {
-              setUserRole(profileData.role as "admin" | "manager" | "user");
-              setUserDepartment(profileData.department ?? null);
-            }
-          }
-          
-          setLoading(false);
-        }
-      } catch (error) {
-        console.error("Error loading vehicle:", error);
-        if (isMounted) {
-          setLoading(false);
-        }
-      }
-    };
-
-    loadVehicle();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [id]);
+  const loading = vehicleLoading;
+  const userRole = userRoleData?.role ?? null;
+  const userDepartment = userRoleData?.department ?? null;
 
   if (loading) {
     return (
@@ -182,7 +53,7 @@ export default function VehicleDetailClient() {
     );
   }
 
-  if (!vehicle) {
+  if (vehicleError || !vehicle) {
     notFound();
   }
 

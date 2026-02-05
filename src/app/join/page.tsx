@@ -51,27 +51,20 @@ function JoinPageContent() {
         return;
       }
 
-      // Get organization name and departments
-      const [orgResult, deptResult] = await Promise.all([
-        supabase
-          .from("organizations")
-          .select("name")
-          .eq("id", result.invite.organization_id)
-          .maybeSingle(),
-        supabase
-          .from("departments")
-          .select("name")
-          .eq("organization_id", result.invite.organization_id)
-          .order("name", { ascending: true }),
-      ]);
+      // Get departments (organization name is already included in invite)
+      const { data: deptResult } = await supabase
+        .from("departments")
+        .select("name")
+        .eq("organization_id", result.invite.organization_id)
+        .order("name", { ascending: true });
 
-      if (deptResult.data) {
-        setAvailableDepartments(deptResult.data.map((d) => d.name));
+      if (deptResult) {
+        setAvailableDepartments(deptResult.map((d) => d.name));
       }
 
       setInviteInfo({
         email: result.invite.email,
-        organization_name: orgResult.data?.name ?? "기관",
+        organization_name: result.invite.organization_name ?? "기관",
         role: result.invite.role,
         department: result.invite.department || null,
         name: result.invite.name || null,
@@ -111,27 +104,20 @@ function JoinPageContent() {
       return;
     }
 
-    // Get organization name and departments
-    const [orgResult, deptResult] = await Promise.all([
-      supabase
-        .from("organizations")
-        .select("name")
-        .eq("id", result.invite.organization_id)
-        .maybeSingle(),
-      supabase
-        .from("departments")
-        .select("name")
-        .eq("organization_id", result.invite.organization_id)
-        .order("name", { ascending: true }),
-    ]);
+    // Get departments (organization name is already included in invite)
+    const { data: deptResult } = await supabase
+      .from("departments")
+      .select("name")
+      .eq("organization_id", result.invite.organization_id)
+      .order("name", { ascending: true });
 
-    if (deptResult.data) {
-      setAvailableDepartments(deptResult.data.map((d) => d.name));
+    if (deptResult) {
+      setAvailableDepartments(deptResult.map((d) => d.name));
     }
 
     setInviteInfo({
       email: result.invite.email,
-      organization_name: orgResult.data?.name ?? "기관",
+      organization_name: result.invite.organization_name ?? "기관",
       role: result.invite.role,
       department: result.invite.department || null,
       name: result.invite.name || null,
@@ -325,9 +311,14 @@ function JoinPageContent() {
   if (!inviteInfo) {
     if (message) {
       return (
-        <div className="flex min-h-screen items-center justify-center">
-          <div className="rounded-xl border border-neutral-200 bg-white p-8 text-center">
-            <p className="text-sm text-rose-600">{message}</p>
+        <div className="flex min-h-screen items-center justify-center p-4">
+          <div className="w-full max-w-md rounded-xl border border-neutral-200 bg-white p-8 text-center space-y-4">
+            <div>
+              <p className="text-sm font-medium text-rose-600 mb-2">{message}</p>
+              <p className="text-xs text-neutral-500">
+                초대 링크의 토큰 부분을 다시 확인하거나, 관리자에게 새로운 초대를 요청하세요.
+              </p>
+            </div>
             {isAuthenticated ? (
               <button
                 onClick={() => {
@@ -335,17 +326,29 @@ function JoinPageContent() {
                   setMessage(null);
                   setInviteInfo(null);
                 }}
-                className="mt-4 inline-block text-sm text-neutral-600 underline"
+                className="btn-primary w-full"
               >
                 다시 입력하기
               </button>
             ) : (
-              <Link
-                href="/login"
-                className="mt-4 inline-block text-sm text-neutral-600 underline"
-              >
-                로그인 페이지로 이동
-              </Link>
+              <div className="space-y-2">
+                <Link
+                  href="/login"
+                  className="btn-primary w-full inline-block text-center"
+                >
+                  로그인 페이지로 이동
+                </Link>
+                <button
+                  onClick={() => {
+                    setToken("");
+                    setMessage(null);
+                    setInviteInfo(null);
+                  }}
+                  className="btn-outline w-full"
+                >
+                  토큰 다시 입력하기
+                </button>
+              </div>
             )}
           </div>
         </div>

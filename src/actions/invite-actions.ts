@@ -3,6 +3,9 @@
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { generateShortId } from "@/lib/short-id";
 
+// 초대 링크 유효기간 (일)
+const INVITE_EXPIRES_DAYS = 7;
+
 export async function generateInviteToken(
   organizationId: string,
   email: string | null,
@@ -108,6 +111,7 @@ export async function getInviteByToken(
   invite?: {
     id: string;
     organization_id: string;
+    organization_name?: string;
     email: string;
     role: string;
     department: string | null;
@@ -119,32 +123,66 @@ export async function getInviteByToken(
   try {
     const supabase = await createSupabaseServerClient();
     
-    const { data: invite, error } = await supabase
+    // 먼저 토큰으로 초대를 찾기 (상태 무관)
+    // RLS 정책이 anon 사용자도 허용하도록 설정되어 있어야 함
+    const { data: allInvites, error: searchError } = await supabase
       .from("organization_invites")
-      .select("id,organization_id,email,role,department,name,created_at")
+      .select("id,organization_id,email,role,department,name,created_at,accepted_at,revoked_at")
       .eq("token", token)
-      .is("accepted_at", null)
-      .is("revoked_at", null)
       .maybeSingle();
 
-    if (error) {
-      return { ok: false, message: error.message };
+    if (searchError) {
+      console.error("getInviteByToken error:", searchError);
+      // RLS 정책 오류인 경우 더 명확한 메시지 제공
+      if (searchError.code === "42501" || searchError.message?.includes("row-level security")) {
+        return { 
+          ok: false, 
+          message: "초대 링크 확인 중 권한 오류가 발생했습니다. 관리자에게 문의하세요. (RLS 정책 확인 필요)" 
+        };
+      }
+      return { ok: false, message: `초대 링크 확인 중 오류가 발생했습니다: ${searchError.message}` };
     }
 
-    if (!invite) {
-      return { ok: false, message: "유효하지 않거나 만료된 초대 링크입니다." };
+    if (!allInvites) {
+      return { ok: false, message: "유효하지 않은 초대 링크입니다. 토큰을 확인해주세요." };
     }
 
-    // Check if invite is expired (7 days)
-    const createdAt = new Date(invite.created_at);
+    // 이미 수락된 초대인지 확인
+    if (allInvites.accepted_at) {
+      return { ok: false, message: "이미 사용된 초대 링크입니다. 관리자에게 새로운 초대를 요청하세요." };
+    }
+
+    // 취소된 초대인지 확인
+    if (allInvites.revoked_at) {
+      return { ok: false, message: "취소된 초대 링크입니다. 관리자에게 새로운 초대를 요청하세요." };
+    }
+
+    // 만료 확인
+    const createdAt = new Date(allInvites.created_at);
     const expiresAt = new Date(createdAt);
-    expiresAt.setDate(expiresAt.getDate() + 7);
+    expiresAt.setDate(expiresAt.getDate() + INVITE_EXPIRES_DAYS);
 
     if (expiresAt.getTime() < Date.now()) {
-      return { ok: false, message: "초대 링크가 만료되었습니다." };
+      return { ok: false, message: `초대 링크가 만료되었습니다. (유효기간: ${INVITE_EXPIRES_DAYS}일) 관리자에게 새로운 초대를 요청하세요.` };
     }
 
-    return { ok: true, invite };
+    // 기관 이름 조회 (서버 액션에서 조회하여 클라이언트에서 RLS 문제 방지)
+    let organizationName: string | undefined;
+    try {
+      const { data: orgData } = await supabase
+        .from("organizations")
+        .select("name")
+        .eq("id", allInvites.organization_id)
+        .maybeSingle();
+      organizationName = orgData?.name;
+    } catch (orgError) {
+      // 기관 이름 조회 실패해도 초대 정보는 반환
+      console.warn("Failed to fetch organization name:", orgError);
+    }
+
+    // 유효한 초대 반환
+    const { accepted_at, revoked_at, ...invite } = allInvites;
+    return { ok: true, invite: { ...invite, organization_name: organizationName } };
   } catch (error) {
     return {
       ok: false,

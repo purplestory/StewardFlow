@@ -1,95 +1,16 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { useParams, notFound } from "next/navigation";
-import { supabase } from "@/lib/supabase";
-import { isUUID } from "@/lib/short-id";
-import type { Vehicle } from "@/types/database";
 import VehicleEditForm from "./VehicleEditForm";
 import OrganizationGate from "@/components/settings/OrganizationGate";
+import { useVehicle } from "@/hooks/useVehicles";
 
 export default function VehicleEditClient() {
   const params = useParams();
   const id = params.id as string;
-  const [vehicle, setVehicle] = useState<Vehicle | null>(null);
-  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    let isMounted = true;
-
-    const loadVehicle = async () => {
-      if (!id || typeof id !== "string") {
-        if (isMounted) {
-          setLoading(false);
-        }
-        return;
-      }
-
-      try {
-        // Check if id is UUID or short_id
-        const isUuid = isUUID(id);
-        
-        let query = supabase
-          .from("vehicles")
-          .select("*");
-        
-        if (isUuid) {
-          query = query.eq("id", id);
-        } else {
-          query = query.eq("short_id", id);
-        }
-        
-        const { data, error } = await query.maybeSingle();
-
-        if (error) {
-          console.error("Error fetching vehicle:", error);
-          // If short_id lookup failed and it's not a UUID, try UUID as fallback
-          if (!isUuid) {
-            const { data: fallbackData, error: fallbackError } = await supabase
-              .from("vehicles")
-              .select("*")
-              .eq("id", id)
-              .maybeSingle();
-            
-            if (!fallbackError && fallbackData) {
-              if (isMounted) {
-                setVehicle(fallbackData as Vehicle);
-                setLoading(false);
-              }
-              return;
-            }
-          }
-          if (isMounted) {
-            setLoading(false);
-          }
-          return;
-        }
-
-        if (!data) {
-          if (isMounted) {
-            setLoading(false);
-          }
-          return;
-        }
-
-        if (isMounted) {
-          setVehicle(data as Vehicle);
-          setLoading(false);
-        }
-      } catch (error) {
-        console.error("Error loading vehicle:", error);
-        if (isMounted) {
-          setLoading(false);
-        }
-      }
-    };
-
-    loadVehicle();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [id]);
+  // React Query를 사용한 데이터 페칭
+  const { data: vehicle, isLoading: loading, error } = useVehicle(id);
 
   if (loading) {
     return (
@@ -101,7 +22,7 @@ export default function VehicleEditClient() {
     );
   }
 
-  if (!vehicle) {
+  if (error || !vehicle) {
     notFound();
   }
 

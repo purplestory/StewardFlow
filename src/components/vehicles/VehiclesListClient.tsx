@@ -1,12 +1,14 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
-import { supabase } from "@/lib/supabase";
 import Notice from "@/components/common/Notice";
 import type { Vehicle } from "@/types/database";
 import VehicleCard from "@/components/vehicles/VehicleCard";
 import VehicleForm from "@/components/vehicles/VehicleForm";
+import { useVehicles, useVehicleApprovalPolicies } from "@/hooks/useVehicles";
+import { useUserProfile } from "@/hooks/useAssets";
 
 const statusOptions: Array<{ value: Vehicle["status"] | ""; label: string }> = [
   { value: "", label: "전체" },
@@ -16,112 +18,52 @@ const statusOptions: Array<{ value: Vehicle["status"] | ""; label: string }> = [
 ];
 
 export default function VehiclesListClient() {
-  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
-  const [policyLabels, setPolicyLabels] = useState<Record<string, string>>({});
-  const [loading, setLoading] = useState(true);
-  const [message, setMessage] = useState<string | null>(null);
-  const [hasOrganization, setHasOrganization] = useState<boolean | null>(null);
-  const [isManager, setIsManager] = useState(false);
+  const queryClient = useQueryClient();
+
   const [showRegisterForm, setShowRegisterForm] = useState(false);
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState<Vehicle["status"] | "">("");
-  const isMountedRef = useRef(true);
 
-  const loadVehicles = async () => {
-    setLoading(true);
-    setMessage(null);
+  // React Query를 사용한 데이터 페칭
+  const { data: vehicles = [], isLoading: vehiclesLoading, error: vehiclesError } = useVehicles();
+  const { data: userProfile, isLoading: profileLoading } = useUserProfile();
+  const { data: policyData } = useVehicleApprovalPolicies(userProfile?.orgId ?? null);
 
-    // Get user's organization_id first
-    const { data: sessionData } = await supabase.auth.getSession();
-    const user = sessionData.session?.user ?? null;
+  // Policy labels 계산
+  const policyLabels = useMemo(() => {
+    if (!policyData || !vehicles.length) return {};
 
-    if (!user) {
-      setVehicles([]);
-      setHasOrganization(false);
-      setLoading(false);
-      return;
-    }
-
-    const { data: profileData } = await supabase
-      .from("profiles")
-      .select("organization_id,role")
-      .eq("id", user.id)
-      .maybeSingle();
-
-    const orgId = profileData?.organization_id ?? null;
-    setHasOrganization(Boolean(orgId));
-    setIsManager(
-      profileData?.role === "admin" || profileData?.role === "manager"
-    );
-
-    if (!orgId) {
-      setVehicles([]);
-      setLoading(false);
-      return;
-    }
-
-    // Load vehicles with organization_id filter
-    const { data, error } = await supabase
-      .from("vehicles")
-      .select("*")
-      .eq("organization_id", orgId)
-      .order("created_at", { ascending: false });
-
-    if (!isMountedRef.current) return;
-
-    if (error) {
-      setMessage(error.message);
-      setVehicles([]);
-    } else {
-      setVehicles((data ?? []) as Vehicle[]);
-    }
-
-    // Load approval policies
-    const { data: policyData } = await supabase
-      .from("approval_policies")
-      .select("scope,department,required_role")
-      .eq("organization_id", orgId)
-      .eq("scope", "vehicle");
-
-    if (policyData) {
-      const labelMap: Record<string, string> = {};
-      const roleLabel: Record<string, string> = {
-        admin: "관리자",
-        manager: "부서 관리자",
-        user: "일반 사용자",
-      };
-
-      (data ?? []).forEach((vehicle) => {
-        const department =
-          vehicle.owner_scope === "organization"
-            ? null
-            : vehicle.owner_department;
-        const exactPolicy = policyData.find(
-          (policy) => policy.department === department
-        );
-        const fallbackPolicy = policyData.find(
-          (policy) => policy.department === null
-        );
-        const requiredRole =
-          exactPolicy?.required_role ??
-          fallbackPolicy?.required_role ??
-          "manager";
-        labelMap[vehicle.id] = roleLabel[requiredRole] ?? "부서 관리자";
-      });
-
-      setPolicyLabels(labelMap);
-    }
-
-    setLoading(false);
-  };
-
-  useEffect(() => {
-    isMountedRef.current = true;
-    loadVehicles();
-    return () => {
-      isMountedRef.current = false;
+    const labelMap: Record<string, string> = {};
+    const roleLabel: Record<string, string> = {
+      admin: "관리자",
+      manager: "부서 관리자",
+      user: "일반 사용자",
     };
-  }, []);
+
+    vehicles.forEach((vehicle) => {
+      const department =
+        vehicle.owner_scope === "organization"
+          ? null
+          : vehicle.owner_department;
+      const exactPolicy = policyData.find(
+        (policy) => policy.department === department
+      );
+      const fallbackPolicy = policyData.find(
+        (policy) => policy.department === null
+      );
+      const requiredRole =
+        exactPolicy?.required_role ??
+        fallbackPolicy?.required_role ??
+        "manager";
+      labelMap[vehicle.id] = roleLabel[requiredRole] ?? "부서 관리자";
+    });
+    return labelMap;
+  }, [vehicles, policyData]);
+
+  const loading = vehiclesLoading || profileLoading;
+  const hasOrganization = !!userProfile?.orgId;
+  const isManager = userProfile?.isManager ?? false;
+  const message = vehiclesError ? vehiclesError.message : null;
 
   const filteredVehicles = useMemo(() => {
     const normalized = query.trim().toLowerCase();
@@ -211,7 +153,7 @@ export default function VehiclesListClient() {
         </div>
       )}
 
-      {loading || hasOrganization === null ? (
+      {loading ? (
         <Notice className="rounded-xl bg-white p-10">
           차량 목록을 불러오는 중입니다.
         </Notice>

@@ -1,12 +1,14 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
-import { supabase } from "@/lib/supabase";
 import Notice from "@/components/common/Notice";
 import type { Space } from "@/types/database";
 import SpaceCard from "@/components/spaces/SpaceCard";
 import SpaceForm from "@/components/spaces/SpaceForm";
+import { useSpaces, useSpaceApprovalPolicies } from "@/hooks/useSpaces";
+import { useUserProfile } from "@/hooks/useAssets";
 
 const statusOptions: Array<{ value: Space["status"] | ""; label: string }> = [
   { value: "", label: "전체" },
@@ -16,99 +18,52 @@ const statusOptions: Array<{ value: Space["status"] | ""; label: string }> = [
 ];
 
 export default function SpacesListClient() {
-  const [spaces, setSpaces] = useState<Space[]>([]);
-  const [policyLabels, setPolicyLabels] = useState<Record<string, string>>({});
-  const [loading, setLoading] = useState(true);
-  const [message, setMessage] = useState<string | null>(null);
-  const [hasOrganization, setHasOrganization] = useState<boolean | null>(null);
-  const [isManager, setIsManager] = useState(false);
+  const queryClient = useQueryClient();
+
   const [showRegisterForm, setShowRegisterForm] = useState(false);
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState<Space["status"] | "">("");
-  const isMountedRef = useRef(true);
 
-  const loadSpaces = async () => {
-    setLoading(true);
-    setMessage(null);
+  // React Query를 사용한 데이터 페칭
+  const { data: spaces = [], isLoading: spacesLoading, error: spacesError } = useSpaces();
+  const { data: userProfile, isLoading: profileLoading } = useUserProfile();
+  const { data: policyData } = useSpaceApprovalPolicies(userProfile?.orgId ?? null);
 
-    const { data, error } = await supabase
-      .from("spaces")
-      .select("*")
-      .order("created_at", { ascending: false });
+  // Policy labels 계산
+  const policyLabels = useMemo(() => {
+    if (!policyData || !spaces.length) return {};
 
-    if (!isMountedRef.current) return;
-
-    if (error) {
-      setMessage(error.message);
-      setSpaces([]);
-      setHasOrganization(false);
-    } else {
-      setSpaces((data ?? []) as Space[]);
-    }
-
-    const { data: sessionData } = await supabase.auth.getSession();
-    const user = sessionData.session?.user ?? null;
-
-    if (user) {
-      const { data: profileData } = await supabase
-        .from("profiles")
-        .select("organization_id,role")
-        .eq("id", user.id)
-        .maybeSingle();
-
-      const orgId = profileData?.organization_id ?? null;
-      setHasOrganization(Boolean(orgId));
-      setIsManager(
-        profileData?.role === "admin" || profileData?.role === "manager"
-      );
-      if (orgId) {
-        const { data: policyData } = await supabase
-          .from("approval_policies")
-          .select("scope,department,required_role")
-          .eq("organization_id", orgId)
-          .eq("scope", "space");
-
-        if (policyData) {
-          const labelMap: Record<string, string> = {};
-          const roleLabel: Record<string, string> = {
-            admin: "관리자",
-            manager: "부서 관리자",
-            user: "일반 사용자",
-          };
-
-          (data ?? []).forEach((space) => {
-            const department =
-              space.owner_scope === "organization"
-                ? null
-                : space.owner_department;
-            const exactPolicy = policyData.find(
-              (policy) => policy.department === department
-            );
-            const fallbackPolicy = policyData.find(
-              (policy) => policy.department === null
-            );
-            const requiredRole =
-              exactPolicy?.required_role ??
-              fallbackPolicy?.required_role ??
-              "manager";
-            labelMap[space.id] = roleLabel[requiredRole] ?? "부서 관리자";
-          });
-
-          setPolicyLabels(labelMap);
-        }
-      }
-    }
-
-    setLoading(false);
-  };
-
-  useEffect(() => {
-    isMountedRef.current = true;
-    loadSpaces();
-    return () => {
-      isMountedRef.current = false;
+    const labelMap: Record<string, string> = {};
+    const roleLabel: Record<string, string> = {
+      admin: "관리자",
+      manager: "부서 관리자",
+      user: "일반 사용자",
     };
-  }, []);
+
+    spaces.forEach((space) => {
+      const department =
+        space.owner_scope === "organization"
+          ? null
+          : space.owner_department;
+      const exactPolicy = policyData.find(
+        (policy) => policy.department === department
+      );
+      const fallbackPolicy = policyData.find(
+        (policy) => policy.department === null
+      );
+      const requiredRole =
+        exactPolicy?.required_role ??
+        fallbackPolicy?.required_role ??
+        "manager";
+      labelMap[space.id] = roleLabel[requiredRole] ?? "부서 관리자";
+    });
+    return labelMap;
+  }, [spaces, policyData]);
+
+  const loading = spacesLoading || profileLoading;
+  const hasOrganization = !!userProfile?.orgId;
+  const isManager = userProfile?.isManager ?? false;
+  const message = spacesError ? spacesError.message : null;
 
   const filteredSpaces = useMemo(() => {
     const normalized = query.trim().toLowerCase();
@@ -197,7 +152,7 @@ export default function SpacesListClient() {
         </div>
       )}
 
-      {loading || hasOrganization === null ? (
+      {loading ? (
         <Notice className="rounded-xl bg-white p-10">
           공간 목록을 불러오는 중입니다.
         </Notice>

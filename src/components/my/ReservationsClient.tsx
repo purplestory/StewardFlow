@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import Link from "next/link";
-import { supabase } from "@/lib/supabase";
 import Notice from "@/components/common/Notice";
+import { useUserReservations } from "@/hooks/useReservations";
+import { useUserProfile } from "@/hooks/useAssets";
 
 type ReservationRow = {
   id: string;
@@ -15,66 +15,12 @@ type ReservationRow = {
 };
 
 export default function ReservationsClient() {
-  const [userId, setUserId] = useState<string | null>(null);
-  const [reservations, setReservations] = useState<ReservationRow[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [message, setMessage] = useState<string | null>(null);
+  // React Query를 사용한 데이터 페칭
+  const { data: reservations = [], isLoading: loading, error } = useUserReservations();
+  const { data: userProfile } = useUserProfile();
 
-  useEffect(() => {
-    let isMounted = true;
-
-    const load = async () => {
-      setLoading(true);
-      setMessage(null);
-
-      const { data: sessionData } = await supabase.auth.getSession();
-      const user = sessionData.session?.user ?? null;
-
-      if (!isMounted) return;
-      setUserId(user?.id ?? null);
-
-      if (!user) {
-        setReservations([]);
-        setLoading(false);
-        return;
-      }
-
-      const { data, error } = await supabase
-        .from("reservations")
-        .select("id,status,start_date,end_date,note,assets(name)")
-        .eq("borrower_id", user.id)
-        .order("created_at", { ascending: false });
-
-      if (!isMounted) return;
-
-      if (error) {
-        setMessage(error.message);
-        setReservations([]);
-      } else {
-        const normalizedData = (data ?? []).map((row: any) => {
-          const asset = Array.isArray(row.assets) ? row.assets[0] : row.assets;
-          return {
-            ...row,
-            assets: asset || null,
-          };
-        });
-        setReservations(normalizedData as ReservationRow[]);
-      }
-
-      setLoading(false);
-    };
-
-    load();
-
-    const { data: subscription } = supabase.auth.onAuthStateChange(() => {
-      load();
-    });
-
-    return () => {
-      isMounted = false;
-      subscription?.subscription?.unsubscribe();
-    };
-  }, []);
+  const userId = userProfile?.user?.id ?? null;
+  const message = error ? error.message : null;
 
   if (loading) {
     return (

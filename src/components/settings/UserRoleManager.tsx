@@ -63,19 +63,67 @@ export default function UserRoleManager() {
       return;
     }
 
+    // 프로필 조회 시 더 자세한 디버깅 정보 수집
+    console.log("Loading profile for user:", user.id);
+    
     const { data: profileData, error: profileError } = await supabase
       .from("profiles")
       .select("organization_id,role")
       .eq("id", user.id)
       .maybeSingle();
 
+    console.log("Profile query result:", {
+      data: profileData,
+      error: profileError,
+      hasData: !!profileData,
+      hasError: !!profileError,
+    });
+
     if (profileError) {
-      setMessage(profileError.message);
+      console.error("Profile load error:", profileError);
+      console.error("Error details:", {
+        message: profileError.message,
+        code: profileError.code,
+        details: profileError.details,
+        hint: profileError.hint,
+        user_id: user.id,
+      });
+      
+      // RLS 정책 오류인 경우 특별 처리
+      if (profileError.code === "42501" || profileError.message?.includes("row-level security")) {
+        setMessage(
+          `RLS 정책 오류: 프로필을 조회할 수 없습니다. Supabase SQL Editor에서 RLS 정책을 확인하고 수정해주세요. 오류: ${profileError.message}`
+        );
+      } else {
+        setMessage(`프로필 조회 오류: ${profileError.message}`);
+      }
       setLoading(false);
       return;
     }
 
-    if (!profileData?.organization_id) {
+    if (!profileData) {
+      console.warn("No profile found for user:", user.id);
+      console.warn("This might be an RLS policy issue. Check browser console for errors.");
+      
+      // RLS 정책 문제일 가능성이 높으므로 사용자에게 안내
+      setMessage(
+        "프로필을 찾을 수 없습니다. RLS 정책 문제일 수 있습니다. Supabase SQL Editor에서 다음 SQL을 실행해주세요: DROP POLICY IF EXISTS \"profiles_select_own\" ON public.profiles; DROP POLICY IF EXISTS \"profiles_select_same_org\" ON public.profiles; CREATE POLICY \"profiles_select_same_org\" ON public.profiles FOR SELECT TO authenticated USING (id = auth.uid() OR organization_id IN (SELECT organization_id FROM public.profiles WHERE id = auth.uid()));"
+      );
+      setNeedsOrganization(true);
+      setLoading(false);
+      return;
+    }
+
+    console.log("Profile loaded successfully:", {
+      user_id: user.id,
+      organization_id: profileData.organization_id,
+      role: profileData.role,
+      hasOrganizationId: !!profileData.organization_id,
+    });
+
+    if (!profileData.organization_id) {
+      console.warn("User profile has no organization_id:", user.id, profileData);
+      console.warn("Profile data:", JSON.stringify(profileData, null, 2));
       setNeedsOrganization(true);
       setLoading(false);
       return;
@@ -129,6 +177,15 @@ export default function UserRoleManager() {
       .select("id,email,name,department,role")
       .eq("organization_id", profileData.organization_id)
       .order("created_at", { ascending: true });
+    
+    // 디버깅: 프로필 조회 결과 확인
+    if (error) {
+      console.error("Error loading profiles:", error);
+      console.error("Organization ID:", profileData.organization_id);
+    } else {
+      console.log("Profiles loaded:", data?.length || 0, "profiles");
+      console.log("Profile IDs:", data?.map((p: ProfileRow) => p.id));
+    }
 
     // Try to select token, but handle case where column doesn't exist yet
     let inviteData: InviteRow[] | null = null;
@@ -165,12 +222,23 @@ export default function UserRoleManager() {
 
     if (error) {
       console.error("Error loading profiles:", error);
-      setMessage(error.message);
+      console.error("Error details:", {
+        message: error.message,
+        code: error.code,
+        details: error.details,
+        hint: error.hint,
+        organization_id: profileData.organization_id,
+      });
+      setMessage(`프로필 조회 오류: ${error.message}. RLS 정책을 확인해주세요.`);
       setProfiles([]);
     } else {
-      setProfiles((data ?? []) as ProfileRow[]);
-      if (data && data.length === 0) {
+      const profilesList = (data ?? []) as ProfileRow[];
+      console.log(`Loaded ${profilesList.length} profiles for organization ${profileData.organization_id}`);
+      console.log("Profiles:", profilesList.map(p => ({ id: p.id, name: p.name, email: p.email, role: p.role })));
+      setProfiles(profilesList);
+      if (profilesList.length === 0) {
         console.warn("No profiles found for organization:", profileData.organization_id);
+        setMessage("등록된 사용자가 없습니다. 초대를 보내 새 사용자를 추가해 주세요.");
       }
     }
 
@@ -182,18 +250,18 @@ export default function UserRoleManager() {
       
       // 이미 가입한 사용자(프로필이 존재하는 사용자) 필터링
       // 이메일 또는 이름으로 프로필이 존재하는 초대는 제외
-      const profileEmails = new Set((data ?? []).map((p: ProfileRow) => p.email.toLowerCase()));
-      const profileNames = new Set((data ?? []).map((p: ProfileRow) => p.name?.toLowerCase()).filter(Boolean));
+      const profileEmails = new Set((data ?? []).map((p: ProfileRow) => p.email.toLowerCase().trim()));
+      const profileNames = new Set((data ?? []).map((p: ProfileRow) => p.name?.toLowerCase().trim()).filter(Boolean));
       
       // 이미 가입한 사용자의 초대는 accepted_at 업데이트
       const invitesToAccept: string[] = [];
       const filteredInvites = pendingInvites.filter((invite) => {
         // 이미 가입한 사용자는 제외하고 accepted_at 업데이트
-        if (invite.email && profileEmails.has(invite.email.toLowerCase())) {
+        if (invite.email && profileEmails.has(invite.email.toLowerCase().trim())) {
           invitesToAccept.push(invite.id);
           return false;
         }
-        if (invite.name && profileNames.has(invite.name.toLowerCase())) {
+        if (invite.name && profileNames.has(invite.name.toLowerCase().trim())) {
           invitesToAccept.push(invite.id);
           return false;
         }
@@ -203,10 +271,43 @@ export default function UserRoleManager() {
       // 이미 가입한 사용자의 초대는 자동으로 accepted_at 업데이트
       if (invitesToAccept.length > 0) {
         const nowIso = new Date().toISOString();
-        await supabase
+        const { error: updateError } = await supabase
           .from("organization_invites")
           .update({ accepted_at: nowIso })
           .in("id", invitesToAccept);
+        
+        if (updateError) {
+          console.error("Failed to update accepted_at for invites:", updateError);
+        } else {
+          // 업데이트 성공 후 목록 다시 불러오기
+          const { data: updatedInvites } = await supabase
+            .from("organization_invites")
+            .select("id,email,role,department,name,created_at,accepted_at,revoked_at,token")
+            .eq("organization_id", profileData.organization_id)
+            .is("accepted_at", null)
+            .is("revoked_at", null)
+            .order("created_at", { ascending: false });
+          
+          if (updatedInvites) {
+            // 업데이트된 목록으로 다시 필터링
+            const updatedPendingInvites = (updatedInvites as InviteRow[]).filter((invite) => {
+              if (invite.email && profileEmails.has(invite.email.toLowerCase().trim())) {
+                return false;
+              }
+              if (invite.name && profileNames.has(invite.name.toLowerCase().trim())) {
+                return false;
+              }
+              return true;
+            });
+            
+            setInvites(
+              updatedPendingInvites.filter((invite) => !isInviteExpired(invite.created_at))
+            );
+            setLastLoadedAt(new Date().toISOString());
+            setLoading(false);
+            return;
+          }
+        }
       }
       
       const expiredIds = filteredInvites

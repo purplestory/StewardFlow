@@ -111,7 +111,7 @@ export default function ReservationForm({
                   value={startDate}
                   onChange={(e) => setStartDate(e.target.value)}
                   max={endDate || undefined}
-                  className="form-input"
+                  className="form-input text-base md:text-sm"
                   required
                   disabled={isDisabled}
                 />
@@ -119,7 +119,7 @@ export default function ReservationForm({
                   type="time"
                   value={startTime}
                   onChange={(e) => setStartTime(e.target.value)}
-                  className="form-input"
+                  className="form-input text-base md:text-sm min-w-[100px]"
                   required
                   disabled={isDisabled}
                 />
@@ -133,7 +133,7 @@ export default function ReservationForm({
                   value={endDate}
                   onChange={(e) => setEndDate(e.target.value)}
                   min={startDate || undefined}
-                  className="form-input"
+                  className="form-input text-base md:text-sm"
                   required
                   disabled={isDisabled}
                 />
@@ -141,7 +141,7 @@ export default function ReservationForm({
                   type="time"
                   value={endTime}
                   onChange={(e) => setEndTime(e.target.value)}
-                  className="form-input"
+                  className="form-input text-base md:text-sm min-w-[100px]"
                   required
                   disabled={isDisabled}
                 />

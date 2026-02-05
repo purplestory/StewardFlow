@@ -132,11 +132,11 @@ export default function PolicySettings({ organizationId }: PolicySettingsProps) 
 
         <div className="space-y-4">
           {features.spaces !== false && (
-            <div className="p-4 border border-neutral-200 rounded-lg">
-              <label className="block form-label">
+            <div className="p-4 border border-neutral-200 rounded-lg mb-6">
+              <label className="block form-label mb-3">
                 공간 소유 정책
               </label>
-              <div className="space-y-2">
+              <div className="space-y-3">
                 <label className="flex items-center gap-2">
                   <input
                     type="radio"
@@ -168,11 +168,11 @@ export default function PolicySettings({ organizationId }: PolicySettingsProps) 
           )}
 
           {features.vehicles === true && (
-            <div className="p-4 border border-neutral-200 rounded-lg">
-              <label className="block form-label">
+            <div className="p-4 border border-neutral-200 rounded-lg mb-6">
+              <label className="block form-label mb-3">
                 차량 소유 정책
               </label>
-              <div className="space-y-2">
+              <div className="space-y-3">
                 <label className="flex items-center gap-2">
                   <input
                     type="radio"
@@ -218,7 +218,7 @@ export default function PolicySettings({ organizationId }: PolicySettingsProps) 
         </p>
 
         <div className="space-y-4">
-          <div className="flex items-center justify-between p-4 border border-neutral-200 rounded-lg">
+          <div className="flex items-center justify-between p-4 border border-neutral-200 rounded-lg gap-4">
             <div className="flex-1">
               <label className="font-medium text-sm">반납 확인 절차 활성화</label>
               <p className="text-xs text-neutral-500 mt-1">
@@ -240,14 +240,14 @@ export default function PolicySettings({ organizationId }: PolicySettingsProps) 
 
           {returnVerificationPolicy.enabled && (
             <>
-              <div className="flex items-center justify-between p-4 border border-neutral-200 rounded-lg">
+              <div className="flex items-center justify-between p-4 border border-neutral-200 rounded-lg gap-4">
                 <div className="flex-1">
                   <label className="font-medium text-sm">사진 촬영 필수</label>
                   <p className="text-xs text-neutral-500 mt-1">
                     반납 시 반드시 사진을 촬영해야 합니다. (차량은 계기판 및 외관 사진 필수)
                   </p>
                 </div>
-                <label className="relative inline-flex items-center cursor-pointer">
+                <label className="relative inline-flex items-center cursor-pointer flex-shrink-0">
                   <input
                     type="checkbox"
                     checked={returnVerificationPolicy.require_photo !== false}
@@ -260,7 +260,7 @@ export default function PolicySettings({ organizationId }: PolicySettingsProps) 
                 </label>
               </div>
 
-              <div className="flex items-center justify-between p-4 border border-neutral-200 rounded-lg">
+              <div className="flex items-center justify-between p-4 border border-neutral-200 rounded-lg gap-4">
                 <div className="flex-1">
                   <label className="font-medium text-sm">관리자 확인 필수</label>
                   <p className="text-xs text-neutral-500 mt-1">

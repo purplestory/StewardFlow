@@ -34,6 +34,7 @@ export default function Header() {
   const [userDepartment, setUserDepartment] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [dropdownOpen, setDropdownOpen] = useState<string | null>(null);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // Check localStorage for session on client side only (after mount)
   useEffect(() => {
@@ -402,7 +403,9 @@ export default function Header() {
         <Link href="/" className="text-2xl font-semibold">
           Steward Flow
         </Link>
-        <nav className="flex flex-wrap items-center gap-4 text-sm text-neutral-600">
+        
+        {/* Desktop Navigation */}
+        <nav className="hidden md:flex flex-wrap items-center gap-4 text-sm text-neutral-600">
           {/* Main navigation items */}
           {mainNavItems.map((item) => (
             <Link key={item.href} href={item.href} className="hover:text-black">
@@ -462,7 +465,89 @@ export default function Header() {
             <NotificationBadge />
           )}
         </nav>
+
+        {/* Mobile Menu Button */}
+        <div className="md:hidden flex items-center gap-2">
+          {/* Notification badge (로그인된 경우) */}
+          {((!loading && isAuthed) || (loading && hasLocalStorageSession === true)) && (
+            <NotificationBadge />
+          )}
+          <button
+            type="button"
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            className="p-2 text-neutral-600 hover:text-black"
+            aria-label="메뉴 열기"
+          >
+            {mobileMenuOpen ? (
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            ) : (
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+            )}
+          </button>
+        </div>
       </div>
+
+      {/* Mobile Menu */}
+      {mobileMenuOpen && (
+        <div className="md:hidden border-t border-neutral-200 bg-white">
+          <nav className="px-4 py-3 space-y-2">
+            {/* Main navigation items */}
+            {mainNavItems.map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                className="block py-2 text-sm text-neutral-600 hover:text-black"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                {item.label}
+              </Link>
+            ))}
+
+            {/* User menu items */}
+            {!loading && userItems.length > 0 && (
+              <>
+                <div className="border-t border-neutral-200 my-2"></div>
+                {userItems.map((item, index) => (
+                  <Link
+                    key={`${item.href}-${index}`}
+                    href={item.href}
+                    className="block py-2 text-sm text-neutral-600 hover:text-black"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    {item.label}
+                  </Link>
+                ))}
+                <div className="border-t border-neutral-200 my-2"></div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    handleSignOut();
+                  }}
+                  className="block w-full text-left py-2 text-sm text-neutral-600 hover:text-black"
+                >
+                  로그아웃
+                </button>
+              </>
+            )}
+
+            {/* Login button (if not authenticated) */}
+            {!loading && !isAuthed && (
+              <Link
+                href="/login"
+                className="block py-2 text-sm text-neutral-600 hover:text-black"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                로그인
+              </Link>
+            )}
+          </nav>
+        </div>
+      )}
     </header>
   );
 }

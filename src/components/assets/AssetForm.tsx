@@ -761,7 +761,7 @@ export default function AssetForm({ asset }: AssetFormProps = {}) {
       </div>
 
       <div className="form-grid">
-        <label className="flex flex-col gap-2">
+        <label className="flex flex-col gap-2 md:flex-col">
           <span className="form-label">물품명</span>
           <input
             name="name"
@@ -771,7 +771,7 @@ export default function AssetForm({ asset }: AssetFormProps = {}) {
             required
           />
         </label>
-        <label className="flex flex-col gap-2">
+        <label className="flex flex-col gap-2 md:flex-col">
           <span className="form-label">
             모델명
             <span className="form-label-optional">(선택)</span>

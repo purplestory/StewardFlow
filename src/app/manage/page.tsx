@@ -21,15 +21,38 @@ export default function ManagePage() {
         return;
       }
 
-      const { data: profileData } = await supabase
+      const { data: profileData, error: profileError } = await supabase
         .from("profiles")
         .select("role,organization_id")
         .eq("id", user.id)
         .maybeSingle();
 
+      if (profileError) {
+        console.error("Profile load error in manage page:", profileError);
+        console.error("Error details:", {
+          message: profileError.message,
+          code: profileError.code,
+          details: profileError.details,
+          hint: profileError.hint,
+          user_id: user.id,
+        });
+        // RLS 정책 오류인 경우에도 계속 진행 (기본값 사용)
+      }
+
       if (profileData) {
-        setRole((profileData.role as "admin" | "manager" | "user") ?? "user");
+        const userRole = (profileData.role as "admin" | "manager" | "user") ?? "user";
+        console.log("Profile loaded in manage page:", {
+          user_id: user.id,
+          role: userRole,
+          organization_id: profileData.organization_id,
+        });
+        setRole(userRole);
         setHasOrganization(!!profileData.organization_id);
+      } else {
+        console.warn("No profile data found for user:", user.id);
+        // 프로필이 없으면 기본값 사용
+        setRole("user");
+        setHasOrganization(false);
       }
 
       setLoading(false);

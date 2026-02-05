@@ -343,14 +343,15 @@ export default function AssetAdminPanel() {
               key={asset.id}
               className="flex items-center justify-between rounded-lg border border-neutral-200 px-3 py-2 text-xs"
             >
-              <label className="flex items-center gap-2 flex-1">
+              <label className="flex items-center gap-2 flex-1 min-w-0">
                 <input
                   type="checkbox"
                   checked={selectedIds.has(asset.id)}
                   onChange={() => toggleSelect(asset.id)}
+                  className="flex-shrink-0"
                 />
-                <span>{asset.name}</span>
-                <span className="text-neutral-400">
+                <span className="truncate">{asset.name}</span>
+                <span className="text-neutral-400 flex-shrink-0">
                   ({asset.owner_scope === "organization"
                     ? "기관 공용"
                     : asset.owner_department})
@@ -360,12 +361,15 @@ export default function AssetAdminPanel() {
                 <span className="text-neutral-500">
                   {statusLabel[asset.status]}
                 </span>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1">
                   <Link
                     href={`/assets/${asset.short_id || asset.id}/edit`}
-                    className="btn-ghost"
+                    className="p-2 text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100 rounded transition-colors"
+                    title="수정"
                   >
-                    수정
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
                   </Link>
                   <button
                     type="button"
@@ -374,9 +378,12 @@ export default function AssetAdminPanel() {
                       setDeletionReason("");
                     }}
                     disabled={deletingId === asset.id || updating}
-                    className="btn-ghost text-sm text-rose-600 hover:text-rose-700"
+                    className="p-2 text-rose-600 hover:text-rose-700 hover:bg-rose-50 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    title="삭제"
                   >
-                    삭제
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
                   </button>
                 </div>
               </div>

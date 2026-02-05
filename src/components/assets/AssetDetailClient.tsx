@@ -166,9 +166,9 @@ export default function AssetDetailClient() {
             </span>
           </div>
 
-          <div className="flex items-start justify-between gap-4">
+          <div className="flex flex-col gap-3">
             <div className="flex-1">
-              <h1 className="text-2xl font-bold text-neutral-900">{asset.name}</h1>
+              <h1 className="text-2xl font-bold text-neutral-900 break-words">{asset.name}</h1>
               {asset.model_name && (
                 <p className="text-sm text-neutral-500 mt-1">{asset.model_name}</p>
               )}
@@ -179,7 +179,7 @@ export default function AssetDetailClient() {
                 return (
                   <Link
                     href={`/assets/${asset.short_id || asset.id}/edit`}
-                    className="btn-secondary"
+                    className="btn-secondary w-full md:w-auto"
                   >
                     수정
                   </Link>
@@ -194,7 +194,7 @@ export default function AssetDetailClient() {
                   return (
                     <Link
                       href={`/assets/${asset.short_id || asset.id}/edit`}
-                      className="btn-secondary"
+                      className="btn-secondary w-full md:w-auto"
                     >
                       수정
                     </Link>

@@ -30,11 +30,30 @@ export default function OrganizationGate({ children }: OrganizationGateProps) {
         return;
       }
 
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("profiles")
         .select("organization_id")
         .eq("id", user.id)
         .maybeSingle();
+
+      console.log("OrganizationGate - Profile query result:", {
+        user_id: user.id,
+        data,
+        error,
+        hasData: !!data,
+        hasError: !!error,
+        organization_id: data?.organization_id,
+      });
+
+      if (error) {
+        console.error("OrganizationGate - Profile load error:", error);
+        console.error("Error details:", {
+          message: error.message,
+          code: error.code,
+          details: error.details,
+          hint: error.hint,
+        });
+      }
 
       if (!isMounted) return;
 

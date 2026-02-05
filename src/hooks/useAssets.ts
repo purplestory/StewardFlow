@@ -13,7 +13,22 @@ export function useAssets() {
         .is("deleted_at", null)
         .order("created_at", { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error("Assets query error:", error);
+        console.error("Error details:", {
+          message: error.message,
+          code: error.code,
+          details: error.details,
+          hint: error.hint,
+        });
+        throw error;
+      }
+      
+      console.log("Assets loaded:", {
+        count: data?.length ?? 0,
+        assets: data?.map(a => ({ id: a.id, name: a.name, organization_id: a.organization_id })),
+      });
+      
       return (data ?? []) as Asset[];
     },
     staleTime: 1000 * 60 * 2, // 2분간 fresh 상태 유지

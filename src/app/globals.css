@@ -210,6 +210,32 @@ input[type="datetime-local"] {
   @apply text-sm font-medium text-neutral-900;
 }
 
+/* 모바일에서 라벨을 왼쪽에 배치 (선택적) */
+@media (max-width: 768px) {
+  .form-label-inline {
+    @apply flex items-center gap-2;
+  }
+  
+  .form-label-inline .form-label {
+    @apply min-w-[100px] flex-shrink-0;
+  }
+  
+  /* 모바일에서 form-grid 내부의 라벨을 가로 배치 */
+  .form-grid > label {
+    @apply flex-row items-center gap-3;
+  }
+  
+  .form-grid > label .form-label {
+    @apply min-w-[100px] flex-shrink-0 mb-0;
+  }
+  
+  .form-grid > label > input,
+  .form-grid > label > select,
+  .form-grid > label > textarea {
+    @apply flex-1;
+  }
+}
+
 .form-label-optional {
   @apply text-xs font-normal text-neutral-500 ml-1;
 }
@@ -220,7 +246,7 @@ input[type="datetime-local"] {
   @apply hover:bg-neutral-800;
   @apply focus:outline-none focus:ring-2 focus:ring-neutral-500 focus:ring-offset-2;
   @apply disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-neutral-900;
-  @apply flex items-center justify-center;
+  @apply flex items-center justify-center whitespace-nowrap;
 }
 
 .btn-secondary {
@@ -228,7 +254,7 @@ input[type="datetime-local"] {
   @apply hover:bg-neutral-50 hover:border-neutral-300;
   @apply focus:outline-none focus:ring-2 focus:ring-neutral-500 focus:ring-offset-2;
   @apply disabled:opacity-50 disabled:cursor-not-allowed;
-  @apply flex items-center justify-center;
+  @apply flex items-center justify-center whitespace-nowrap;
 }
 
 .btn-sm {
@@ -252,7 +278,7 @@ input[type="datetime-local"] {
   @apply hover:bg-neutral-50 hover:border-neutral-300;
   @apply focus:outline-none focus:ring-2 focus:ring-neutral-500 focus:ring-offset-2;
   @apply disabled:opacity-50 disabled:cursor-not-allowed;
-  @apply flex items-center justify-center;
+  @apply flex items-center justify-center whitespace-nowrap;
 }
 
 .form-section {

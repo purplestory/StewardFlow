@@ -133,7 +133,7 @@ export default function AuthCard() {
         // Check if profile already exists
         const { data: existingProfile } = await supabase
           .from("profiles")
-          .select("id,role,organization_id")
+          .select("id,role,organization_id,name")
           .eq("id", currentUser.id)
           .maybeSingle();
 

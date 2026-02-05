@@ -31,13 +31,12 @@ export async function createReservation(
   formData: FormData
 ): Promise<ReservationActionState> {
   const assetId = formData.get("asset_id")?.toString();
+  const spaceId = formData.get("space_id")?.toString();
+  const vehicleId = formData.get("vehicle_id")?.toString();
   const resourceType = formData.get("resource_type")?.toString() ?? "asset";
   const startDate = formData.get("start_date")?.toString();
   const endDate = formData.get("end_date")?.toString();
   const note = formData.get("note")?.toString() || null;
-  
-  // resourceType이 "vehicle"인 경우 vehicleId로 처리
-  const vehicleId = resourceType === "vehicle" ? assetId : null;
 
   // 반복 일정 설정 파싱
   const recurrenceType = (formData.get("recurrence_type")?.toString() || "none") as "none" | "weekly" | "monthly";
@@ -49,7 +48,7 @@ export async function createReservation(
     ? parseInt(formData.get("recurrence_day_of_month")!.toString())
     : null;
 
-  const actualResourceId = resourceType === "vehicle" ? vehicleId : assetId;
+  const actualResourceId = resourceType === "space" ? spaceId : resourceType === "vehicle" ? vehicleId : assetId;
   
   if (!actualResourceId || !startDate || !endDate) {
     return { ok: false, message: "필수 정보를 모두 입력해주세요." };

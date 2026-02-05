@@ -400,11 +400,11 @@ export default function Header() {
   return (
     <header className="border-b border-neutral-200 bg-white">
       <div className="mx-auto flex w-full max-w-5xl items-center justify-between px-4 py-4">
-        <Link href="/" className="flex items-center gap-2 text-2xl font-semibold hover:opacity-80 transition-opacity">
+        <Link href="/" className="flex items-center gap-2.5 md:gap-3 text-xl md:text-2xl font-semibold hover:opacity-80 transition-opacity">
           <img
             src="/icon.svg"
             alt="StewardFlow"
-            className="w-8 h-8 md:w-10 md:h-10 flex-shrink-0"
+            className="w-10 h-10 md:w-12 md:h-12 flex-shrink-0"
           />
           <span>Steward Flow</span>
         </Link>

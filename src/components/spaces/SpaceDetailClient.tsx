@@ -10,11 +10,11 @@ import ImageSlider from "@/components/common/ImageSlider";
 import { useSpace, useSpaceReservations, useSpaceApprovalPolicies } from "@/hooks/useSpaces";
 import { useUserRole } from "@/hooks/useAssets";
 
-const statusLabel: Record<SpaceReservationSummary["status"], string> = {
-  pending: "승인 대기",
-  approved: "승인됨",
-  returned: "반납 완료",
-  rejected: "반려",
+const statusLabel: Record<Space["status"], string> = {
+  available: "사용 가능",
+  rented: "예약 중",
+  repair: "사용 불가",
+  lost: "사용 불가",
 };
 
 export default function SpaceDetailClient() {

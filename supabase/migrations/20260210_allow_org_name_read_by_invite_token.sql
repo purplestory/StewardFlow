@@ -22,7 +22,9 @@ $$;
 -- organizations 테이블에 초대 토큰으로 조회 가능한 정책 추가
 -- 유효한 초대 토큰이 있는 경우 기관 이름 조회 허용
 -- 기존 정책과 함께 사용 (OR 조건)
-CREATE POLICY IF NOT EXISTS "organizations_select_by_invite_token"
+DROP POLICY IF EXISTS "organizations_select_by_invite_token" ON public.organizations;
+
+CREATE POLICY "organizations_select_by_invite_token"
 ON public.organizations
 FOR SELECT
 TO authenticated, anon

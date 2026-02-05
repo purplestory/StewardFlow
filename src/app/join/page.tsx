@@ -424,22 +424,75 @@ function JoinPageContent() {
                 }
 
                 // Create/update profile
-                const { error: profileError } = await supabase
-                  .from("profiles")
-                  .upsert({
-                    id: user.id,
-                    email: (user.email ?? email) || inviteResult.invite.email,
-                    organization_id: finalOrganizationId,
-                    role: finalRole,
-                    name: name || inviteResult.invite.name || existingProfile?.name || null,
-                    department: department || inviteResult.invite.department || existingProfile?.department || null,
-                    phone: phone || existingProfile?.phone || null,
-                  }, {
-                    onConflict: 'id'
-                  });
+                let profileError = null;
+                if (existingProfile) {
+                  // Update existing profile
+                  const { error: updateError } = await supabase
+                    .from("profiles")
+                    .update({
+                      email: (user.email ?? email) || inviteResult.invite.email,
+                      organization_id: finalOrganizationId,
+                      role: finalRole,
+                      name: name || inviteResult.invite.name || existingProfile?.name || null,
+                      department: department || inviteResult.invite.department || existingProfile?.department || null,
+                      phone: phone || existingProfile?.phone || null,
+                    })
+                    .eq("id", user.id);
+                  profileError = updateError;
+                } else {
+                  // Insert new profile
+                  const { error: insertError } = await supabase
+                    .from("profiles")
+                    .insert({
+                      id: user.id,
+                      email: (user.email ?? email) || inviteResult.invite.email,
+                      organization_id: finalOrganizationId,
+                      role: finalRole,
+                      name: name || inviteResult.invite.name || null,
+                      department: department || inviteResult.invite.department || null,
+                      phone: phone || null,
+                    });
+                  profileError = insertError;
+                }
 
                 if (profileError) {
-                  setMessage(profileError.message);
+                  console.error("Profile update/insert error:", {
+                    error: profileError,
+                    code: profileError.code,
+                    message: profileError.message,
+                    details: profileError.details,
+                    hint: profileError.hint,
+                    user_id: user.id,
+                    organization_id: finalOrganizationId,
+                    existingProfile: !!existingProfile,
+                  });
+                  setMessage(
+                    `프로필 ${existingProfile ? "업데이트" : "생성"} 실패: ${profileError.message || "알 수 없는 오류"}`
+                  );
+                  setSigningUp(false);
+                  return;
+                }
+
+                // Verify the update was successful
+                const { data: verifyProfile, error: verifyError } = await supabase
+                  .from("profiles")
+                  .select("id,organization_id,role")
+                  .eq("id", user.id)
+                  .maybeSingle();
+
+                if (verifyError || !verifyProfile) {
+                  console.error("Profile verification error:", verifyError);
+                  setMessage("프로필은 생성되었지만 확인에 실패했습니다. 페이지를 새로고침해주세요.");
+                  setSigningUp(false);
+                  return;
+                }
+
+                if (verifyProfile.organization_id !== finalOrganizationId) {
+                  console.error("Organization ID mismatch:", {
+                    expected: finalOrganizationId,
+                    actual: verifyProfile.organization_id,
+                  });
+                  setMessage("기관 ID가 올바르게 설정되지 않았습니다. 관리자에게 문의하세요.");
                   setSigningUp(false);
                   return;
                 }
@@ -479,7 +532,14 @@ function JoinPageContent() {
                   // 감사 로그 실패는 치명적이지 않으므로 계속 진행
                 }
 
-                router.push("/");
+                // 세션 새로고침을 위해 잠시 대기
+                await new Promise(resolve => setTimeout(resolve, 500));
+                
+                // 세션 새로고침
+                await supabase.auth.refreshSession();
+                
+                // 페이지 리로드하여 프로필 정보 갱신
+                window.location.href = "/";
               }}
               className="space-y-4"
             >

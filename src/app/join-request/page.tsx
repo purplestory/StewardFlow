@@ -94,21 +94,120 @@ export default function JoinRequestPage() {
       return;
     }
 
-    // 프로필 업데이트
-    const { error: updateError } = await supabase
+    // 프로필 확인 후 업데이트 또는 생성
+    const { data: existingProfile, error: checkError } = await supabase
       .from("profiles")
-      .update({
-        name: name.trim() || null,
-        phone: phone.trim() || null,
-      })
-      .eq("id", user.id);
+      .select("id,organization_id")
+      .eq("id", user.id)
+      .maybeSingle();
 
-    if (updateError) {
-      console.error("Profile update error:", updateError);
-      setMessage("정보 업데이트 중 오류가 발생했습니다.");
+    if (checkError) {
+      console.error("프로필 확인 오류:", checkError);
+      setMessage(`프로필 확인 중 오류가 발생했습니다: ${checkError.message}`);
       setSubmitting(false);
       return;
     }
+
+    console.log("가입 신청 - 프로필 확인 결과:", {
+      hasProfile: !!existingProfile,
+      organizationId: existingProfile?.organization_id,
+    });
+
+    let saveError = null;
+    let saveSuccess = false;
+
+    if (existingProfile) {
+      // 프로필이 있으면 업데이트
+      console.log("가입 신청 - 프로필 업데이트 시도");
+      const { error, data } = await supabase
+        .from("profiles")
+        .update({
+          name: name.trim() || null,
+          phone: phone.trim() || null,
+          // organization_id는 기존 값 유지 (null이면 null 유지)
+        })
+        .eq("id", user.id)
+        .select();
+
+      saveError = error;
+      saveSuccess = !error && !!data;
+      console.log("가입 신청 - 프로필 업데이트 결과:", {
+        success: saveSuccess,
+        error: error?.message,
+        data,
+      });
+    } else {
+      // 프로필이 없으면 생성 (organization_id는 null로 유지)
+      console.log("가입 신청 - 프로필 생성 시도");
+      const { error, data } = await supabase
+        .from("profiles")
+        .insert({
+          id: user.id,
+          email: user.email || email || "",
+          name: name.trim() || null,
+          phone: phone.trim() || null,
+          organization_id: null, // 가입 신청 상태
+        })
+        .select();
+
+      saveError = error;
+      saveSuccess = !error && !!data;
+      console.log("가입 신청 - 프로필 생성 결과:", {
+        success: saveSuccess,
+        error: error?.message,
+        data,
+      });
+    }
+
+    if (saveError) {
+      console.error("Profile update/insert error:", saveError);
+      console.error("에러 상세:", {
+        code: saveError.code,
+        message: saveError.message,
+        details: saveError.details,
+        hint: saveError.hint,
+        userId: user.id,
+        hasExistingProfile: !!existingProfile,
+      });
+      setMessage(`정보 저장 중 오류가 발생했습니다: ${saveError.message || "알 수 없는 오류"}`);
+      setSubmitting(false);
+      return;
+    }
+
+    if (!saveSuccess) {
+      console.error("프로필 저장 실패: saveSuccess가 false입니다");
+      setMessage("정보 저장에 실패했습니다. 다시 시도해주세요.");
+      setSubmitting(false);
+      return;
+    }
+
+    // 저장 후 검증: 실제로 저장되었는지 확인
+    const { data: verifyProfile, error: verifyError } = await supabase
+      .from("profiles")
+      .select("id,name,phone,organization_id")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    if (verifyError) {
+      console.error("프로필 검증 오류:", verifyError);
+      setMessage("정보는 저장되었지만 확인에 실패했습니다. 페이지를 새로고침해주세요.");
+      setSubmitting(false);
+      return;
+    }
+
+    if (!verifyProfile) {
+      console.error("프로필이 저장되지 않았습니다.");
+      setMessage("정보 저장에 실패했습니다. 다시 시도해주세요.");
+      setSubmitting(false);
+      return;
+    }
+
+    console.log("가입 신청 저장 완료:", {
+      userId: user.id,
+      name: verifyProfile.name,
+      phone: verifyProfile.phone,
+      organizationId: verifyProfile.organization_id,
+    });
 
     // 가입 신청 완료 (organization_id가 null인 상태로 유지)
     // 관리자가 UserRoleManager에서 승인할 수 있음

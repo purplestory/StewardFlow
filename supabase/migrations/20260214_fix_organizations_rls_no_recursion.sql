@@ -3,6 +3,7 @@
 -- 1. 기존 정책 모두 삭제
 DROP POLICY IF EXISTS "organizations_insert_authenticated" ON public.organizations;
 DROP POLICY IF EXISTS "organizations_select_own" ON public.organizations;
+DROP POLICY IF EXISTS "organizations_select_all_by_admin" ON public.organizations;
 DROP POLICY IF EXISTS "organizations_update_admin" ON public.organizations;
 DROP POLICY IF EXISTS "organizations_delete_admin" ON public.organizations;
 DROP POLICY IF EXISTS "organizations_select_by_invite_token" ON public.organizations;

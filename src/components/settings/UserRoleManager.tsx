@@ -190,13 +190,37 @@ export default function UserRoleManager() {
 
       if (allUsersError) {
         console.error("전체 사용자 조회 오류:", allUsersError);
+        console.error("에러 상세:", {
+          code: allUsersError.code,
+          message: allUsersError.message,
+          details: allUsersError.details,
+          hint: allUsersError.hint,
+        });
         setMessage(`사용자 조회 실패: ${allUsersError.message}`);
+        setPendingUsers([]);
       } else if (allUsersData) {
         // 클라이언트에서 organization_id가 null인 사용자만 필터링
-        const pendingUsersData = allUsersData.filter(user => user.organization_id === null);
+        const pendingUsersData = allUsersData.filter(user => 
+          user.organization_id === null || user.organization_id === undefined
+        );
         console.log("전체 사용자 조회 성공:", allUsersData.length, "명");
+        console.log("전체 사용자 데이터:", allUsersData.map(u => ({
+          id: u.id,
+          name: u.name,
+          email: u.email,
+          organization_id: u.organization_id
+        })));
         console.log("미승인 사용자:", pendingUsersData.length, "명");
+        console.log("미승인 사용자 데이터:", pendingUsersData.map(u => ({
+          id: u.id,
+          name: u.name,
+          email: u.email,
+          organization_id: u.organization_id
+        })));
         setPendingUsers(pendingUsersData as ProfileRow[]);
+      } else {
+        console.log("전체 사용자 데이터가 null입니다");
+        setPendingUsers([]);
       }
 
       // 모든 기관 목록 조회 (최고관리자만)

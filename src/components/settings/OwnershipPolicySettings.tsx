@@ -10,12 +10,12 @@ type OrganizationFeatures = {
   vehicles?: boolean;
 };
 
-type OwnershipPolicies = {
-  spaces?: "organization_only" | "department_allowed";
-  vehicles?: "organization_only" | "department_allowed";
-};
-
 type OwnershipPolicyValue = "organization_only" | "department_allowed";
+
+type OwnershipPolicies = {
+  spaces?: OwnershipPolicyValue;
+  vehicles?: OwnershipPolicyValue;
+};
 
 type OwnershipPolicySettingsProps = {
   organizationId: string | null;

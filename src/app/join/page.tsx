@@ -5,6 +5,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { getInviteByToken } from "@/actions/invite-actions";
 import Link from "next/link";
+import LogoIcon from "@/components/common/LogoIcon";
 
 function JoinPageContent() {
   const searchParams = useSearchParams();
@@ -318,11 +319,7 @@ function JoinPageContent() {
           {/* 로고 */}
           <div className="flex justify-center mb-4">
             <div className="w-16 h-16 flex items-center justify-center">
-              <img
-                src="/icon.svg"
-                alt="StewardFlow"
-                className="w-full h-full object-contain"
-              />
+              <LogoIcon className="w-full h-full" />
             </div>
           </div>
           <h1 className="text-xl md:text-2xl font-semibold text-center mb-2">

@@ -366,3 +366,9 @@ button.day-button abbr {
   text-decoration-style: none !important;
   border-bottom: none !important;
 }
+
+/* SVG 로고 배경 투명 처리 */
+svg[viewBox="0 0 1024 1024"] {
+  background: transparent !important;
+  background-color: transparent !important;
+}

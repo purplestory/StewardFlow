@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import NotificationBadge from "@/components/notifications/NotificationBadge";
 import { supabase } from "@/lib/supabase";
+import LogoIcon from "@/components/common/LogoIcon";
 
 type Role = "admin" | "manager" | "user";
 
@@ -401,12 +402,7 @@ export default function Header() {
     <header className="border-b border-neutral-200 bg-white">
       <div className="mx-auto flex w-full max-w-5xl items-center justify-between px-4 py-4">
         <Link href="/" className="flex items-center gap-1 text-xl md:text-2xl font-semibold hover:opacity-80 transition-opacity">
-          <img
-            src="/icon.svg"
-            alt="StewardFlow"
-            className="w-10 h-10 md:w-12 md:h-12 flex-shrink-0"
-            style={{ background: 'transparent' }}
-          />
+          <LogoIcon className="w-10 h-10 md:w-12 md:h-12 flex-shrink-0" />
           <span>StewardFlow</span>
         </Link>
         

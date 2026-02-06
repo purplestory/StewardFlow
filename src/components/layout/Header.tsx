@@ -96,12 +96,28 @@ export default function Header() {
         if (!isMounted) return;
         
         if (profileError) {
-          console.error("Profile fetch error:", profileError);
+          console.error("Header - Profile fetch error:", profileError);
+          console.error("Header - Error details:", {
+            code: profileError.code,
+            message: profileError.message,
+            details: profileError.details,
+            hint: profileError.hint,
+            userId: user.id,
+          });
           setRole("user");
           setHasOrganization(false);
           setLoading(false);
           return;
         }
+        
+        // 디버깅: 프로필 데이터 확인
+        console.log("Header - 프로필 데이터:", {
+          userId: user.id,
+          hasProfile: !!profileData,
+          role: profileData?.role,
+          organizationId: profileData?.organization_id,
+          name: profileData?.name,
+        });
         
         setRole((profileData?.role as Role) ?? "user");
         const orgId = profileData?.organization_id ?? null;

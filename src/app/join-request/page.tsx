@@ -235,7 +235,7 @@ export default function JoinRequestPage() {
             </button>
             <button
               type="button"
-              onClick={() => router.push("/")}
+              onClick={() => router.push("/?skip_redirect=true")}
               className="flex-1 btn-ghost"
               style={{ height: "38px" }}
             >

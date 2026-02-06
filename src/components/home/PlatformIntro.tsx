@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useState, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import LogoIcon from "@/components/common/LogoIcon";
@@ -12,8 +12,9 @@ type OrganizationFeatures = {
   vehicles?: boolean;
 };
 
-export default function PlatformIntro() {
+function PlatformIntroContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [features, setFeatures] = useState<OrganizationFeatures | null>(null);
   const [loading, setLoading] = useState(true);
@@ -31,8 +32,11 @@ export default function PlatformIntro() {
           .eq("id", user.id)
           .maybeSingle();
 
-        // organization_id가 없으면 가입 신청 페이지로 리다이렉트
-        if (!profileData?.organization_id) {
+        // skip_redirect 파라미터가 있으면 리다이렉트하지 않음
+        const skipRedirect = searchParams.get("skip_redirect") === "true";
+        
+        // organization_id가 없으면 가입 신청 페이지로 리다이렉트 (skip_redirect가 아닐 때만)
+        if (!profileData?.organization_id && !skipRedirect) {
           router.push("/join-request");
           return;
         }
@@ -73,7 +77,7 @@ export default function PlatformIntro() {
     return () => {
       subscription.unsubscribe();
     };
-  }, []);
+  }, [router, searchParams]);
 
   const handleCategoryClick = (category: "assets" | "spaces" | "vehicles") => {
     if (isAuthenticated && features) {
@@ -317,10 +321,10 @@ export default function PlatformIntro() {
       </div>
 
       {/* CTA */}
-      {!isAuthenticated && (
+      {(!isAuthenticated || (isAuthenticated && !features)) && (
         <div className="text-center mt-12">
           <Link
-            href="/login"
+            href={isAuthenticated ? "/join-request" : "/login"}
             className="w-auto rounded-lg bg-slate-900 px-8 text-base font-semibold text-white transition-all duration-200 hover:bg-slate-800 hover:shadow-md active:bg-slate-950 active:shadow-sm focus:outline-none focus:ring-2 focus:ring-slate-500 focus:ring-offset-2"
             style={{ height: "56px", fontSize: "20px", paddingLeft: "48px", paddingRight: "48px", display: "inline-flex", alignItems: "center", justifyContent: "center" }}
           >
@@ -329,5 +333,20 @@ export default function PlatformIntro() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function PlatformIntro() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-neutral-900 mx-auto"></div>
+          <p className="mt-4 text-sm text-neutral-600">로딩 중...</p>
+        </div>
+      </div>
+    }>
+      <PlatformIntroContent />
+    </Suspense>
   );
 }

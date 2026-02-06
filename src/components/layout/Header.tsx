@@ -430,21 +430,22 @@ export default function Header() {
             </Link>
           ))}
 
-          {/* User dropdown */}
+          {/* User menu */}
           {!loading && isAuthed && (
-            <div className="relative dropdown-menu">
-              <button
-                type="button"
-                onClick={() => toggleDropdown('user')}
-                className="hover:text-black flex items-center gap-1"
-              >
-                {userMenuLabel}
-                <span className="text-xs">▼</span>
-              </button>
-              {dropdownOpen === 'user' && (
-                <div className="absolute top-full left-0 mt-1 bg-white border border-neutral-200 rounded-lg shadow-lg py-1 min-w-[140px] z-50">
-                  {userItems.length > 0 && (
-                    <>
+            <div className="flex items-center gap-3">
+              {/* User dropdown (if there are menu items) */}
+              {userItems.length > 0 && (
+                <div className="relative dropdown-menu">
+                  <button
+                    type="button"
+                    onClick={() => toggleDropdown('user')}
+                    className="hover:text-black flex items-center gap-1"
+                  >
+                    {userMenuLabel}
+                    <span className="text-xs">▼</span>
+                  </button>
+                  {dropdownOpen === 'user' && (
+                    <div className="absolute top-full left-0 mt-1 bg-white border border-neutral-200 rounded-lg shadow-lg py-1 min-w-[140px] z-50">
                       {userItems.map((item, index) => (
                         <Link
                           key={`${item.href}-${index}`}
@@ -455,22 +456,18 @@ export default function Header() {
                           {item.label}
                         </Link>
                       ))}
-                      <div className="border-t border-neutral-200 my-1"></div>
-                    </>
+                    </div>
                   )}
-                  {/* 로그아웃 버튼 - 항상 표시 */}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setDropdownOpen(null);
-                      handleSignOut();
-                    }}
-                    className="w-full text-left px-4 py-2 hover:bg-neutral-50 text-neutral-600"
-                  >
-                    로그아웃
-                  </button>
                 </div>
               )}
+              {/* 로그아웃 버튼 - 항상 표시 */}
+              <button
+                type="button"
+                onClick={handleSignOut}
+                className="hover:text-black text-sm text-neutral-600"
+              >
+                로그아웃
+              </button>
             </div>
           )}
 

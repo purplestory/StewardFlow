@@ -50,11 +50,16 @@ SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
 
 ## 문서
 
-### 📚 메뉴얼
+### 📚 사용자 문서
 
-- **[일반 사용자 매뉴얼](./docs/user_manual_general.md)**: 일반 사용자를 위한 사용 가이드 ⭐ **최신**
-- **[부서 관리자 매뉴얼](./docs/user_manual_manager.md)**: 부서 관리자를 위한 관리 가이드 ⭐ **최신**
-- **[관리자 매뉴얼](./docs/admin_manual.md)**: 관리자를 위한 시스템 관리 가이드 ⭐ **최신**
+- **[StewardFlow 소개](./INTRO.md)**: 기관 구성원을 위한 시스템 소개 문서 ⭐ **신규**
+- **[통합 사용자 매뉴얼](./MANUAL.md)**: 모든 사용자를 위한 통합 가이드 ⭐ **최신**
+
+### 📖 관리자/개발자 문서
+
+- **[일반 사용자 매뉴얼](./docs/user_manual_general.md)**: 일반 사용자를 위한 사용 가이드
+- **[부서 관리자 매뉴얼](./docs/user_manual_manager.md)**: 부서 관리자를 위한 관리 가이드
+- **[관리자 매뉴얼](./docs/admin_manual.md)**: 관리자를 위한 시스템 관리 가이드
 - **[개발 메뉴얼](./docs/development_manual.md)**: 개발자를 위한 프로젝트 설정 및 개발 가이드
 
 ### 📖 추가 문서

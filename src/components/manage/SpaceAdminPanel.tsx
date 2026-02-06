@@ -302,20 +302,15 @@ export default function SpaceAdminPanel() {
               key={space.id}
               className="flex items-center justify-between rounded-lg border border-neutral-200 px-3 py-2 text-xs"
             >
-              <label className="flex items-center gap-2 flex-1">
+              <label className="flex items-center gap-2 flex-1 min-w-0">
                 <input
                   type="checkbox"
                   checked={selectedIds.has(space.id)}
                   onChange={() => toggleSelect(space.id)}
+                  className="flex-shrink-0"
                 />
-                <span>{space.name}</span>
-                <span className="text-neutral-400">
-                  ({space.owner_scope === "organization"
-                    ? "기관 공용"
-                    : space.owner_department})
-                </span>
-              </label>
-              <div className="flex items-center gap-2">
+                <span className="truncate">{space.name}</span>
+                {/* 상태 뱃지 - 제품명 옆에 표시 */}
                 <span
                   className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium flex-shrink-0 ${
                     space.status === "available"
@@ -355,6 +350,8 @@ export default function SpaceAdminPanel() {
                      space.status === "repair" ? "사용 불가" : "사용 불가"}
                   </span>
                 </span>
+              </label>
+              <div className="flex items-center gap-2">
                 <Link
                   href={`/spaces/${space.short_id || space.id}/edit`}
                   className="btn-ghost"

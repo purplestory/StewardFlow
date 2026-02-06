@@ -369,19 +369,7 @@ export default function ProfileEditor() {
     }
 
     // 일반 사용자는 즉시 탈퇴
-    // 프로필 삭제
-    const { error: deleteError } = await supabase
-      .from("profiles")
-      .delete()
-      .eq("id", user.id);
-
-    if (deleteError) {
-      setMessage(`계정 탈퇴 실패: ${deleteError.message}`);
-      setDeleting(false);
-      return;
-    }
-
-    // Audit log 기록 (계정 삭제)
+    // Audit log 기록 (계정 삭제 전에 기록)
     if (profile.organization_id) {
       await supabase.from("audit_logs").insert({
         organization_id: profile.organization_id,
@@ -394,6 +382,16 @@ export default function ProfileEditor() {
           deleted_user_email: profile.email,
         },
       });
+    }
+
+    // Server Action을 사용하여 auth.users와 profiles 모두 삭제
+    const { deleteUserAccount } = await import("@/actions/auth-actions");
+    const result = await deleteUserAccount(user.id);
+
+    if (!result.success) {
+      setMessage(result.error || "계정 탈퇴 실패");
+      setDeleting(false);
+      return;
     }
 
     // 로그아웃 및 리다이렉트

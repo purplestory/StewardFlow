@@ -1254,14 +1254,12 @@ export default function UserRoleManager() {
       });
     }
 
-    // 프로필 삭제
-    const { error: deleteError } = await supabase
-      .from("profiles")
-      .delete()
-      .eq("id", request.requester_id);
+    // Server Action을 사용하여 auth.users와 profiles 모두 삭제
+    const { deleteUserAccount } = await import("@/actions/auth-actions");
+    const deleteResult = await deleteUserAccount(request.requester_id);
 
-    if (deleteError) {
-      setMessage(`계정 삭제 실패: ${deleteError.message}`);
+    if (!deleteResult.success) {
+      setMessage(deleteResult.error || "계정 삭제 실패");
       setProcessingRequestId(null);
       return;
     }

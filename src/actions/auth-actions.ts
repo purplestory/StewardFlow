@@ -7,8 +7,12 @@ function getSupabaseAdmin() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
 
-  if (!supabaseUrl || !serviceRoleKey) {
-    throw new Error("Supabase 환경 변수가 설정되지 않았습니다.");
+  if (!supabaseUrl) {
+    throw new Error("NEXT_PUBLIC_SUPABASE_URL 환경 변수가 설정되지 않았습니다.");
+  }
+
+  if (!serviceRoleKey) {
+    throw new Error("SUPABASE_SERVICE_ROLE_KEY 환경 변수가 설정되지 않았습니다. Vercel 환경 변수 설정을 확인하세요.");
   }
 
   return createClient(supabaseUrl, serviceRoleKey, {
@@ -26,6 +30,17 @@ function getSupabaseAdmin() {
  */
 export async function deleteUserAccount(userId: string) {
   try {
+    // 환경 변수 확인
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
+
+    if (!supabaseUrl || !serviceRoleKey) {
+      return {
+        success: false,
+        error: "서버 설정 오류: 환경 변수가 설정되지 않았습니다. 관리자에게 문의하세요.",
+      };
+    }
+
     const supabaseAdmin = getSupabaseAdmin();
 
     // 1. 먼저 profiles 삭제 (RLS 정책 때문에 먼저 삭제)

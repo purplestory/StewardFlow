@@ -385,11 +385,18 @@ export default function ProfileEditor() {
     }
 
     // Server Action을 사용하여 auth.users와 profiles 모두 삭제
-    const { deleteUserAccount } = await import("@/actions/auth-actions");
-    const result = await deleteUserAccount(user.id);
+    try {
+      const { deleteUserAccount } = await import("@/actions/auth-actions");
+      const result = await deleteUserAccount(user.id);
 
-    if (!result.success) {
-      setMessage(result.error || "계정 탈퇴 실패");
+      if (!result.success) {
+        setMessage(result.error || "계정 탈퇴 실패");
+        setDeleting(false);
+        return;
+      }
+    } catch (error: any) {
+      console.error("Account deletion error:", error);
+      setMessage(`계정 탈퇴 중 오류가 발생했습니다: ${error.message || "알 수 없는 오류"}`);
       setDeleting(false);
       return;
     }

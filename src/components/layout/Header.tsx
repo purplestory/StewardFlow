@@ -433,8 +433,8 @@ export default function Header() {
           {/* User menu */}
           {!loading && isAuthed && (
             <div className="flex items-center gap-3">
-              {/* User dropdown (if there are menu items) */}
-              {userItems.length > 0 && (
+              {/* 가입 승인된 멤버: 드롭다운 메뉴 안에 로그아웃 포함 */}
+              {hasOrganization && userItems.length > 0 ? (
                 <div className="relative dropdown-menu">
                   <button
                     type="button"
@@ -456,18 +456,34 @@ export default function Header() {
                           {item.label}
                         </Link>
                       ))}
+                      {/* 로그아웃 버튼 - 드롭다운 맨 아래에 구분선과 함께 배치 */}
+                      <div className="border-t border-neutral-200 my-1"></div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setDropdownOpen(null);
+                          handleSignOut();
+                        }}
+                        className="w-full text-left px-4 py-2 hover:bg-neutral-50 text-neutral-600"
+                      >
+                        로그아웃
+                      </button>
                     </div>
                   )}
                 </div>
+              ) : (
+                /* 가입 신청 대기 중인 사용자: 사용자 이름과 로그아웃 버튼만 표시 */
+                <>
+                  <span className="text-sm text-neutral-600">{userMenuLabel}</span>
+                  <button
+                    type="button"
+                    onClick={handleSignOut}
+                    className="hover:text-black text-sm text-neutral-600"
+                  >
+                    로그아웃
+                  </button>
+                </>
               )}
-              {/* 로그아웃 버튼 - 항상 표시 */}
-              <button
-                type="button"
-                onClick={handleSignOut}
-                className="hover:text-black text-sm text-neutral-600"
-              >
-                로그아웃
-              </button>
             </div>
           )}
 

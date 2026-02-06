@@ -188,7 +188,11 @@ export default function UserRoleManager() {
         .is("organization_id", null)
         .order("created_at", { ascending: false });
 
-      if (!pendingError && pendingUsersData) {
+      if (pendingError) {
+        console.error("미승인 사용자 조회 오류:", pendingError);
+        setMessage(`미승인 사용자 조회 실패: ${pendingError.message}`);
+      } else if (pendingUsersData) {
+        console.log("미승인 사용자 조회 성공:", pendingUsersData.length, "명");
         setPendingUsers(pendingUsersData as ProfileRow[]);
       }
 

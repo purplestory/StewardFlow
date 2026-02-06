@@ -213,8 +213,8 @@ input[type="datetime-local"]::-webkit-datetime-edit-minute-field {
 /* 달력 팝업 자체는 브라우저가 제어하므로, 대신 입력 필드를 더 크게 만들어 사용성을 개선 */
 input[type="date"],
 input[type="datetime-local"] {
-  min-height: 48px;
-  padding: 12px 16px;
+  min-height: 38px;
+  padding: 8px 16px;
   font-size: 16px;
   box-sizing: border-box;
 }
@@ -223,8 +223,8 @@ input[type="datetime-local"] {
 
 /* 시간 필드는 고정 너비로 설정하여 잘림 방지 */
 input[type="time"] {
-  min-height: 48px;
-  padding: 12px 16px;
+  min-height: 38px;
+  padding: 8px 16px;
   font-size: 16px;
   box-sizing: border-box;
 }

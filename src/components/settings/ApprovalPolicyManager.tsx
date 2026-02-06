@@ -35,15 +35,7 @@ export default function ApprovalPolicyManager() {
   const [organizationId, setOrganizationId] = useState<string | null>(null);
   const [role, setRole] = useState<Profile["role"]>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
-  const [templateDepartment, setTemplateDepartment] = useState("");
   const [departments, setDepartments] = useState<string[]>([]);
-  const [previewScope, setPreviewScope] = useState<ApprovalPolicy["scope"]>(
-    "asset"
-  );
-  const [previewOwnerScope, setPreviewOwnerScope] = useState<
-    "organization" | "department"
-  >("department");
-  const [previewDepartment, setPreviewDepartment] = useState("");
 
   const load = async () => {
     setLoading(true);
@@ -97,25 +89,26 @@ export default function ApprovalPolicyManager() {
       setPolicies((data ?? []) as ApprovalPolicy[]);
     }
 
-    const [profileDepartments, assetDepartments, spaceDepartments, vehicleDepartments] =
-      await Promise.all([
-        supabase.from("profiles").select("department"),
-        supabase.from("assets").select("owner_department"),
-        supabase.from("spaces").select("owner_department"),
-        supabase.from("vehicles").select("owner_department"),
-      ]);
+    // 시스템에 등록된 부서 목록 로드
+    if (orgId) {
+      const { data: deptData, error: deptError } = await supabase
+        .from("departments")
+        .select("name")
+        .eq("organization_id", orgId)
+        .order("name", { ascending: true });
 
-    const merged = [
-      ...(profileDepartments.data ?? []).map((row) => row.department),
-      ...(assetDepartments.data ?? []).map((row) => row.owner_department),
-      ...(spaceDepartments.data ?? []).map((row) => row.owner_department),
-      ...(vehicleDepartments.data ?? []).map((row) => row.owner_department),
-    ]
-      .filter((value): value is string => Boolean(value))
-      .map((value) => value.trim())
-      .filter((value) => value.length > 0);
-
-    setDepartments(Array.from(new Set(merged)).sort());
+      if (!deptError && deptData) {
+        const departmentNames = deptData
+          .map((row) => row.name)
+          .filter((name): name is string => Boolean(name && name.trim()))
+          .map((name) => name.trim());
+        setDepartments(Array.from(new Set(departmentNames)));
+      } else {
+        setDepartments([]);
+      }
+    } else {
+      setDepartments([]);
+    }
 
     setLoading(false);
   };
@@ -165,21 +158,32 @@ export default function ApprovalPolicyManager() {
     }
   };
 
-  const handleDelete = async (policyId: string) => {
-    setMessage(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
 
-    const targetPolicy = policies.find((policy) => policy.id === policyId);
-    const { error } = await supabase
-      .from("approval_policies")
-      .delete()
-      .eq("id", policyId);
+  const handleDelete = (policyId: string) => {
+    setShowDeleteConfirm(policyId);
+  };
 
-    if (error) {
-      setMessage(error.message);
+  const confirmDelete = async () => {
+    if (!showDeleteConfirm) {
       return;
     }
 
-    setPolicies((prev) => prev.filter((policy) => policy.id !== policyId));
+    setMessage(null);
+
+    const targetPolicy = policies.find((policy) => policy.id === showDeleteConfirm);
+    const { error } = await supabase
+      .from("approval_policies")
+      .delete()
+      .eq("id", showDeleteConfirm);
+
+    if (error) {
+      setMessage(error.message);
+      setShowDeleteConfirm(null);
+      return;
+    }
+
+    setPolicies((prev) => prev.filter((policy) => policy.id !== showDeleteConfirm));
 
     if (organizationId && currentUserId) {
       await supabase.from("audit_logs").insert({
@@ -187,13 +191,15 @@ export default function ApprovalPolicyManager() {
         actor_id: currentUserId,
         action: "approval_policy_delete",
         target_type: "approval_policy",
-        target_id: policyId,
+        target_id: showDeleteConfirm,
         metadata: {
           scope: targetPolicy?.scope ?? null,
           department: targetPolicy?.department ?? null,
         },
       });
     }
+
+    setShowDeleteConfirm(null);
   };
 
   const handleCreate = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -213,7 +219,7 @@ export default function ApprovalPolicyManager() {
       return;
     }
 
-    const normalizedDepartment = departmentInput || null;
+    const normalizedDepartment = departmentInput && departmentInput.length > 0 ? departmentInput : null;
 
     const { data: existing } = await supabase
       .from("approval_policies")
@@ -260,129 +266,6 @@ export default function ApprovalPolicyManager() {
     await load();
   };
 
-  const handleCreateOrgTemplates = async () => {
-    setMessage(null);
-
-    if (!organizationId) {
-      setMessage("기관 정보가 없습니다.");
-      return;
-    }
-
-    const { data: existing } = await supabase
-      .from("approval_policies")
-      .select("id,scope,department")
-      .eq("organization_id", organizationId)
-      .eq("department", null);
-
-    const existingScopes = new Set(
-      (existing ?? []).map((row) => row.scope)
-    );
-
-    const rows = [
-      { scope: "asset", required_role: "admin" },
-      { scope: "space", required_role: "admin" },
-      { scope: "vehicle", required_role: "admin" },
-    ]
-      .filter((row) => !existingScopes.has(row.scope))
-      .map((row) => ({
-        organization_id: organizationId,
-        scope: row.scope,
-        department: null,
-        required_role: row.required_role,
-      }));
-
-    if (rows.length === 0) {
-      setMessage("기관 공용 정책이 이미 모두 등록되어 있습니다.");
-      return;
-    }
-
-    const { error } = await supabase.from("approval_policies").insert(rows);
-
-    if (error) {
-      setMessage(error.message);
-      return;
-    }
-
-    if (organizationId && currentUserId) {
-      await supabase.from("audit_logs").insert({
-        organization_id: organizationId,
-        actor_id: currentUserId,
-        action: "approval_policy_template_create",
-        target_type: "approval_policy",
-        metadata: {
-          template_type: "organization",
-          count: rows.length,
-        },
-      });
-    }
-    await load();
-  };
-
-  const handleCreateDepartmentTemplates = async () => {
-    setMessage(null);
-    const department = templateDepartment.trim();
-
-    if (!organizationId) {
-      setMessage("기관 정보가 없습니다.");
-      return;
-    }
-
-    if (!department) {
-      setMessage("부서명을 입력해주세요.");
-      return;
-    }
-
-    const { data: existing } = await supabase
-      .from("approval_policies")
-      .select("id,scope,department")
-      .eq("organization_id", organizationId)
-      .eq("department", department);
-
-    const existingScopes = new Set(
-      (existing ?? []).map((row) => row.scope)
-    );
-
-    const rows = [
-      { scope: "asset", required_role: "manager" },
-      { scope: "space", required_role: "manager" },
-      { scope: "vehicle", required_role: "manager" },
-    ]
-      .filter((row) => !existingScopes.has(row.scope))
-      .map((row) => ({
-        organization_id: organizationId,
-        scope: row.scope,
-        department,
-        required_role: row.required_role,
-      }));
-
-    if (rows.length === 0) {
-      setMessage("해당 부서 정책이 이미 모두 등록되어 있습니다.");
-      return;
-    }
-
-    const { error } = await supabase.from("approval_policies").insert(rows);
-
-    if (error) {
-      setMessage(error.message);
-      return;
-    }
-
-    setTemplateDepartment("");
-    if (organizationId && currentUserId) {
-      await supabase.from("audit_logs").insert({
-        organization_id: organizationId,
-        actor_id: currentUserId,
-        action: "approval_policy_template_create",
-        target_type: "approval_policy",
-        metadata: {
-          template_type: "department",
-          department,
-          count: rows.length,
-        },
-      });
-    }
-    await load();
-  };
 
   if (loading) {
     return (
@@ -418,138 +301,55 @@ export default function ApprovalPolicyManager() {
         </Notice>
       )}
 
+      <div>
+        <h3 className="text-lg font-semibold mb-2">승인정책 관리</h3>
+        <p className="text-sm text-neutral-600 mb-4">
+          물품, 공간, 차량의 대여 승인에 필요한 권한을 설정합니다.
+        </p>
+      </div>
+
       <div className="rounded-xl border border-neutral-200 bg-white p-6 space-y-4">
-        <h3 className="text-sm font-semibold text-neutral-900">기본 템플릿</h3>
-        <div className="flex flex-col gap-3 md:flex-row md:items-center">
-          <button
-            type="button"
-            onClick={handleCreateOrgTemplates}
-            className="px-4 py-2 rounded-lg text-sm font-medium transition-all bg-white text-neutral-700 border border-neutral-200 hover:bg-neutral-50 whitespace-nowrap"
+        <form
+          onSubmit={handleCreate}
+          className="grid gap-3 md:grid-cols-4"
+        >
+          <select
+            name="scope"
+            className="form-select"
           >
-            기관 공용 정책 생성
-          </button>
-          <span className="text-xs text-neutral-500">
-            기관 공용 물품/공간/차량은 관리자 승인으로 설정됩니다.
-          </span>
-        </div>
-        <div className="flex flex-col gap-3 md:flex-row md:items-center">
-          <input
-            value={templateDepartment}
-            onChange={(event) => setTemplateDepartment(event.target.value)}
-            className="form-input"
-            placeholder="부서명 입력 (예: 유년부)"
-            list="department-options"
-          />
-          <datalist id="department-options">
-            {departments.map((department) => (
-              <option key={department} value={department} />
+            <option value="asset">물품</option>
+            <option value="space">공간</option>
+            <option value="vehicle">차량</option>
+          </select>
+          <select
+            name="department"
+            className="form-select"
+          >
+            <option value="">기관 공용</option>
+            {departments.map((dept) => (
+              <option key={dept} value={dept}>
+                {dept}
+              </option>
             ))}
-          </datalist>
-          <button
-            type="button"
-            onClick={handleCreateDepartmentTemplates}
-            className="px-4 py-2 rounded-lg text-sm font-medium transition-all bg-white text-neutral-700 border border-neutral-200 hover:bg-neutral-50 whitespace-nowrap"
+          </select>
+          <select
+            name="required_role"
+            className="form-select"
           >
-            부서 정책 생성
+            <option value="manager">부서 관리자</option>
+            <option value="admin">관리자</option>
+            <option value="user">일반 사용자</option>
+          </select>
+          <button className="px-4 py-2 rounded-lg text-sm font-medium transition-all bg-neutral-900 text-white hover:bg-neutral-800 whitespace-nowrap">
+            정책 추가
           </button>
-        </div>
-      </div>
+        </form>
 
-      <div className="rounded-xl border border-neutral-200 bg-white p-6 space-y-4">
-        <h3 className="text-sm font-semibold text-neutral-900">승인 정책 적용 미리보기</h3>
-        <div className="grid gap-3 md:grid-cols-3">
-          <label className="flex flex-col gap-2">
-            <span className="form-label">대상</span>
-            <select
-              value={previewScope}
-              onChange={(event) =>
-                setPreviewScope(event.target.value as ApprovalPolicy["scope"])
-              }
-              className="form-select"
-            >
-              <option value="asset">물품</option>
-              <option value="space">공간</option>
-              <option value="vehicle">차량</option>
-            </select>
-          </label>
-          <label className="flex flex-col gap-2">
-            <span className="form-label">소유 범위</span>
-            <select
-              value={previewOwnerScope}
-              onChange={(event) =>
-                setPreviewOwnerScope(
-                  event.target.value as "organization" | "department"
-                )
-              }
-              className="form-select"
-            >
-              <option value="department">부서 소유</option>
-              <option value="organization">기관 공용</option>
-            </select>
-          </label>
-          <label className="flex flex-col gap-2">
-            <span className="form-label">부서명</span>
-            <input
-              value={previewDepartment}
-              onChange={(event) => setPreviewDepartment(event.target.value)}
-              className="form-input"
-              placeholder="부서명 입력 (예: 유년부)"
-              list="department-options"
-              disabled={previewOwnerScope === "organization"}
-            />
-          </label>
-        </div>
-        <div className="rounded-lg border border-dashed border-neutral-300 bg-neutral-50 px-4 py-3 text-sm text-neutral-700">
-          적용 권한:{" "}
-          {
-            roleLabels[
-              resolveRequiredRole(
-                policies,
-                previewScope,
-                previewOwnerScope,
-                previewDepartment
-              )
-            ]
-          }
-        </div>
-      </div>
-
-      <form
-        onSubmit={handleCreate}
-        className="grid gap-3 rounded-xl border border-neutral-200 bg-white p-6 md:grid-cols-4"
-      >
-        <select
-          name="scope"
-          className="form-select"
-        >
-          <option value="asset">물품</option>
-          <option value="space">공간</option>
-          <option value="vehicle">차량</option>
-        </select>
-        <input
-          name="department"
-          className="form-input"
-          placeholder="부서명 (비워두면 기관 공용)"
-        />
-        <select
-          name="required_role"
-          className="form-select"
-        >
-          <option value="manager">부서 관리자</option>
-          <option value="admin">관리자</option>
-          <option value="user">일반 사용자</option>
-        </select>
-        <button className="px-4 py-2 rounded-lg text-sm font-medium transition-all bg-neutral-900 text-white hover:bg-neutral-800 whitespace-nowrap">
-          정책 추가
-        </button>
-      </form>
-
-      <div className="rounded-xl border border-neutral-200 bg-white p-6">
         {policies.length === 0 ? (
           <div className="text-center text-sm text-neutral-500">
             <p>등록된 승인 정책이 없습니다.</p>
             <p className="mt-2 text-xs text-neutral-400">
-              위에서 정책을 추가하거나 템플릿을 생성해 주세요.
+              위에서 정책을 추가해 주세요.
             </p>
           </div>
         ) : (
@@ -603,29 +403,54 @@ export default function ApprovalPolicyManager() {
           </div>
         )}
       </div>
+
+      {/* 삭제 확인 모달 */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-md rounded-lg bg-white shadow-xl">
+            <div className="rounded-t-lg bg-rose-600 px-6 py-4">
+              <h3 className="text-lg font-semibold text-white">승인 정책 삭제</h3>
+            </div>
+            <div className="px-6 py-4 space-y-4">
+              <div className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3">
+                <p className="text-sm text-rose-700">
+                  정말 이 승인 정책을 삭제하시겠습니까?
+                </p>
+                {(() => {
+                  const targetPolicy = policies.find((p) => p.id === showDeleteConfirm);
+                  if (targetPolicy) {
+                    const scopeLabel = scopeLabels[targetPolicy.scope];
+                    const deptLabel = targetPolicy.department ?? "기관 공용";
+                    return (
+                      <p className="text-xs text-rose-600 mt-2">
+                        {scopeLabel} · {deptLabel} · {roleLabels[targetPolicy.required_role]}
+                      </p>
+                    );
+                  }
+                  return null;
+                })()}
+              </div>
+            </div>
+            <div className="flex gap-3 rounded-b-lg border-t border-neutral-200 bg-neutral-50 px-6 py-4">
+              <button
+                type="button"
+                onClick={confirmDelete}
+                className="flex-1 btn-primary bg-rose-600 hover:bg-rose-700"
+              >
+                삭제
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowDeleteConfirm(null)}
+                className="flex-1 btn-ghost"
+              >
+                취소
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
-const resolveRequiredRole = (
-  policies: ApprovalPolicy[],
-  scope: ApprovalPolicy["scope"],
-  ownerScope: "organization" | "department",
-  departmentInput: string
-): ApprovalPolicy["required_role"] => {
-  const department =
-    ownerScope === "organization" ? null : departmentInput.trim() || null;
-  const exactPolicy = policies.find(
-    (policy) =>
-      policy.scope === scope &&
-      policy.department === department
-  );
-  const fallbackPolicy = policies.find(
-    (policy) => policy.scope === scope && policy.department === null
-  );
-  return (
-    exactPolicy?.required_role ??
-    fallbackPolicy?.required_role ??
-    "manager"
-  );
-};

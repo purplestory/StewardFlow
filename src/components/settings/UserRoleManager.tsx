@@ -11,6 +11,7 @@ type ProfileRow = {
   name: string | null;
   department: string | null;
   role: "admin" | "manager" | "user";
+  organization_id: string | null;
 };
 
 type InviteRow = {
@@ -36,6 +37,7 @@ export default function UserRoleManager() {
   const [invites, setInvites] = useState<InviteRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState<string | null>(null);
+  const [successToast, setSuccessToast] = useState<string | null>(null);
   const [organizationId, setOrganizationId] = useState<string | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [currentUserRole, setCurrentUserRole] = useState<ProfileRow["role"]>(
@@ -52,6 +54,16 @@ export default function UserRoleManager() {
   const [departmentChangeRequests, setDepartmentChangeRequests] = useState<
     (DepartmentChangeRequest & { requester_name: string | null; requester_email: string })[]
   >([]);
+  const [pendingUsers, setPendingUsers] = useState<ProfileRow[]>([]);
+  const [allOrganizations, setAllOrganizations] = useState<Array<{ id: string; name: string }>>([]);
+  const [approvingUserId, setApprovingUserId] = useState<string | null>(null);
+  const [approvalOrganizationId, setApprovalOrganizationId] = useState<string>("");
+  const [approvalDepartment, setApprovalDepartment] = useState<string>("");
+  const [approvalRole, setApprovalRole] = useState<ProfileRow["role"]>("user");
+  const [approvalDepartments, setApprovalDepartments] = useState<string[]>([]);
+  const [showInviteLinkModal, setShowInviteLinkModal] = useState(false);
+  const [generatedInviteLink, setGeneratedInviteLink] = useState<string | null>(null);
+  const [inviteLinkCopied, setInviteLinkCopied] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -136,6 +148,43 @@ export default function UserRoleManager() {
     setOrganizationId(profileData.organization_id);
     setCurrentUserId(user.id);
     setCurrentUserRole(profileData.role ?? "user");
+
+    // 일반 사용자는 사용자 목록을 볼 수 없음
+    if (profileData.role === "user") {
+      setProfiles([]);
+      setInvites([]);
+      setPendingUsers([]);
+      setLoading(false);
+      setMessage("사용자 목록은 관리자 또는 부서 관리자만 볼 수 있습니다.");
+      return;
+    }
+
+    // 최고관리자(admin)만 미승인 사용자 목록 조회 가능
+    if (profileData.role === "admin") {
+      // organization_id가 null인 모든 사용자 조회 (미승인 사용자)
+      const { data: pendingUsersData, error: pendingError } = await supabase
+        .from("profiles")
+        .select("id,email,name,department,role,organization_id,created_at")
+        .is("organization_id", null)
+        .order("created_at", { ascending: false });
+
+      if (!pendingError && pendingUsersData) {
+        setPendingUsers(pendingUsersData as ProfileRow[]);
+      }
+
+      // 모든 기관 목록 조회 (최고관리자만)
+      const { data: orgsData, error: orgsError } = await supabase
+        .from("organizations")
+        .select("id,name")
+        .order("name", { ascending: true });
+
+      if (!orgsError && orgsData) {
+        setAllOrganizations(orgsData);
+      }
+    } else {
+      setPendingUsers([]);
+      setAllOrganizations([]);
+    }
 
     // Load departments for invitation
     const { data: deptData } = await supabase
@@ -369,6 +418,22 @@ export default function UserRoleManager() {
       return;
     }
 
+    // 부서 관리자는 일반 사용자를 부서 관리자까지만 변경 가능 (관리자로는 변경 불가)
+    if (currentUserRole === "manager" && role === "admin") {
+      setMessage("부서 관리자는 사용자를 관리자로 변경할 수 없습니다.");
+      return;
+    }
+
+    // 대상 사용자의 현재 역할 확인
+    const targetProfile = profiles.find((p) => p.id === profileId);
+    if (targetProfile) {
+      // 부서 관리자는 관리자 역할을 변경할 수 없음
+      if (currentUserRole === "manager" && targetProfile.role === "admin") {
+        setMessage("부서 관리자는 관리자 역할을 변경할 수 없습니다.");
+        return;
+      }
+    }
+
     const { error } = await supabase
       .from("profiles")
       .update({ role })
@@ -394,6 +459,10 @@ export default function UserRoleManager() {
       target_id: profileId,
       metadata: { role },
     });
+
+    // 성공 토스트 표시 후 자동으로 숨김
+    setSuccessToast("권한이 변경되었습니다.");
+    setTimeout(() => setSuccessToast(null), 2000);
   };
 
   const sendInvite = async () => {
@@ -458,6 +527,9 @@ export default function UserRoleManager() {
       .eq("id", organizationId)
       .maybeSingle();
 
+    let emailSent = false;
+    let emailError: string | null = null;
+
     // Send email via API (이메일이 있는 경우에만)
     if (email) {
       try {
@@ -475,56 +547,16 @@ export default function UserRoleManager() {
         const emailResult = await emailResponse.json();
 
         if (emailResult.ok) {
-          // Copy to clipboard as backup
-          try {
-            await navigator.clipboard.writeText(inviteLink);
-            setMessage(
-              `초대 이메일을 발송했습니다. 링크도 클립보드에 복사되었습니다.`
-            );
-          } catch {
-            setMessage(`초대 이메일을 발송했습니다.`);
-          }
+          emailSent = true;
         } else {
-          // Email failed, but invite link is still valid
-          try {
-            await navigator.clipboard.writeText(inviteLink);
-            setMessage(
-              `초대 링크가 생성되었고 클립보드에 복사되었습니다. (이메일 발송 실패: ${emailResult.message}) 링크: ${inviteLink}`
-            );
-          } catch {
-            setMessage(
-              `초대 링크가 생성되었습니다. (이메일 발송 실패: ${emailResult.message}) 링크: ${inviteLink}`
-            );
-          }
+          emailError = emailResult.message;
         }
       } catch (error) {
-        // API call failed, but invite link is still valid
-        try {
-          await navigator.clipboard.writeText(inviteLink);
-          setMessage(
-            `초대 링크가 생성되었고 클립보드에 복사되었습니다. (이메일 발송 오류) 링크: ${inviteLink}`
-          );
-        } catch {
-          setMessage(`초대 링크가 생성되었습니다. (이메일 발송 오류) 링크: ${inviteLink}`);
-        }
-      }
-    } else {
-      // 이메일이 없으면 링크만 복사
-      try {
-        await navigator.clipboard.writeText(inviteLink);
-        setMessage(
-          `초대 링크가 생성되었고 클립보드에 복사되었습니다. 링크: ${inviteLink}`
-        );
-      } catch {
-        setMessage(`초대 링크가 생성되었습니다. 링크: ${inviteLink}`);
+        emailError = "이메일 발송 오류";
       }
     }
 
-    setInvitationEmail("");
-    setInvitationName("");
-    setInvitationRole("user");
-    setInvitationDepartment("");
-
+    // audit log
     await supabase.from("audit_logs").insert({
       organization_id: organizationId,
       actor_id: currentUserId,
@@ -533,7 +565,16 @@ export default function UserRoleManager() {
       metadata: { email, role: invitationRole, has_link: true },
     });
 
-    await load();
+    // 초대 링크 모달 표시
+    setGeneratedInviteLink(inviteLink);
+    setInviteLinkCopied(false);
+    setShowInviteLinkModal(true);
+
+    // 폼 초기화
+    setInvitationEmail("");
+    setInvitationName("");
+    setInvitationRole("user");
+    setInvitationDepartment("");
   };
 
   const resendInvite = async (invite: InviteRow) => {
@@ -860,7 +901,7 @@ export default function UserRoleManager() {
         <div className="flex flex-wrap items-center gap-2">
           <input
             type="text"
-            className="form-input flex-1"
+            className="form-input flex-1 min-w-[120px]"
             placeholder="이름 (필수)"
             value={invitationName}
             onChange={(event) => setInvitationName(event.target.value)}
@@ -868,7 +909,7 @@ export default function UserRoleManager() {
             required
           />
           <input
-            className="form-input flex-1"
+            className="form-input flex-1 min-w-[120px]"
             placeholder="이메일 (선택사항, 가입 시 변경 가능)"
             value={invitationEmail}
             onChange={(event) => setInvitationEmail(event.target.value)}
@@ -878,7 +919,7 @@ export default function UserRoleManager() {
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <select
-            className="form-input"
+            className="form-select min-w-[140px]"
             value={invitationRole}
             onChange={(event) =>
               setInvitationRole(event.target.value as ProfileRow["role"])
@@ -887,10 +928,13 @@ export default function UserRoleManager() {
           >
             <option value="user">일반 사용자</option>
             <option value="manager">부서 관리자</option>
-            <option value="admin">관리자</option>
+            {/* 부서 관리자는 관리자 역할로 초대할 수 없음 */}
+            {currentUserRole === "admin" && (
+              <option value="admin">관리자</option>
+            )}
           </select>
           <select
-            className="form-input flex-1"
+            className="form-select flex-1 min-w-[140px]"
             value={invitationDepartment}
             onChange={(event) => setInvitationDepartment(event.target.value)}
             disabled={currentUserRole === "user"}
@@ -906,7 +950,7 @@ export default function UserRoleManager() {
             type="button"
             onClick={sendInvite}
             disabled={currentUserRole === "user" || !invitationName.trim()}
-            className="px-4 py-2 rounded-lg text-sm font-medium transition-all bg-neutral-900 text-white hover:bg-neutral-800"
+            className="px-4 py-2 rounded-lg text-sm font-medium transition-all bg-neutral-900 text-white hover:bg-neutral-800 whitespace-nowrap"
           >
             초대 링크 생성
           </button>
@@ -1029,7 +1073,123 @@ export default function UserRoleManager() {
         </div>
       )}
 
+      {/* 미승인 사용자 목록 (최고관리자만) */}
+      {currentUserRole === "admin" && pendingUsers.length > 0 && (
+        <div className="space-y-3 rounded-lg border border-amber-200 bg-amber-50 p-4">
+          <h3 className="text-sm font-semibold text-amber-900">미승인 사용자</h3>
+          <p className="text-xs text-amber-700">
+            초대코드 없이 가입한 사용자입니다. 기관, 부서, 권한을 지정하여 승인해주세요.
+          </p>
+          {pendingUsers.map((user) => (
+            <div
+              key={user.id}
+              className="rounded-lg border border-amber-200 bg-white p-3"
+            >
+              <div className="flex flex-wrap items-start justify-between gap-2">
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-neutral-900">
+                    {user.name || "이름 없음"}
+                  </p>
+                  <p className="text-xs text-neutral-500">{user.email}</p>
+                  <p className="text-xs text-neutral-400 mt-1">
+                    가입일: {formatDateTime(user.created_at || new Date().toISOString())}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleStartApproval(user.id)}
+                  className="h-10 px-4 rounded-lg text-sm font-medium transition-all bg-amber-600 text-white hover:bg-amber-700 whitespace-nowrap"
+                >
+                  승인하기
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* 승인 모달 */}
+      {approvingUserId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-md rounded-lg bg-white shadow-xl">
+            <div className="rounded-t-lg bg-amber-600 px-6 py-4">
+              <h3 className="text-lg font-semibold text-white">사용자 승인</h3>
+            </div>
+            <div className="px-6 py-4 space-y-4">
+              <div>
+                <label className="form-label">기관 선택</label>
+                <select
+                  className="form-select"
+                  value={approvalOrganizationId}
+                  onChange={(e) => handleOrganizationChange(e.target.value)}
+                  required
+                >
+                  <option value="">기관을 선택하세요</option>
+                  {allOrganizations.map((org) => (
+                    <option key={org.id} value={org.id}>
+                      {org.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              {approvalOrganizationId && (
+                <>
+                  <div>
+                    <label className="form-label">부서 선택 (선택사항)</label>
+                    <select
+                      className="form-select"
+                      value={approvalDepartment}
+                      onChange={(e) => setApprovalDepartment(e.target.value)}
+                    >
+                      <option value="">부서 없음</option>
+                      {approvalDepartments.map((dept) => (
+                        <option key={dept} value={dept}>
+                          {dept}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="form-label">권한</label>
+                    <select
+                      className="form-select"
+                      value={approvalRole}
+                      onChange={(e) =>
+                        setApprovalRole(e.target.value as ProfileRow["role"])
+                      }
+                      required
+                    >
+                      <option value="user">일반 사용자</option>
+                      <option value="manager">부서 관리자</option>
+                      <option value="admin">관리자</option>
+                    </select>
+                  </div>
+                </>
+              )}
+            </div>
+            <div className="flex gap-3 rounded-b-lg border-t border-neutral-200 bg-neutral-50 px-6 py-4">
+              <button
+                type="button"
+                onClick={handleApproveUser}
+                disabled={!approvalOrganizationId}
+                className="flex-1 btn-primary bg-amber-600 hover:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                승인
+              </button>
+              <button
+                type="button"
+                onClick={handleCancelApproval}
+                className="flex-1 btn-ghost"
+              >
+                취소
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="space-y-2">
+        <h3 className="text-sm font-semibold">등록된 사용자</h3>
         {profiles.length === 0 ? (
           <div className="rounded-lg border border-dashed border-neutral-300 p-6 text-center text-sm text-neutral-500">
             <p>등록된 사용자가 없습니다.</p>
@@ -1063,18 +1223,94 @@ export default function UserRoleManager() {
                     )
                   }
                   disabled={
-                    currentUserId === profile.id || currentUserRole === "user"
+                    currentUserId === profile.id || 
+                    currentUserRole === "user" ||
+                    // 부서 관리자는 관리자 역할을 변경할 수 없음
+                    (currentUserRole === "manager" && profile.role === "admin")
                   }
                 >
                   <option value="admin">관리자</option>
                   <option value="manager">부서 관리자</option>
                   <option value="user">일반 사용자</option>
                 </select>
+                {/* 부서 관리자는 일반 사용자를 부서 관리자까지만 변경 가능 */}
+                {currentUserRole === "manager" && profile.role !== "admin" && (
+                  <p className="text-xs text-neutral-400">
+                    부서 관리자까지만 변경 가능
+                  </p>
+                )}
               </div>
             </div>
           ))
         )}
       </div>
+
+      {/* 성공 토스트 모달 */}
+      {successToast && (
+        <div className="fixed bottom-4 right-4 z-50 animate-in slide-in-from-bottom-4">
+          <div className="rounded-lg bg-emerald-500 text-white px-4 py-3 shadow-lg flex items-center gap-2 min-w-[200px]">
+            <svg className="w-5 h-5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+            </svg>
+            <span className="text-sm font-medium">{successToast}</span>
+          </div>
+        </div>
+      )}
+
+      {/* 초대 링크 모달 */}
+      {showInviteLinkModal && generatedInviteLink && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-md rounded-lg bg-white shadow-xl">
+            <div className="rounded-t-lg bg-emerald-600 px-6 py-4">
+              <h3 className="text-lg font-semibold text-white">초대 링크 생성 완료</h3>
+            </div>
+            <div className="px-6 py-4 space-y-4">
+              <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3">
+                <p className="text-sm text-emerald-700 mb-2">
+                  초대 링크가 생성되었습니다. 아래 링크를 복사하여 공유하세요.
+                </p>
+                <div className="flex items-center gap-2 mt-3">
+                  <input
+                    type="text"
+                    readOnly
+                    value={generatedInviteLink}
+                    className="flex-1 form-input text-sm bg-white"
+                    onClick={(e) => (e.target as HTMLInputElement).select()}
+                  />
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      try {
+                        await navigator.clipboard.writeText(generatedInviteLink);
+                        setInviteLinkCopied(true);
+                        setTimeout(() => setInviteLinkCopied(false), 2000);
+                      } catch {
+                        setMessage("클립보드 복사에 실패했습니다.");
+                      }
+                    }}
+                    className="px-4 py-2 rounded-lg text-sm font-medium transition-all bg-emerald-600 text-white hover:bg-emerald-700 whitespace-nowrap"
+                  >
+                    {inviteLinkCopied ? "복사됨!" : "복사"}
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div className="flex gap-3 rounded-b-lg border-t border-neutral-200 bg-neutral-50 px-6 py-4">
+              <button
+                type="button"
+                onClick={async () => {
+                  setShowInviteLinkModal(false);
+                  setGeneratedInviteLink(null);
+                  await load();
+                }}
+                className="flex-1 btn-primary"
+              >
+                확인
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

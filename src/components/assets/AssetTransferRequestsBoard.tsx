@@ -548,16 +548,83 @@ export default function AssetTransferRequestsBoard() {
   return (
     <div className="space-y-4">
       <div className="rounded-2xl border border-neutral-200 bg-white p-6">
-        <h1 className="text-2xl font-semibold">불용품 양도 요청</h1>
-        <p className="mt-2 text-sm text-neutral-600">
-          내 요청과 내 부서로 들어온 요청을 확인할 수 있습니다.
-        </p>
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-semibold">불용품 양도 요청</h1>
+            <p className="mt-2 text-sm text-neutral-600">
+              내 요청과 내 부서로 들어온 요청을 확인할 수 있습니다.
+            </p>
+          </div>
+          <div className="flex items-center gap-3">
+            {lastLoadedAt && (
+              <span className="text-xs text-neutral-500 whitespace-nowrap">
+                최근 갱신: {formatDateTime(lastLoadedAt)}
+              </span>
+            )}
+            <button
+              type="button"
+              onClick={reload}
+              className="p-2 text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100 rounded transition-colors"
+              title="새로고침"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+            </button>
+          </div>
+        </div>
+        {/* 탭 메뉴 */}
+        <div className="mt-4 border-b border-neutral-200">
+          <nav className="-mb-px flex space-x-1" aria-label="요청 탭">
+            <button
+              type="button"
+              onClick={() => setFilter("mine")}
+              className={`
+                whitespace-nowrap border-b-2 px-4 py-3 text-sm font-medium transition-colors
+                ${
+                  filter === "mine"
+                    ? "border-black text-black"
+                    : "border-transparent text-neutral-500 hover:border-neutral-300 hover:text-neutral-700"
+                }
+              `}
+            >
+              내 요청
+            </button>
+            <button
+              type="button"
+              onClick={() => setFilter("incoming")}
+              className={`
+                whitespace-nowrap border-b-2 px-4 py-3 text-sm font-medium transition-colors
+                ${
+                  filter === "incoming"
+                    ? "border-black text-black"
+                    : "border-transparent text-neutral-500 hover:border-neutral-300 hover:text-neutral-700"
+                }
+              `}
+            >
+              내 부서 요청
+            </button>
+            {(role === "admin" || role === "manager") && (
+              <button
+                type="button"
+                onClick={() => setFilter("all")}
+                className={`
+                  whitespace-nowrap border-b-2 px-4 py-3 text-sm font-medium transition-colors
+                  ${
+                    filter === "all"
+                      ? "border-black text-black"
+                      : "border-transparent text-neutral-500 hover:border-neutral-300 hover:text-neutral-700"
+                  }
+                `}
+              >
+                전체
+              </button>
+            )}
+          </nav>
+        </div>
+        
+        {/* 상태 필터 버튼 */}
         <div className="mt-4 flex flex-wrap items-center gap-2">
-          {lastLoadedAt && (
-            <span className="text-xs text-neutral-500">
-              최근 갱신: {formatDateTime(lastLoadedAt)}
-            </span>
-          )}
           <button
             type="button"
             onClick={() => setStatusFilter("all")}
@@ -613,50 +680,6 @@ export default function AssetTransferRequestsBoard() {
           >
             취소 {statusCounts.cancelled}
           </button>
-          <button
-            type="button"
-            onClick={reload}
-            className="h-10 px-4 rounded-lg text-sm font-medium transition-all bg-white text-neutral-700 border border-neutral-200 hover:bg-neutral-50 whitespace-nowrap flex items-center justify-center"
-          >
-            새로고침
-          </button>
-        </div>
-        <div className="mt-4 flex flex-wrap items-center gap-2">
-          <button
-            type="button"
-            onClick={() => setFilter("mine")}
-            className={`h-10 px-4 rounded-lg text-sm font-medium transition-all whitespace-nowrap flex items-center justify-center ${
-              filter === "mine"
-                ? "bg-neutral-900 text-white"
-                : "bg-white text-neutral-700 border border-neutral-200 hover:bg-neutral-50"
-            }`}
-          >
-            내 요청
-          </button>
-          <button
-            type="button"
-            onClick={() => setFilter("incoming")}
-            className={`h-10 px-4 rounded-lg text-sm font-medium transition-all whitespace-nowrap flex items-center justify-center ${
-              filter === "incoming"
-                ? "bg-neutral-900 text-white"
-                : "bg-white text-neutral-700 border border-neutral-200 hover:bg-neutral-50"
-            }`}
-          >
-            내 부서 요청
-          </button>
-          {(role === "admin" || role === "manager") && (
-            <button
-              type="button"
-              onClick={() => setFilter("all")}
-              className={`h-10 px-4 rounded-lg text-sm font-medium transition-all whitespace-nowrap flex items-center justify-center ${
-                filter === "all"
-                  ? "bg-neutral-900 text-white"
-                  : "bg-white text-neutral-700 border border-neutral-200 hover:bg-neutral-50"
-              }`}
-            >
-              전체
-            </button>
-          )}
         </div>
       </div>
 
@@ -674,19 +697,6 @@ export default function AssetTransferRequestsBoard() {
           >
             <option value="latest">최신순</option>
             <option value="status">상태순</option>
-          </select>
-          <select
-            className="form-select"
-            value={statusFilter}
-            onChange={(event) =>
-              setStatusFilter(event.target.value as TransferRequestRow["status"] | "all")
-            }
-          >
-            <option value="all">전체 상태</option>
-            <option value="pending">대기</option>
-            <option value="approved">승인됨</option>
-            <option value="rejected">거절됨</option>
-            <option value="cancelled">취소됨</option>
           </select>
           <select
             className="form-select"
@@ -712,19 +722,6 @@ export default function AssetTransferRequestsBoard() {
             value={requesterQuery}
             onChange={(event) => setRequesterQuery(event.target.value)}
           />
-          <button
-            type="button"
-            onClick={() => {
-              setStatusFilter("all");
-              setDepartmentFilter("all");
-              setSearch("");
-              setRequesterQuery("");
-              setSortOrder("latest");
-            }}
-            className="h-10 px-4 rounded-lg text-sm font-medium transition-all bg-white text-neutral-700 border border-neutral-200 hover:bg-neutral-50 whitespace-nowrap flex items-center justify-center"
-          >
-            초기화
-          </button>
         </div>
       </div>
       <p className="text-xs text-neutral-400">
@@ -734,19 +731,6 @@ export default function AssetTransferRequestsBoard() {
       {filteredRequests.length === 0 ? (
         <Notice>
           <p>요청이 없습니다.</p>
-          <button
-            type="button"
-            onClick={() => {
-              setStatusFilter("all");
-              setDepartmentFilter("all");
-              setSearch("");
-              setRequesterQuery("");
-              setSortOrder("latest");
-            }}
-            className="mt-3 h-10 px-4 rounded-lg text-sm font-medium transition-all bg-white text-neutral-700 border border-neutral-200 hover:bg-neutral-50 whitespace-nowrap flex items-center justify-center"
-          >
-            필터 초기화
-          </button>
         </Notice>
       ) : (
         <div className="space-y-2">

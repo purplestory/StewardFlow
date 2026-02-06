@@ -29,7 +29,6 @@ const categoryLabel: Record<NonNullable<Asset["category"]>, string> = {
 
 export default function AssetCard({ asset, requiredRoleLabel }: AssetCardProps) {
   const tags = asset.tags ?? [];
-  const showUnused = !asset.last_used_at;
 
   const detailUrl = `/assets/${asset.short_id ?? asset.id}`;
   
@@ -146,13 +145,8 @@ export default function AssetCard({ asset, requiredRoleLabel }: AssetCardProps) 
       </div>
 
       {/* 태그 */}
-      {(tags.length > 0 || showUnused) && (
+      {tags.length > 0 && (
         <div className="mt-3 flex flex-wrap gap-1.5">
-          {showUnused && (
-            <span className="inline-flex items-center rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700 border border-amber-200">
-              미사용
-            </span>
-          )}
           {tags.map((tag) => (
             <span
               key={tag}

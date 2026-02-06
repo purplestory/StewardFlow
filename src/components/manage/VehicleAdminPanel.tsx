@@ -184,7 +184,7 @@ export default function VehicleAdminPanel() {
           href="/new?category=vehicles"
           className="btn-primary whitespace-nowrap"
         >
-          등록
+          차량 등록
         </Link>
       </div>
 
@@ -206,58 +206,91 @@ export default function VehicleAdminPanel() {
             value={query}
             onChange={(event) => setQuery(event.target.value)}
           />
-          <select
-            className="form-select h-10 text-xs"
-            value={statusFilter}
-            onChange={(event) =>
-              setStatusFilter(
-                event.target.value as Vehicle["status"] | "all"
-              )
-            }
-          >
-            {statusOptions.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center gap-2 text-xs">
-        <button
-          type="button"
-          disabled={updating}
-          onClick={() => bulkUpdateStatus("available")}
-          className="btn-ghost text-xs"
-        >
-          사용 가능
-        </button>
-        <button
-          type="button"
-          disabled={updating}
-          onClick={() => bulkUpdateStatus("rented")}
-          className="btn-ghost text-xs"
-        >
-          예약 중
-        </button>
-        <button
-          type="button"
-          disabled={updating}
-          onClick={() => bulkUpdateStatus("repair")}
-          className="btn-ghost text-xs"
-        >
-          사용 불가
-        </button>
-        <button
-          type="button"
-          disabled={updating}
-          onClick={() => bulkUpdateStatus("lost")}
-          className="btn-ghost text-xs"
-        >
-          사용 불가(분실)
-        </button>
+      {/* 상태 필터 버튼 */}
+      <div className="rounded-lg border border-neutral-200 bg-neutral-50 px-4 py-3">
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setStatusFilter("all")}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+              statusFilter === "all"
+                ? "bg-black text-white shadow-sm"
+                : "bg-white text-neutral-700 border border-neutral-300 hover:border-neutral-400 hover:bg-neutral-50"
+            }`}
+          >
+            전체
+          </button>
+          <button
+            type="button"
+            onClick={() => setStatusFilter("available")}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+              statusFilter === "available"
+                ? "bg-emerald-500 text-white shadow-sm"
+                : "bg-white text-neutral-700 border border-neutral-300 hover:border-emerald-200 hover:bg-emerald-50"
+            }`}
+          >
+            사용 가능
+          </button>
+          <button
+            type="button"
+            onClick={() => setStatusFilter("rented")}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+              statusFilter === "rented"
+                ? "bg-blue-500 text-white shadow-sm"
+                : "bg-white text-neutral-700 border border-neutral-300 hover:border-blue-200 hover:bg-blue-50"
+            }`}
+          >
+            예약 중
+          </button>
+          <button
+            type="button"
+            onClick={() => setStatusFilter("repair")}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+              statusFilter === "repair"
+                ? "bg-amber-500 text-white shadow-sm"
+                : "bg-white text-neutral-700 border border-neutral-300 hover:border-amber-200 hover:bg-amber-50"
+            }`}
+          >
+            사용 불가
+          </button>
+        </div>
       </div>
+
+      {/* 일괄 변경 - 선택된 항목이 있을 때만 표시 */}
+      {selectedIds.size > 0 && (
+        <div className="flex flex-wrap items-center gap-2 text-xs border-t border-neutral-200 pt-3 mt-3">
+          <span className="text-neutral-600 font-medium">
+            선택된 항목({selectedIds.size}건):
+          </span>
+          <select
+            className="form-select h-8 text-xs"
+            value=""
+            onChange={(event) => {
+              const status = event.target.value as Vehicle["status"];
+              if (status) {
+                bulkUpdateStatus(status);
+                event.target.value = ""; // 선택 초기화
+              }
+            }}
+            disabled={updating}
+          >
+            <option value="">일괄 상태 변경...</option>
+            <option value="available">→ 사용 가능</option>
+            <option value="rented">→ 예약 중</option>
+            <option value="repair">→ 사용 불가</option>
+          </select>
+          <button
+            type="button"
+            onClick={() => setSelectedIds(new Set())}
+            className="btn-ghost text-xs"
+          >
+            선택 해제
+          </button>
+        </div>
+      )}
 
       {message && (
         <Notice variant="error" className="p-3 text-xs">

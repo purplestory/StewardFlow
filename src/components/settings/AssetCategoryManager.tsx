@@ -29,6 +29,7 @@ export default function AssetCategoryManager({
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const [isReordering, setIsReordering] = useState(false);
   const [userRole, setUserRole] = useState<"admin" | "manager" | "user">("user");
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
 
   // 카테고리 코드를 자동 생성하는 함수 (시스템이 고유한 코드 생성)
   const generateCategoryValue = (): string => {
@@ -301,18 +302,17 @@ export default function AssetCategoryManager({
     setDragOverIndex(null);
   };
 
-  const handleDrop = async (e: React.DragEvent, dropIndex: number) => {
-    e.preventDefault();
-    setDragOverIndex(null);
-
-    if (draggedIndex === null || draggedIndex === dropIndex) {
+  const performDrop = async (dragIndex: number, dropIndex: number) => {
+    if (dragIndex === null || dragIndex === dropIndex) {
       setDraggedIndex(null);
+      setDragOverIndex(null);
       return;
     }
 
     if (!organizationId) {
       setMessage("기관 정보가 없습니다.");
       setDraggedIndex(null);
+      setDragOverIndex(null);
       return;
     }
 
@@ -321,7 +321,7 @@ export default function AssetCategoryManager({
 
     try {
       const newCategories = [...categories];
-      const [removed] = newCategories.splice(draggedIndex, 1);
+      const [removed] = newCategories.splice(dragIndex, 1);
       newCategories.splice(dropIndex, 0, removed);
 
       const { error } = await supabase
@@ -373,21 +373,86 @@ export default function AssetCategoryManager({
     } finally {
       setIsReordering(false);
       setDraggedIndex(null);
+      setDragOverIndex(null);
     }
   };
 
-  const handleDeleteCategory = async (value: string) => {
-    if (!organizationId) {
-      setMessage("기관 정보가 없습니다.");
+  const handleDrop = async (e: React.DragEvent, dropIndex: number) => {
+    e.preventDefault();
+    if (draggedIndex === null || draggedIndex === dropIndex) {
+      setDraggedIndex(null);
+      setDragOverIndex(null);
+      return;
+    }
+    await performDrop(draggedIndex, dropIndex);
+  };
+
+  // 모바일 터치 이벤트 핸들러
+  const [touchStartY, setTouchStartY] = useState<number | null>(null);
+  const [touchCurrentIndex, setTouchCurrentIndex] = useState<number | null>(null);
+
+  const handleTouchStart = (e: React.TouchEvent, index: number) => {
+    if (isReordering || editingCategoryValue !== null) return;
+    const touch = e.touches[0];
+    setTouchStartY(touch.clientY);
+    setTouchCurrentIndex(index);
+    setDraggedIndex(index);
+  };
+
+  const handleTouchMove = (e: React.TouchEvent, index: number) => {
+    if (touchStartY === null || touchCurrentIndex === null) return;
+    e.preventDefault();
+    
+    const touch = e.touches[0];
+    const currentY = touch.clientY;
+    const element = document.elementFromPoint(touch.clientX, touch.clientY);
+    const dragItem = element?.closest('[data-drag-index]');
+    
+    if (dragItem) {
+      const targetIndex = parseInt(dragItem.getAttribute('data-drag-index') || '-1');
+      if (targetIndex !== -1 && targetIndex !== draggedIndex) {
+        setDragOverIndex(targetIndex);
+      }
+    }
+  };
+
+  const handleTouchEnd = async (e: React.TouchEvent, index: number) => {
+    if (touchStartY === null || touchCurrentIndex === null) return;
+    
+    const touch = e.changedTouches[0];
+    const element = document.elementFromPoint(touch.clientX, touch.clientY);
+    const dragItem = element?.closest('[data-drag-index]');
+    
+    if (dragItem) {
+      const dropIndex = parseInt(dragItem.getAttribute('data-drag-index') || '-1');
+      if (dropIndex !== -1 && dropIndex !== touchCurrentIndex) {
+        await performDrop(touchCurrentIndex, dropIndex);
+      }
+    }
+    
+    setTouchStartY(null);
+    setTouchCurrentIndex(null);
+    setDraggedIndex(null);
+    setDragOverIndex(null);
+  };
+
+  const handleDeleteCategory = (value: string) => {
+    setShowDeleteConfirm(value);
+  };
+
+  const confirmDeleteCategory = async () => {
+    if (!showDeleteConfirm || !organizationId) {
       return;
     }
 
-    if (!confirm(`정말 "${categories.find((c) => c.value === value)?.label}" 카테고리를 삭제하시겠습니까?`)) {
+    const categoryToDelete = categories.find((c) => c.value === showDeleteConfirm);
+    if (!categoryToDelete) {
+      setShowDeleteConfirm(null);
       return;
     }
 
     try {
-      const updatedCategories = categories.filter((cat) => cat.value !== value);
+      const updatedCategories = categories.filter((cat) => cat.value !== showDeleteConfirm);
 
       const { error } = await supabase
         .from("organizations")
@@ -400,11 +465,13 @@ export default function AssetCategoryManager({
 
       setCategories(updatedCategories);
       setMessage("카테고리가 삭제되었습니다.");
+      setShowDeleteConfirm(null);
     } catch (error) {
       console.error("Error deleting category:", error);
       setMessage(
         `카테고리 삭제 실패: ${error instanceof Error ? error.message : "알 수 없는 오류"}`
       );
+      setShowDeleteConfirm(null);
     }
   };
 
@@ -440,10 +507,10 @@ export default function AssetCategoryManager({
       <div className="space-y-4">
         <div className="rounded-lg border border-neutral-200 bg-white p-4">
           <h4 className="text-sm font-semibold mb-3">카테고리 추가</h4>
-          <div className="flex flex-col sm:flex-row gap-2 items-center">
+          <div className="flex gap-2">
             <input
               type="text"
-              className="form-input flex-1 h-10"
+              className="form-input flex-1"
               placeholder="카테고리명 (예: 음향)"
               value={newCategoryLabel}
               onChange={(e) => setNewCategoryLabel(e.target.value)}
@@ -452,7 +519,7 @@ export default function AssetCategoryManager({
               type="button"
               onClick={handleAddCategory}
               disabled={isAdding || !newCategoryLabel.trim()}
-              className="btn-primary w-auto sm:w-auto"
+              className="btn-primary whitespace-nowrap flex-shrink-0"
             >
               {isAdding ? "추가 중..." : "추가"}
             </button>
@@ -471,11 +538,15 @@ export default function AssetCategoryManager({
               {categories.map((category, index) => (
                 <div
                   key={category.value}
+                  data-drag-index={index}
                   draggable={!isReordering && editingCategoryValue === null}
                   onDragStart={() => handleDragStart(index)}
                   onDragOver={(e) => handleDragOver(e, index)}
                   onDragLeave={handleDragLeave}
                   onDrop={(e) => handleDrop(e, index)}
+                  onTouchStart={(e) => handleTouchStart(e, index)}
+                  onTouchMove={(e) => handleTouchMove(e, index)}
+                  onTouchEnd={(e) => handleTouchEnd(e, index)}
                   className={`flex items-center justify-between p-2 rounded border border-neutral-200 bg-neutral-50 transition-all ${
                     draggedIndex === index
                       ? "opacity-50 cursor-grabbing"
@@ -486,7 +557,7 @@ export default function AssetCategoryManager({
                 >
                   <div className="flex items-center gap-2 flex-1">
                     <svg
-                      className="w-4 h-4 text-neutral-400"
+                      className="w-5 h-5 text-neutral-400 flex-shrink-0"
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
@@ -540,20 +611,20 @@ export default function AssetCategoryManager({
                           <button
                             type="button"
                             onClick={() => handleEditCategory(category.value)}
-                            className="p-1.5 text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100 rounded transition-colors"
+                            className="p-2 text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100 rounded transition-colors"
                             title="수정"
                           >
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                             </svg>
                           </button>
                           <button
                             type="button"
                             onClick={() => handleDeleteCategory(category.value)}
-                            className="p-1.5 text-rose-600 hover:text-rose-700 hover:bg-rose-50 rounded transition-colors"
+                            className="p-2 text-rose-600 hover:text-rose-700 hover:bg-rose-50 rounded transition-colors"
                             title="삭제"
                           >
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                             </svg>
                           </button>
@@ -567,6 +638,43 @@ export default function AssetCategoryManager({
           )}
         </div>
       </div>
+
+      {/* 삭제 확인 모달 */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-md rounded-lg bg-white shadow-xl">
+            <div className="rounded-t-lg bg-rose-600 px-6 py-4">
+              <h3 className="text-lg font-semibold text-white">카테고리 삭제</h3>
+            </div>
+            <div className="px-6 py-4 space-y-4">
+              <div className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3">
+                <p className="text-sm text-rose-700">
+                  정말 "{categories.find((c) => c.value === showDeleteConfirm)?.label}" 카테고리를 삭제하시겠습니까?
+                </p>
+                <p className="text-xs text-rose-600 mt-2">
+                  이 카테고리를 사용하는 물품들은 카테고리 정보가 제거될 수 있습니다.
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-3 rounded-b-lg border-t border-neutral-200 bg-neutral-50 px-6 py-4">
+              <button
+                type="button"
+                onClick={confirmDeleteCategory}
+                className="flex-1 btn-primary bg-rose-600 hover:bg-rose-700"
+              >
+                삭제
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowDeleteConfirm(null)}
+                className="flex-1 btn-ghost"
+              >
+                취소
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

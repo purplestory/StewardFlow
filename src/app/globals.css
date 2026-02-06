@@ -139,24 +139,31 @@ body {
 
 /* Professional Form Styles - Unified Design System */
 .form-input {
-  @apply h-10 w-full rounded-lg border border-neutral-200 bg-white px-4 text-sm font-normal text-neutral-900 placeholder:text-neutral-400 transition-all duration-200;
+  @apply h-10 w-full rounded-lg border border-neutral-200 bg-white text-sm font-normal text-neutral-900 placeholder:text-neutral-400 transition-all duration-200;
   @apply focus:border-slate-600 focus:outline-none focus:ring-2 focus:ring-slate-500/20 focus:shadow-sm;
   @apply disabled:bg-neutral-50 disabled:text-neutral-500 disabled:cursor-not-allowed;
   @apply hover:border-neutral-300;
+  box-sizing: border-box;
+  padding-left: 1rem;
+  padding-right: 1rem;
+  text-align: left;
 }
 
 .form-select {
-  @apply h-10 w-full rounded-lg border border-neutral-200 bg-white px-4 text-sm font-normal text-neutral-900 transition-all duration-200;
+  @apply h-10 w-full rounded-lg border border-neutral-200 bg-white text-sm font-normal text-neutral-900 transition-all duration-200;
   @apply focus:border-slate-600 focus:outline-none focus:ring-2 focus:ring-slate-500/20 focus:shadow-sm;
   @apply disabled:bg-neutral-50 disabled:text-neutral-500 disabled:cursor-not-allowed;
   @apply hover:border-neutral-300;
   /* select 요소의 높이를 정확히 맞추기 위한 추가 스타일 */
+  box-sizing: border-box;
   appearance: none;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3E%3C/svg%3E");
   background-position: right 0.75rem center;
   background-repeat: no-repeat;
   background-size: 1.25em 1.25em;
+  padding-left: 1rem;
   padding-right: 2.75rem;
+  text-align: left;
 }
 
 .form-textarea {
@@ -170,8 +177,6 @@ body {
 input[type="date"],
 input[type="datetime-local"] {
   font-size: 16px; /* iOS에서 줌 방지 */
-  width: 100%;
-  max-width: 100%;
   box-sizing: border-box;
 }
 
@@ -211,8 +216,16 @@ input[type="datetime-local"] {
   min-height: 48px;
   padding: 12px 16px;
   font-size: 16px;
-  width: 100%;
-  max-width: 100%;
+  box-sizing: border-box;
+}
+
+/* 날짜 필드는 인라인 스타일로 크기 조정 */
+
+/* 시간 필드는 고정 너비로 설정하여 잘림 방지 */
+input[type="time"] {
+  min-height: 48px;
+  padding: 12px 16px;
+  font-size: 16px;
   box-sizing: border-box;
 }
 

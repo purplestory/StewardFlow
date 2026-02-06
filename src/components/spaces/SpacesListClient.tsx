@@ -91,7 +91,7 @@ export default function SpacesListClient() {
             <button
               type="button"
               onClick={() => setShowRegisterForm(!showRegisterForm)}
-              className="px-4 py-2 rounded-lg text-sm font-medium transition-all bg-neutral-900 text-white hover:bg-neutral-800"
+              className="px-4 py-2 rounded-lg text-sm font-medium transition-all bg-neutral-900 text-white hover:bg-neutral-800 whitespace-nowrap"
             >
               {showRegisterForm ? "목록 보기" : "공간 등록"}
             </button>

@@ -424,58 +424,28 @@ export default function OrganizationManager() {
                   {organization.name}
                 </p>
                 {userRole === "admin" && (
-                  <button
-                    type="button"
-                    onClick={() => setIsEditingName(true)}
-                    className="text-xs text-neutral-500 hover:text-neutral-700"
-                  >
-                    수정
-                  </button>
+                  <div className="flex items-center gap-1 text-xs text-neutral-500">
+                    <button
+                      type="button"
+                      onClick={() => setIsEditingName(true)}
+                      className="hover:text-neutral-700"
+                    >
+                      수정
+                    </button>
+                    <span className="text-neutral-300">|</span>
+                    <button
+                      type="button"
+                      onClick={() => setShowDeleteConfirm(true)}
+                      disabled={loading}
+                      className="text-rose-600 hover:text-rose-700 disabled:opacity-50"
+                    >
+                      삭제
+                    </button>
+                  </div>
                 )}
               </div>
             )}
-            <p className="mt-1 text-xs text-neutral-500">
-              기관 ID: {organizationId}
-            </p>
           </div>
-
-          {userRole === "admin" && (
-            <div className="pt-4 border-t border-neutral-200">
-              <button
-                type="button"
-                onClick={() => setShowDeleteConfirm(true)}
-                disabled={loading}
-                className="text-sm text-rose-600 hover:text-rose-700 disabled:opacity-50"
-              >
-                기관 삭제
-              </button>
-              {showDeleteConfirm && (
-                <div className="mt-3 p-4 bg-rose-50 border border-rose-200 rounded-lg">
-                  <p className="text-sm text-rose-900 mb-3">
-                    기관을 삭제하면 모든 데이터(부서, 물품, 공간, 예약 등)가 영구적으로 삭제됩니다. 이 작업은 되돌릴 수 없습니다.
-                  </p>
-                  <div className="flex gap-2">
-                    <button
-                      type="button"
-                      onClick={handleDelete}
-                      disabled={loading}
-                      className="btn-sm bg-rose-600 text-white hover:bg-rose-700"
-                    >
-                      삭제 확인
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setShowDeleteConfirm(false)}
-                      disabled={loading}
-                      className="btn-secondary btn-sm"
-                    >
-                      취소
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
         </div>
       ) : (
         <form
@@ -505,6 +475,45 @@ export default function OrganizationManager() {
       {organizationId && (
         <div className="rounded-xl border border-neutral-200 bg-white p-6">
           <DepartmentManager organizationId={organizationId} />
+        </div>
+      )}
+
+      {/* 삭제 확인 모달 */}
+      {showDeleteConfirm && userRole === "admin" && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-md rounded-lg bg-white shadow-xl">
+            <div className="rounded-t-lg bg-rose-600 px-6 py-4">
+              <h3 className="text-lg font-semibold text-white">기관 삭제</h3>
+            </div>
+            <div className="px-6 py-4 space-y-4">
+              <div className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3">
+                <p className="text-sm text-rose-900 mb-2">
+                  정말 "{organization?.name}" 기관을 삭제하시겠습니까?
+                </p>
+                <p className="text-xs text-rose-700">
+                  기관을 삭제하면 모든 데이터(부서, 물품, 공간, 예약 등)가 영구적으로 삭제됩니다. 이 작업은 되돌릴 수 없습니다.
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-3 rounded-b-lg border-t border-neutral-200 bg-neutral-50 px-6 py-4">
+              <button
+                type="button"
+                onClick={handleDelete}
+                disabled={loading}
+                className="flex-1 btn-primary bg-rose-600 hover:bg-rose-700 disabled:opacity-50"
+              >
+                삭제
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowDeleteConfirm(false)}
+                disabled={loading}
+                className="flex-1 btn-ghost"
+              >
+                취소
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

@@ -193,9 +193,11 @@ export default function AuthCard() {
 
         setProfile(profileData as Profile);
         
-        // If user has no organization, they can create one (first admin)
+        // If user has no organization, they are pending approval
+        // They can only see the main page until an admin approves them
         if (!profileData.organization_id) {
-          // Don't auto-create, let user do it manually
+          // 미승인 사용자: 메인 페이지만 보여줌
+          // 프로필은 설정하되 organization_id가 없음을 표시
         } else if (currentUser) {
           await acceptInvitation(currentUser.id, currentUser.email ?? "");
         }
@@ -267,13 +269,23 @@ export default function AuthCard() {
 
     try {
       const origin = getOrigin();
-      console.log("Starting Kakao login, origin:", origin);
+      const redirectUrl = `${origin}/auth/callback?next=/`;
+      console.log("Starting Kakao login:", {
+        origin,
+        redirectUrl,
+        windowOrigin: typeof window !== "undefined" ? window.location.origin : "N/A",
+        envUrl: process.env.NEXT_PUBLIC_APP_URL || "not set",
+      });
       
-      // OAuth URL 생성
+      // OAuth URL 생성 - redirectTo를 명시적으로 설정하고 queryParams에도 추가
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: "kakao",
         options: {
-          redirectTo: `${origin}/auth/callback?next=/`,
+          redirectTo: redirectUrl,
+          queryParams: {
+            redirect_to: redirectUrl,
+            prompt: "select_account", // 항상 계정 선택 화면 표시
+          },
         },
       });
 

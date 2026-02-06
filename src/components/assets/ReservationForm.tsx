@@ -105,13 +105,14 @@ export default function ReservationForm({
           <div className="grid gap-3 grid-cols-1 md:grid-cols-3 w-full">
             <div className="flex flex-col gap-2 w-full min-w-0">
               <label className="form-label">시작일시</label>
-              <div className="flex gap-2 w-full">
+              <div className="flex gap-2 w-full items-stretch">
                 <input
                   type="date"
                   value={startDate}
                   onChange={(e) => setStartDate(e.target.value)}
                   max={endDate || undefined}
-                  className="form-input text-base md:text-sm flex-1 min-w-0"
+                  className="form-input text-base md:text-sm"
+                  style={{ flex: '1 1 0', minWidth: '110px' }}
                   required
                   disabled={isDisabled}
                 />
@@ -119,7 +120,8 @@ export default function ReservationForm({
                   type="time"
                   value={startTime}
                   onChange={(e) => setStartTime(e.target.value)}
-                  className="form-input text-base md:text-sm w-[100px] flex-shrink-0"
+                  className="form-input text-base md:text-sm flex-shrink-0"
+                  style={{ width: '120px', minWidth: '120px', flexShrink: 0 }}
                   required
                   disabled={isDisabled}
                 />
@@ -127,13 +129,14 @@ export default function ReservationForm({
             </div>
             <div className="flex flex-col gap-2 w-full min-w-0">
               <label className="form-label">종료일시</label>
-              <div className="flex gap-2 w-full">
+              <div className="flex gap-2 w-full items-stretch">
                 <input
                   type="date"
                   value={endDate}
                   onChange={(e) => setEndDate(e.target.value)}
                   min={startDate || undefined}
-                  className="form-input text-base md:text-sm flex-1 min-w-0"
+                  className="form-input text-base md:text-sm"
+                  style={{ flex: '1 1 0', minWidth: '110px' }}
                   required
                   disabled={isDisabled}
                 />
@@ -141,7 +144,8 @@ export default function ReservationForm({
                   type="time"
                   value={endTime}
                   onChange={(e) => setEndTime(e.target.value)}
-                  className="form-input text-base md:text-sm w-[100px] flex-shrink-0"
+                  className="form-input text-base md:text-sm flex-shrink-0"
+                  style={{ width: '120px', minWidth: '120px', flexShrink: 0 }}
                   required
                   disabled={isDisabled}
                 />

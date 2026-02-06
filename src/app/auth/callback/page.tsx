@@ -94,11 +94,13 @@ function AuthCallbackPageContent() {
             return; // 여기서 반드시 종료 - 리다이렉트하지 않음
           }
           
-          // 일반 페이지 리다이렉트 - 즉시 이동 (로그인 페이지를 거치지 않음)
-          // 세션 확인을 기다리지 않고 즉시 리다이렉트 (세션은 이미 설정됨)
+          // 일반 페이지 리다이렉트 - 현재 origin 확인 후 리다이렉트
           const next = searchParams.get("next") || "/";
+          const currentOrigin = window.location.origin;
+          const nextUrl = next.startsWith("http") ? next : `${currentOrigin}${next}`;
+          console.log("Redirecting after OAuth (hash flow):", { currentOrigin, next, nextUrl });
           // replace를 사용하여 히스토리에 남기지 않음
-          window.location.replace(next);
+          window.location.replace(nextUrl);
           return;
         }
 
@@ -166,11 +168,13 @@ function AuthCallbackPageContent() {
             return; // 여기서 반드시 종료 - 리다이렉트하지 않음
           }
           
-          // 일반 페이지 리다이렉트 - 즉시 이동 (로그인 페이지를 거치지 않음)
-          // 세션 확인을 기다리지 않고 즉시 리다이렉트 (세션은 이미 설정됨)
+          // 일반 페이지 리다이렉트 - 현재 origin 확인 후 리다이렉트
           const next = searchParams.get("next") || "/";
+          const currentOrigin = window.location.origin;
+          const nextUrl = next.startsWith("http") ? next : `${currentOrigin}${next}`;
+          console.log("Redirecting after OAuth (code flow):", { currentOrigin, next, nextUrl });
           // replace를 사용하여 히스토리에 남기지 않음
-          window.location.replace(next);
+          window.location.replace(nextUrl);
           return;
         }
 

@@ -5,6 +5,7 @@ import ReservationManager from "@/components/manage/ReservationManager";
 import OrganizationGate from "@/components/settings/OrganizationGate";
 import AssetAdminPanel from "@/components/manage/AssetAdminPanel";
 import CategoryTabs from "@/components/manage/CategoryTabs";
+import ManageLayout from "@/components/manage/ManageLayout";
 import AssetTransferRequestsBoard from "@/components/assets/AssetTransferRequestsBoard";
 import SampleDataGenerator from "@/components/settings/SampleDataGenerator";
 import { supabase } from "@/lib/supabase";
@@ -35,10 +36,10 @@ export default function AssetManagePage() {
   }, []);
 
   return (
-    <section className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold">자원 관리</h1>
-        <p className="text-sm text-neutral-600 mt-2">
+    <ManageLayout>
+      <div className="rounded-xl border border-neutral-200 bg-white p-6 mb-6">
+        <h2 className="text-lg font-semibold">자원 관리</h2>
+        <p className="text-sm text-neutral-600 mt-1">
           물품 상태 관리와 예약 승인 처리를 함께 수행합니다.
         </p>
       </div>
@@ -64,6 +65,6 @@ export default function AssetManagePage() {
           )}
         </div>
       </OrganizationGate>
-    </section>
+    </ManageLayout>
   );
 }

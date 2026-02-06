@@ -272,6 +272,10 @@ export default function Header() {
 
   // Main navigation items (always visible) - ordered by menu_order
   const mainNavItems = useMemo(() => {
+    // organization_id가 없는 사용자는 메뉴 숨기기 (메인 페이지만 접근 가능)
+    if (!hasOrganization) {
+      return [];
+    }
     // Don't show menu items until data is loaded
     if (!features || !menuLabels) {
       return [];
@@ -351,13 +355,17 @@ export default function Header() {
   // User menu items
   const userItems = useMemo(() => {
     if (!isAuthed) return [];
+    // organization_id가 없는 사용자는 메뉴 숨기기
+    if (!hasOrganization) {
+      return [];
+    }
 
     return [
       { href: "/notifications", label: "알림" },
       { href: "/my", label: "마이페이지" },
-      { href: "/manage", label: "관리페이지" },
+      { href: "/assets/manage", label: "관리페이지" },
     ];
-  }, [isAuthed]);
+  }, [isAuthed, hasOrganization]);
 
   // 사용자 메뉴명 생성: '이름(부서)' 형식
   const userMenuLabel = useMemo(() => {

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import FeatureSettings from "@/components/settings/FeatureSettings";
 import AssetCategoryManager from "@/components/settings/AssetCategoryManager";
 import OrganizationGate from "@/components/settings/OrganizationGate";
+import ManageLayout from "@/components/manage/ManageLayout";
 import Notice from "@/components/common/Notice";
 import { supabase } from "@/lib/supabase";
 
@@ -60,10 +61,10 @@ export default function MenuSettingsPage() {
   }
 
   return (
-    <section className="space-y-6">
-      <div className="rounded-2xl border border-neutral-200 bg-white p-6">
-        <h1 className="text-2xl font-semibold">서비스 메뉴 설정</h1>
-        <p className="mt-2 text-sm text-neutral-600">
+    <ManageLayout>
+      <div className="rounded-xl border border-neutral-200 bg-white p-6 mb-6">
+        <h2 className="text-lg font-semibold">서비스 메뉴 설정</h2>
+        <p className="text-sm text-neutral-600 mt-1">
           기관에서 사용할 기능을 활성화/비활성화하고, 메뉴 이름과 순서를 설정할 수 있습니다.
         </p>
       </div>
@@ -75,6 +76,6 @@ export default function MenuSettingsPage() {
           <AssetCategoryManager organizationId={organizationId} />
         </div>
       </OrganizationGate>
-    </section>
+    </ManageLayout>
   );
 }

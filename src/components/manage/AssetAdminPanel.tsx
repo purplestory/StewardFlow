@@ -13,7 +13,6 @@ const statusOptions: Array<{ value: Asset["status"] | "all"; label: string }> =
     { value: "available", label: "대여 가능" },
     { value: "rented", label: "대여 중" },
     { value: "repair", label: "수리 중" },
-    { value: "lost", label: "분실" },
     { value: "retired", label: "불용품" },
   ];
 
@@ -171,7 +170,7 @@ export default function AssetAdminPanel() {
           href="/new?category=equipment"
           className="btn-primary whitespace-nowrap"
         >
-          등록
+          물품 등록
         </Link>
       </div>
 
@@ -245,17 +244,6 @@ export default function AssetAdminPanel() {
           </button>
           <button
             type="button"
-            onClick={() => setStatusFilter("lost")}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-              statusFilter === "lost"
-                ? "bg-rose-500 text-white shadow-sm"
-                : "bg-white text-neutral-700 border border-neutral-300 hover:border-rose-200 hover:bg-rose-50"
-            }`}
-          >
-            분실
-          </button>
-          <button
-            type="button"
             onClick={() => setStatusFilter("retired")}
             className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
               statusFilter === "retired"
@@ -290,7 +278,6 @@ export default function AssetAdminPanel() {
             <option value="available">→ 대여 가능</option>
             <option value="rented">→ 대여 중</option>
             <option value="repair">→ 수리 중</option>
-            <option value="lost">→ 분실</option>
             <option value="retired">→ 불용품</option>
           </select>
           <button
@@ -463,6 +450,7 @@ export default function AssetAdminPanel() {
                   <option value="불용품">불용품 (사용 가능한 상태)</option>
                   <option value="잔존 수명 종료">잔존 수명 종료</option>
                   <option value="고장">고장</option>
+                  <option value="분실">분실</option>
                   <option value="신제품 등록">신제품 등록</option>
                   <option value="기타">기타</option>
                 </select>

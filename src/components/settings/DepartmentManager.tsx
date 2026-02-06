@@ -28,6 +28,7 @@ export default function DepartmentManager({ organizationId }: DepartmentManagerP
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const [isReordering, setIsReordering] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
 
   useEffect(() => {
     loadDepartments();
@@ -169,8 +170,12 @@ export default function DepartmentManager({ organizationId }: DepartmentManagerP
     setSaving(false);
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm("정말 이 부서를 삭제하시겠습니까? 이 부서에 속한 회원들의 부서 정보가 초기화될 수 있습니다.")) {
+  const handleDelete = (id: string) => {
+    setShowDeleteConfirm(id);
+  };
+
+  const confirmDelete = async () => {
+    if (!showDeleteConfirm) {
       return;
     }
 
@@ -180,10 +185,11 @@ export default function DepartmentManager({ organizationId }: DepartmentManagerP
     const { error } = await supabase
       .from("departments")
       .delete()
-      .eq("id", id);
+      .eq("id", showDeleteConfirm);
 
     if (error) {
       setMessage(`부서 삭제 오류: ${error.message}`);
+      setShowDeleteConfirm(null);
     } else {
       // 삭제된 부서를 순서 목록에서 제거
       try {
@@ -194,7 +200,7 @@ export default function DepartmentManager({ organizationId }: DepartmentManagerP
           .maybeSingle();
         
         const currentOrder = (orgData?.department_order as string[]) || [];
-        const newOrder = currentOrder.filter((deptId) => deptId !== id);
+        const newOrder = currentOrder.filter((deptId) => deptId !== showDeleteConfirm);
         
         await supabase
           .from("organizations")
@@ -206,6 +212,7 @@ export default function DepartmentManager({ organizationId }: DepartmentManagerP
       }
       
       setMessage("부서가 삭제되었습니다.");
+      setShowDeleteConfirm(null);
       await loadDepartments();
     }
 
@@ -239,9 +246,8 @@ export default function DepartmentManager({ organizationId }: DepartmentManagerP
     setDragOverIndex(null);
   };
 
-  const handleDrop = async (e: React.DragEvent, index: number) => {
-    e.preventDefault();
-    if (draggedIndex === null || draggedIndex === index) {
+  const performDrop = async (dragIndex: number, dropIndex: number) => {
+    if (dragIndex === null || dragIndex === dropIndex) {
       setDraggedIndex(null);
       setDragOverIndex(null);
       setIsReordering(false);
@@ -249,8 +255,8 @@ export default function DepartmentManager({ organizationId }: DepartmentManagerP
     }
 
     const newDepartments = [...departments];
-    const [draggedItem] = newDepartments.splice(draggedIndex, 1);
-    newDepartments.splice(index, 0, draggedItem);
+    const [draggedItem] = newDepartments.splice(dragIndex, 1);
+    newDepartments.splice(dropIndex, 0, draggedItem);
     setDepartments(newDepartments);
 
     // 순서를 데이터베이스에 저장
@@ -279,6 +285,67 @@ export default function DepartmentManager({ organizationId }: DepartmentManagerP
       return;
     }
 
+    setDraggedIndex(null);
+    setDragOverIndex(null);
+    setIsReordering(false);
+  };
+
+  const handleDrop = async (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    if (draggedIndex === null || draggedIndex === index) {
+      setDraggedIndex(null);
+      setDragOverIndex(null);
+      setIsReordering(false);
+      return;
+    }
+    await performDrop(draggedIndex, index);
+  };
+
+  // 모바일 터치 이벤트 핸들러
+  const [touchStartY, setTouchStartY] = useState<number | null>(null);
+  const [touchCurrentIndex, setTouchCurrentIndex] = useState<number | null>(null);
+
+  const handleTouchStart = (e: React.TouchEvent, index: number) => {
+    if (editingId) return;
+    const touch = e.touches[0];
+    setTouchStartY(touch.clientY);
+    setTouchCurrentIndex(index);
+    setDraggedIndex(index);
+    setIsReordering(true);
+  };
+
+  const handleTouchMove = (e: React.TouchEvent, index: number) => {
+    if (touchStartY === null || touchCurrentIndex === null) return;
+    e.preventDefault();
+    
+    const touch = e.touches[0];
+    const element = document.elementFromPoint(touch.clientX, touch.clientY);
+    const dragItem = element?.closest('[data-drag-index]');
+    
+    if (dragItem) {
+      const targetIndex = parseInt(dragItem.getAttribute('data-drag-index') || '-1');
+      if (targetIndex !== -1 && targetIndex !== draggedIndex) {
+        setDragOverIndex(targetIndex);
+      }
+    }
+  };
+
+  const handleTouchEnd = async (e: React.TouchEvent, index: number) => {
+    if (touchStartY === null || touchCurrentIndex === null) return;
+    
+    const touch = e.changedTouches[0];
+    const element = document.elementFromPoint(touch.clientX, touch.clientY);
+    const dragItem = element?.closest('[data-drag-index]');
+    
+    if (dragItem) {
+      const dropIndex = parseInt(dragItem.getAttribute('data-drag-index') || '-1');
+      if (dropIndex !== -1 && dropIndex !== touchCurrentIndex) {
+        await performDrop(touchCurrentIndex, dropIndex);
+      }
+    }
+    
+    setTouchStartY(null);
+    setTouchCurrentIndex(null);
     setDraggedIndex(null);
     setDragOverIndex(null);
     setIsReordering(false);
@@ -325,12 +392,12 @@ export default function DepartmentManager({ organizationId }: DepartmentManagerP
             placeholder="부서 이름 (예: 유년부, 중고등부, 청년부)"
             required
           />
-          <textarea
+          <input
+            type="text"
             value={newDepartmentDescription}
             onChange={(e) => setNewDepartmentDescription(e.target.value)}
-            className="form-textarea"
+            className="form-input"
             placeholder="부서 설명 (선택사항)"
-            rows={2}
           />
         </div>
         <button
@@ -343,30 +410,34 @@ export default function DepartmentManager({ organizationId }: DepartmentManagerP
       </form>
 
       {/* Department List */}
-      <div className="rounded-xl border border-neutral-200 bg-white p-6">
-        <h4 className="font-medium mb-4">부서 목록</h4>
+      <div className="rounded-lg border border-neutral-200 bg-white p-4">
+        <h4 className="text-sm font-semibold mb-3">부서 목록</h4>
         {departments.length === 0 ? (
           <Notice variant="neutral" className="text-left">
             등록된 부서가 없습니다.
           </Notice>
         ) : (
-          <div className="space-y-3">
+          <div className="space-y-2">
             {departments.map((dept, index) => (
               <div
                 key={dept.id}
+                data-drag-index={index}
                 draggable={!editingId && editingId !== dept.id}
                 onDragStart={() => handleDragStart(index)}
                 onDragOver={(e) => handleDragOver(e, index)}
                 onDragLeave={handleDragLeave}
                 onDrop={(e) => handleDrop(e, index)}
-                className={`flex items-start justify-between p-4 border border-neutral-200 rounded-lg transition-all ${
+                onTouchStart={(e) => handleTouchStart(e, index)}
+                onTouchMove={(e) => handleTouchMove(e, index)}
+                onTouchEnd={(e) => handleTouchEnd(e, index)}
+                className={`flex items-center gap-3 p-2 border border-neutral-200 rounded transition-all ${
                   draggedIndex === index
                     ? "opacity-50 cursor-grabbing"
                     : dragOverIndex === index
                     ? "border-blue-400 bg-blue-50"
                     : editingId === dept.id
                     ? ""
-                    : "cursor-grab"
+                    : "cursor-grab bg-white"
                 }`}
               >
                 {editingId === dept.id ? (
@@ -378,11 +449,11 @@ export default function DepartmentManager({ organizationId }: DepartmentManagerP
                       className="form-input"
                       required
                     />
-                    <textarea
+                    <input
+                      type="text"
                       value={editDescription}
                       onChange={(e) => setEditDescription(e.target.value)}
-                      className="form-textarea"
-                      rows={2}
+                      className="form-input"
                     />
                     <div className="flex gap-2">
                       <button
@@ -405,30 +476,30 @@ export default function DepartmentManager({ organizationId }: DepartmentManagerP
                   </div>
                 ) : (
                   <>
-                    <div className="flex items-center gap-3 flex-1">
-                      <svg
-                        className="w-5 h-5 text-neutral-400 flex-shrink-0"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M4 8h16M4 16h16"
-                        />
-                      </svg>
-                      <div className="flex-1">
-                        <div className="font-medium">{dept.name}</div>
+                    <svg
+                      className="w-5 h-5 text-neutral-400 flex-shrink-0"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M4 8h16M4 16h16"
+                      />
+                    </svg>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium flex items-center gap-2">
+                        <span>{dept.name}</span>
                         {dept.description && (
-                          <div className="text-sm text-neutral-600 mt-1">
-                            {dept.description}
-                          </div>
+                          <span className="text-sm text-neutral-500">
+                            ({dept.description})
+                          </span>
                         )}
                       </div>
                     </div>
-                    <div className="flex items-center gap-1">
+                    <div className="flex items-center gap-1 flex-shrink-0">
                       <button
                         type="button"
                         onClick={() => startEdit(dept)}
@@ -458,6 +529,45 @@ export default function DepartmentManager({ organizationId }: DepartmentManagerP
           </div>
         )}
       </div>
+
+      {/* 삭제 확인 모달 */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-md rounded-lg bg-white shadow-xl">
+            <div className="rounded-t-lg bg-rose-600 px-6 py-4">
+              <h3 className="text-lg font-semibold text-white">부서 삭제</h3>
+            </div>
+            <div className="px-6 py-4 space-y-4">
+              <div className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3">
+                <p className="text-sm text-rose-700">
+                  정말 "{departments.find((d) => d.id === showDeleteConfirm)?.name}" 부서를 삭제하시겠습니까?
+                </p>
+                <p className="text-xs text-rose-600 mt-2">
+                  이 부서에 속한 회원들의 부서 정보가 초기화될 수 있습니다.
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-3 rounded-b-lg border-t border-neutral-200 bg-neutral-50 px-6 py-4">
+              <button
+                type="button"
+                onClick={confirmDelete}
+                disabled={saving}
+                className="flex-1 btn-primary bg-rose-600 hover:bg-rose-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {saving ? "삭제 중..." : "삭제"}
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowDeleteConfirm(null)}
+                disabled={saving}
+                className="flex-1 btn-ghost disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                취소
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

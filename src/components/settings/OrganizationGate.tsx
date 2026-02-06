@@ -90,11 +90,7 @@ export default function OrganizationGate({ children }: OrganizationGateProps) {
   if (!hasOrganization) {
     return (
       <Notice variant="warning" className="text-left">
-        기관 설정이 필요합니다.{" "}
-        <Link href="/settings/org" className="underline">
-          기관 설정
-        </Link>
-        으로 이동해 생성/참여를 완료해주세요.
+        관리자 승인이 필요합니다. 초대코드 없이 가입하신 경우, 최고관리자가 승인할 때까지 메인 페이지만 이용하실 수 있습니다.
       </Notice>
     );
   }

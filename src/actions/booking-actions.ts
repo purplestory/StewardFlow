@@ -89,11 +89,21 @@ export async function createReservation(
       spaceQuery = spaceQuery.eq("short_id", resourceId);
     }
     
-    const { data } = await spaceQuery.maybeSingle();
-    resourceName = data?.name ?? null;
-    resourceImageUrl = data?.image_url ?? null;
-    organizationId = data?.organization_id ?? null;
-    actualResourceUuid = data?.id ?? null;
+    const { data, error } = await spaceQuery.maybeSingle();
+    
+    if (error) {
+      console.error("Space query error:", error);
+      return { ok: false, message: `공간 정보를 조회하는 중 오류가 발생했습니다: ${error.message}` };
+    }
+    
+    if (!data) {
+      return { ok: false, message: "해당 공간을 찾을 수 없습니다." };
+    }
+    
+    resourceName = data.name ?? null;
+    resourceImageUrl = data.image_url ?? null;
+    organizationId = data.organization_id ?? null;
+    actualResourceUuid = data.id ?? null;
   } else if (resourceType === "vehicle") {
     // vehicle ID가 UUID인지 short_id인지 확인
     const isUuid = isUUID(resourceId);
@@ -107,13 +117,23 @@ export async function createReservation(
       vehicleQuery = vehicleQuery.eq("short_id", resourceId);
     }
     
-    const { data } = await vehicleQuery.maybeSingle();
-    resourceName = data?.name ?? null;
-    resourceImageUrl = data?.image_url ?? null;
-    organizationId = data?.organization_id ?? null;
-    actualResourceUuid = data?.id ?? null;
+    const { data, error } = await vehicleQuery.maybeSingle();
     
-    if (data?.status && data.status !== "available") {
+    if (error) {
+      console.error("Vehicle query error:", error);
+      return { ok: false, message: `차량 정보를 조회하는 중 오류가 발생했습니다: ${error.message}` };
+    }
+    
+    if (!data) {
+      return { ok: false, message: "해당 차량을 찾을 수 없습니다." };
+    }
+    
+    resourceName = data.name ?? null;
+    resourceImageUrl = data.image_url ?? null;
+    organizationId = data.organization_id ?? null;
+    actualResourceUuid = data.id ?? null;
+    
+    if (data.status && data.status !== "available") {
       return { ok: false, message: "현재 예약할 수 없는 상태입니다." };
     }
   } else {
@@ -128,26 +148,42 @@ export async function createReservation(
       assetQuery = assetQuery.eq("short_id", resourceId);
     }
     
-    const { data } = await assetQuery.maybeSingle();
-    resourceName = data?.name ?? null;
-    resourceImageUrl = data?.image_url ?? null;
-    organizationId = data?.organization_id ?? null;
-    actualResourceUuid = data?.id ?? null;
+    const { data, error } = await assetQuery.maybeSingle();
+    
+    if (error) {
+      console.error("Asset query error:", error);
+      return { ok: false, message: `물품 정보를 조회하는 중 오류가 발생했습니다: ${error.message}` };
+    }
+    
+    if (!data) {
+      return { ok: false, message: "해당 물품을 찾을 수 없습니다." };
+    }
+    
+    resourceName = data.name ?? null;
+    resourceImageUrl = data.image_url ?? null;
+    organizationId = data.organization_id ?? null;
+    actualResourceUuid = data.id ?? null;
 
-    if (data?.loanable === false) {
+    if (data.loanable === false) {
       return { ok: false, message: "대여 불가로 설정된 자산입니다." };
     }
-    if (data?.status && data.status !== "available") {
+    if (data.status && data.status !== "available") {
       return { ok: false, message: "현재 대여할 수 없는 상태입니다." };
     }
-    if (data?.usable_until && isBeyondUsableUntil(data.usable_until, endDate)) {
+    if (data.usable_until && isBeyondUsableUntil(data.usable_until, endDate)) {
       return { ok: false, message: "사용 기한이 만료된 자산입니다." };
     }
   }
 
   // organization_id가 없으면 에러 반환
   if (!organizationId) {
-    return { ok: false, message: "자원의 기관 정보를 확인할 수 없습니다." };
+    console.error("Resource organization_id is null:", {
+      resourceType,
+      resourceId,
+      resourceName,
+      actualResourceUuid,
+    });
+    return { ok: false, message: "자원의 기관 정보를 확인할 수 없습니다. 관리자에게 문의하세요." };
   }
 
   // 사용자의 organization_id와 자원의 organization_id가 일치하는지 확인

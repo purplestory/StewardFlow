@@ -182,17 +182,20 @@ export default function UserRoleManager() {
     // 최고관리자(admin)만 미승인 사용자 목록 조회 가능
     if (profileData.role === "admin") {
       // organization_id가 null인 모든 사용자 조회 (미승인 사용자)
-      const { data: pendingUsersData, error: pendingError } = await supabase
+      // profiles_select_all_by_admin 정책으로 모든 프로필 조회 가능하므로 필터링은 클라이언트에서
+      const { data: allUsersData, error: allUsersError } = await supabase
         .from("profiles")
         .select("id,email,name,department,role,organization_id,created_at")
-        .is("organization_id", null)
         .order("created_at", { ascending: false });
 
-      if (pendingError) {
-        console.error("미승인 사용자 조회 오류:", pendingError);
-        setMessage(`미승인 사용자 조회 실패: ${pendingError.message}`);
-      } else if (pendingUsersData) {
-        console.log("미승인 사용자 조회 성공:", pendingUsersData.length, "명");
+      if (allUsersError) {
+        console.error("전체 사용자 조회 오류:", allUsersError);
+        setMessage(`사용자 조회 실패: ${allUsersError.message}`);
+      } else if (allUsersData) {
+        // 클라이언트에서 organization_id가 null인 사용자만 필터링
+        const pendingUsersData = allUsersData.filter(user => user.organization_id === null);
+        console.log("전체 사용자 조회 성공:", allUsersData.length, "명");
+        console.log("미승인 사용자:", pendingUsersData.length, "명");
         setPendingUsers(pendingUsersData as ProfileRow[]);
       }
 

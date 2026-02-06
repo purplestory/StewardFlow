@@ -32,11 +32,32 @@ export default function JoinRequestPage() {
       setEmail(user.email || "");
 
       // 프로필 확인
-      const { data: profileData } = await supabase
+      const { data: profileData, error: profileError } = await supabase
         .from("profiles")
         .select("name, organization_id, phone")
         .eq("id", user.id)
         .maybeSingle();
+
+      if (profileError) {
+        console.error("가입 신청 페이지 - 프로필 조회 오류:", profileError);
+        console.error("에러 상세:", {
+          code: profileError.code,
+          message: profileError.message,
+          details: profileError.details,
+          hint: profileError.hint,
+          userId: user.id,
+        });
+        setLoading(false);
+        return;
+      }
+
+      // 디버깅: 프로필 데이터 확인
+      console.log("가입 신청 페이지 - 프로필 데이터:", {
+        userId: user.id,
+        hasProfile: !!profileData,
+        organizationId: profileData?.organization_id,
+        name: profileData?.name,
+      });
 
       if (profileData) {
         setName(profileData.name || "");
@@ -45,9 +66,12 @@ export default function JoinRequestPage() {
         
         // 이미 기관이 있으면 메인 페이지로 리다이렉트
         if (profileData.organization_id) {
+          console.log("가입 신청 페이지 - organization_id가 있어서 메인 페이지로 리다이렉트");
           router.push("/");
           return;
         }
+      } else {
+        console.log("가입 신청 페이지 - 프로필 데이터가 없음");
       }
 
       setLoading(false);

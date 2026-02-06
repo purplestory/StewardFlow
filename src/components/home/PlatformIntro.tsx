@@ -33,7 +33,15 @@ function PlatformIntroContent() {
           .maybeSingle();
 
         if (profileError) {
-          console.error("프로필 조회 오류:", profileError);
+          console.error("PlatformIntro - 프로필 조회 오류:", profileError);
+          console.error("에러 상세:", {
+            code: profileError.code,
+            message: profileError.message,
+            details: profileError.details,
+            hint: profileError.hint,
+            userId: user.id,
+          });
+          // 프로필 조회 실패 시에도 리다이렉트하지 않음 (에러 표시)
           setLoading(false);
           return;
         }

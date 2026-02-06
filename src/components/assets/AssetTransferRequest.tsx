@@ -73,8 +73,13 @@ export default function AssetTransferRequest({
   const handleRequest = async () => {
     setMessage(null);
 
-    if (!userId || !organizationId) {
+    if (!userId) {
       setMessage("로그인 후 이동 요청을 이용할 수 있습니다.");
+      return;
+    }
+
+    if (!organizationId) {
+      setMessage("기관 정보를 확인할 수 없습니다.");
       return;
     }
 
@@ -143,8 +148,13 @@ export default function AssetTransferRequest({
   };
 
   const handleCancel = async () => {
-    if (!userId || !organizationId) {
+    if (!userId) {
       setMessage("로그인 후 이동 요청을 이용할 수 있습니다.");
+      return;
+    }
+
+    if (!organizationId) {
+      setMessage("기관 정보를 확인할 수 없습니다.");
       return;
     }
 
@@ -207,6 +217,11 @@ export default function AssetTransferRequest({
   }
 
   if (!userId) {
+    return null;
+  }
+
+  // organizationId가 없으면 표시하지 않음 (에러 방지)
+  if (!organizationId) {
     return null;
   }
 

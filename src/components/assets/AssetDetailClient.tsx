@@ -6,11 +6,10 @@ import Link from "next/link";
 import type { Asset } from "@/types/database";
 import ImageSlider from "@/components/common/ImageSlider";
 import type { AssetReservationSummary } from "@/actions/booking-actions";
-import { listApprovalPoliciesByOrg } from "@/actions/approval-actions";
 import AssetReservationSection from "@/components/assets/AssetReservationSection";
 import AssetAdminActions from "@/components/assets/AssetAdminActions";
 import AssetTransferRequest from "@/components/assets/AssetTransferRequest";
-import { useAsset, useAssetReservations, useUserRole, useUserProfile, useApprovalPolicies } from "@/hooks/useAssets";
+import { useAsset, useAssetReservations, useUserRole, useApprovalPolicies } from "@/hooks/useAssets";
 
 const statusLabel: Record<AssetReservationSummary["status"], string> = {
   pending: "승인 대기",
@@ -66,7 +65,6 @@ export default function AssetDetailClient() {
   const { data: asset, isLoading: assetLoading, error: assetError } = useAsset(id);
   const { data: reservations = [] } = useAssetReservations(asset?.id ?? null);
   const { data: userRoleData } = useUserRole();
-  const { data: userProfile } = useUserProfile();
   const { data: policyData } = useApprovalPolicies(asset?.organization_id ?? null);
 
   // Required role 계산

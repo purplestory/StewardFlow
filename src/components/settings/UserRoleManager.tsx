@@ -12,6 +12,7 @@ type ProfileRow = {
   department: string | null;
   role: "admin" | "manager" | "user";
   organization_id: string | null;
+  created_at?: string;
 };
 
 type InviteRow = {
@@ -249,7 +250,7 @@ export default function UserRoleManager() {
 
     const { data, error } = await supabase
       .from("profiles")
-      .select("id,email,name,department,role")
+      .select("id,email,name,department,role,organization_id")
       .eq("organization_id", profileData.organization_id)
       .order("created_at", { ascending: true });
     
@@ -698,6 +699,81 @@ export default function UserRoleManager() {
       target_id: invite.id,
       metadata: { email: invite.email, role: invite.role },
     });
+  };
+
+  const handleStartApproval = (userId: string) => {
+    setApprovingUserId(userId);
+    setApprovalOrganizationId("");
+    setApprovalDepartment("");
+    setApprovalRole("user");
+    setApprovalDepartments([]);
+  };
+
+  const handleCancelApproval = () => {
+    setApprovingUserId(null);
+  };
+
+  const handleOrganizationChange = async (orgId: string) => {
+    setApprovalOrganizationId(orgId);
+    setApprovalDepartment(""); // Reset department when organization changes
+    if (orgId) {
+      const { data: depts, error } = await supabase
+        .from("departments")
+        .select("name")
+        .eq("organization_id", orgId)
+        .order("name", { ascending: true });
+      if (error) {
+        console.error("Error loading departments for approval:", error);
+        setApprovalDepartments([]);
+      } else {
+        setApprovalDepartments(depts.map((d) => d.name));
+      }
+    } else {
+      setApprovalDepartments([]);
+    }
+  };
+
+  const handleApproveUser = async () => {
+    if (!approvingUserId || !approvalOrganizationId) {
+      setMessage("기관을 선택해주세요.");
+      return;
+    }
+
+    setMessage(null);
+    setLoading(true);
+
+    const { error: updateProfileError } = await supabase
+      .from("profiles")
+      .update({
+        organization_id: approvalOrganizationId,
+        department: approvalDepartment || null,
+        role: approvalRole,
+      })
+      .eq("id", approvingUserId);
+
+    if (updateProfileError) {
+      setMessage(`사용자 승인 실패: ${updateProfileError.message}`);
+      setLoading(false);
+      return;
+    }
+
+    await supabase.from("audit_logs").insert({
+      organization_id: approvalOrganizationId,
+      actor_id: currentUserId,
+      action: "user_approved",
+      target_type: "profile",
+      target_id: approvingUserId,
+      metadata: {
+        approved_by_admin: true,
+        organization_id: approvalOrganizationId,
+        department: approvalDepartment,
+        role: approvalRole,
+      },
+    });
+
+    setMessage("사용자가 성공적으로 승인되었습니다.");
+    setApprovingUserId(null);
+    await load(); // Reload all data
   };
 
   const approveDepartmentChange = async (request: DepartmentChangeRequest) => {

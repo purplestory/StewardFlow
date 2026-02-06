@@ -355,7 +355,8 @@ export default function Header() {
   // User menu items
   const userItems = useMemo(() => {
     if (!isAuthed) return [];
-    // organization_id가 없는 사용자는 메뉴 숨기기
+    
+    // organization_id가 없는 사용자는 빈 배열 반환 (로그아웃만 표시하기 위해)
     if (!hasOrganization) {
       return [];
     }
@@ -430,7 +431,7 @@ export default function Header() {
           ))}
 
           {/* User dropdown */}
-          {!loading && userItems.length > 0 && (
+          {!loading && isAuthed && (
             <div className="relative dropdown-menu">
               <button
                 type="button"
@@ -442,18 +443,22 @@ export default function Header() {
               </button>
               {dropdownOpen === 'user' && (
                 <div className="absolute top-full left-0 mt-1 bg-white border border-neutral-200 rounded-lg shadow-lg py-1 min-w-[140px] z-50">
-                  {userItems.map((item, index) => (
-                    <Link
-                      key={`${item.href}-${index}`}
-                      href={item.href}
-                      className="block px-4 py-2 hover:bg-neutral-50"
-                      onClick={() => setDropdownOpen(null)}
-                    >
-                      {item.label}
-                    </Link>
-                  ))}
-                  {/* 로그아웃 버튼 - 드롭다운 맨 아래에 구분선과 함께 배치 */}
-                  <div className="border-t border-neutral-200 my-1"></div>
+                  {userItems.length > 0 && (
+                    <>
+                      {userItems.map((item, index) => (
+                        <Link
+                          key={`${item.href}-${index}`}
+                          href={item.href}
+                          className="block px-4 py-2 hover:bg-neutral-50"
+                          onClick={() => setDropdownOpen(null)}
+                        >
+                          {item.label}
+                        </Link>
+                      ))}
+                      <div className="border-t border-neutral-200 my-1"></div>
+                    </>
+                  )}
+                  {/* 로그아웃 버튼 - 항상 표시 */}
                   <button
                     type="button"
                     onClick={() => {
@@ -524,19 +529,23 @@ export default function Header() {
             ))}
 
             {/* User menu items */}
-            {!loading && userItems.length > 0 && (
+            {!loading && isAuthed && (
               <>
-                <div className="border-t border-neutral-200 my-2"></div>
-                {userItems.map((item, index) => (
-                  <Link
-                    key={`${item.href}-${index}`}
-                    href={item.href}
-                    className="block py-2 text-sm text-neutral-600 hover:text-black"
-                    onClick={() => setMobileMenuOpen(false)}
-                  >
-                    {item.label}
-                  </Link>
-                ))}
+                {userItems.length > 0 && (
+                  <>
+                    <div className="border-t border-neutral-200 my-2"></div>
+                    {userItems.map((item, index) => (
+                      <Link
+                        key={`${item.href}-${index}`}
+                        href={item.href}
+                        className="block py-2 text-sm text-neutral-600 hover:text-black"
+                        onClick={() => setMobileMenuOpen(false)}
+                      >
+                        {item.label}
+                      </Link>
+                    ))}
+                  </>
+                )}
                 <div className="border-t border-neutral-200 my-2"></div>
                 <button
                   type="button"

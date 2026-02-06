@@ -31,7 +31,13 @@ export default function PlatformIntro() {
           .eq("id", user.id)
           .maybeSingle();
 
-        if (profileData?.organization_id) {
+        // organization_id가 없으면 가입 신청 페이지로 리다이렉트
+        if (!profileData?.organization_id) {
+          router.push("/join-request");
+          return;
+        }
+
+        if (profileData.organization_id) {
           const { data: orgData } = await supabase
             .from("organizations")
             .select("features")

@@ -125,9 +125,11 @@ export default function OwnershipPolicySettings({ organizationId }: OwnershipPol
                     value="organization_only"
                     checked={ownershipPolicies.spaces === "organization_only"}
                     onChange={async () => {
+                      const spacesValue: OwnershipPolicyValue = "organization_only";
+                      const vehiclesValue: OwnershipPolicyValue | undefined = ownershipPolicies.vehicles;
                       const newPolicies: OwnershipPolicies = {
-                        spaces: "organization_only" as OwnershipPolicyValue,
-                        vehicles: ownershipPolicies.vehicles as OwnershipPolicyValue | undefined,
+                        spaces: spacesValue,
+                        vehicles: vehiclesValue,
                       };
                       setOwnershipPolicies(newPolicies);
                       await handleSave(newPolicies);
@@ -143,9 +145,11 @@ export default function OwnershipPolicySettings({ organizationId }: OwnershipPol
                     value="department_allowed"
                     checked={ownershipPolicies.spaces === "department_allowed"}
                     onChange={async () => {
+                      const spacesValue: OwnershipPolicyValue = "department_allowed";
+                      const vehiclesValue: OwnershipPolicyValue | undefined = ownershipPolicies.vehicles;
                       const newPolicies: OwnershipPolicies = {
-                        spaces: "department_allowed" as OwnershipPolicyValue,
-                        vehicles: ownershipPolicies.vehicles as OwnershipPolicyValue | undefined,
+                        spaces: spacesValue,
+                        vehicles: vehiclesValue,
                       };
                       setOwnershipPolicies(newPolicies);
                       await handleSave(newPolicies);
@@ -171,9 +175,11 @@ export default function OwnershipPolicySettings({ organizationId }: OwnershipPol
                     value="organization_only"
                     checked={ownershipPolicies.vehicles === "organization_only"}
                     onChange={async () => {
+                      const spacesValue: OwnershipPolicyValue | undefined = ownershipPolicies.spaces;
+                      const vehiclesValue: OwnershipPolicyValue = "organization_only";
                       const newPolicies: OwnershipPolicies = {
-                        spaces: ownershipPolicies.spaces as OwnershipPolicyValue | undefined,
-                        vehicles: "organization_only" as OwnershipPolicyValue,
+                        spaces: spacesValue,
+                        vehicles: vehiclesValue,
                       };
                       setOwnershipPolicies(newPolicies);
                       await handleSave(newPolicies);
@@ -189,9 +195,11 @@ export default function OwnershipPolicySettings({ organizationId }: OwnershipPol
                     value="department_allowed"
                     checked={ownershipPolicies.vehicles === "department_allowed"}
                     onChange={async () => {
+                      const spacesValue: OwnershipPolicyValue | undefined = ownershipPolicies.spaces;
+                      const vehiclesValue: OwnershipPolicyValue = "department_allowed";
                       const newPolicies: OwnershipPolicies = {
-                        spaces: ownershipPolicies.spaces as OwnershipPolicyValue | undefined,
-                        vehicles: "department_allowed" as OwnershipPolicyValue,
+                        spaces: spacesValue,
+                        vehicles: vehiclesValue,
                       };
                       setOwnershipPolicies(newPolicies);
                       await handleSave(newPolicies);

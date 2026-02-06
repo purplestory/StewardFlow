@@ -123,7 +123,7 @@ export default function OwnershipPolicySettings({ organizationId }: OwnershipPol
                     value="organization_only"
                     checked={ownershipPolicies.spaces === "organization_only"}
                     onChange={async () => {
-                      const newPolicies = { ...ownershipPolicies, spaces: "organization_only" };
+                      const newPolicies: OwnershipPolicies = { ...ownershipPolicies, spaces: "organization_only" as const };
                       setOwnershipPolicies(newPolicies);
                       await handleSave(newPolicies);
                     }}
@@ -138,7 +138,7 @@ export default function OwnershipPolicySettings({ organizationId }: OwnershipPol
                     value="department_allowed"
                     checked={ownershipPolicies.spaces === "department_allowed"}
                     onChange={async () => {
-                      const newPolicies = { ...ownershipPolicies, spaces: "department_allowed" };
+                      const newPolicies: OwnershipPolicies = { ...ownershipPolicies, spaces: "department_allowed" as const };
                       setOwnershipPolicies(newPolicies);
                       await handleSave(newPolicies);
                     }}
@@ -163,7 +163,7 @@ export default function OwnershipPolicySettings({ organizationId }: OwnershipPol
                     value="organization_only"
                     checked={ownershipPolicies.vehicles === "organization_only"}
                     onChange={async () => {
-                      const newPolicies = { ...ownershipPolicies, vehicles: "organization_only" };
+                      const newPolicies: OwnershipPolicies = { ...ownershipPolicies, vehicles: "organization_only" as const };
                       setOwnershipPolicies(newPolicies);
                       await handleSave(newPolicies);
                     }}
@@ -178,7 +178,7 @@ export default function OwnershipPolicySettings({ organizationId }: OwnershipPol
                     value="department_allowed"
                     checked={ownershipPolicies.vehicles === "department_allowed"}
                     onChange={async () => {
-                      const newPolicies = { ...ownershipPolicies, vehicles: "department_allowed" };
+                      const newPolicies: OwnershipPolicies = { ...ownershipPolicies, vehicles: "department_allowed" as const };
                       setOwnershipPolicies(newPolicies);
                       await handleSave(newPolicies);
                     }}

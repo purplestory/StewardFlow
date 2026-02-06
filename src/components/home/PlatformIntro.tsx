@@ -26,29 +26,46 @@ function PlatformIntroContent() {
       setIsAuthenticated(!!user);
 
       if (user) {
-        const { data: profileData } = await supabase
+        const { data: profileData, error: profileError } = await supabase
           .from("profiles")
           .select("organization_id")
           .eq("id", user.id)
           .maybeSingle();
+
+        if (profileError) {
+          console.error("프로필 조회 오류:", profileError);
+          setLoading(false);
+          return;
+        }
+
+        // 디버깅: 프로필 데이터 확인
+        console.log("PlatformIntro - 프로필 데이터:", {
+          userId: user.id,
+          hasProfile: !!profileData,
+          organizationId: profileData?.organization_id,
+        });
 
         // skip_redirect 파라미터가 있으면 리다이렉트하지 않음
         const skipRedirect = searchParams.get("skip_redirect") === "true";
         
         // organization_id가 없으면 가입 신청 페이지로 리다이렉트 (skip_redirect가 아닐 때만)
         if (!profileData?.organization_id && !skipRedirect) {
+          console.log("PlatformIntro - organization_id가 없어서 가입 신청 페이지로 리다이렉트");
           router.push("/join-request");
           return;
         }
 
+        // organization_id가 있으면 features 로드
         if (profileData?.organization_id) {
-          const { data: orgData } = await supabase
+          const { data: orgData, error: orgError } = await supabase
             .from("organizations")
             .select("features")
             .eq("id", profileData.organization_id)
             .maybeSingle();
 
-          if (orgData) {
+          if (orgError) {
+            console.error("기관 정보 조회 오류:", orgError);
+          } else if (orgData) {
             setFeatures({
               equipment: orgData.features?.equipment ?? true,
               spaces: orgData.features?.spaces ?? true,

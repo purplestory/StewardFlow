@@ -28,6 +28,7 @@ export default function AssetAdminActions({
   const [updating, setUpdating] = useState(false);
   const [localStatus, setLocalStatus] = useState(assetStatus);
   const [departments, setDepartments] = useState<Array<{ id: string; name: string }>>([]);
+  const [showTransferForm, setShowTransferForm] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -200,8 +201,6 @@ export default function AssetAdminActions({
   if (!canEdit) {
     return null;
   }
-
-  const [showTransferForm, setShowTransferForm] = useState(false);
 
   return (
     <div className="space-y-4 rounded-xl border border-neutral-200 bg-white p-6">

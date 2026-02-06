@@ -26,6 +26,8 @@ export default function ProfileEditor() {
   const [requestedDepartment, setRequestedDepartment] = useState("");
   const [requestNote, setRequestNote] = useState("");
   const [requesting, setRequesting] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -249,6 +251,59 @@ export default function ProfileEditor() {
     }
 
     setRequesting(false);
+  };
+
+  const handleDeleteAccount = async () => {
+    if (!profile) return;
+
+    // 부서 관리자인 경우 경고
+    if (profile.role === "manager") {
+      setMessage("부서 관리자는 탈퇴 전에 관리자에게 연락하여 권한을 양도해야 합니다.");
+      return;
+    }
+
+    setDeleting(true);
+    setMessage(null);
+
+    const { data: sessionData } = await supabase.auth.getSession();
+    const user = sessionData.session?.user;
+
+    if (!user) {
+      setMessage("로그인 정보를 확인할 수 없습니다.");
+      setDeleting(false);
+      return;
+    }
+
+    // 프로필 삭제
+    const { error: deleteError } = await supabase
+      .from("profiles")
+      .delete()
+      .eq("id", user.id);
+
+    if (deleteError) {
+      setMessage(`계정 탈퇴 실패: ${deleteError.message}`);
+      setDeleting(false);
+      return;
+    }
+
+    // Audit log 기록
+    if (profile.organization_id) {
+      await supabase.from("audit_logs").insert({
+        organization_id: profile.organization_id,
+        actor_id: user.id,
+        action: "account_deleted",
+        target_type: "profile",
+        target_id: user.id,
+        metadata: {
+          deleted_user_name: profile.name,
+          deleted_user_email: profile.email,
+        },
+      });
+    }
+
+    // 로그아웃 및 리다이렉트
+    await supabase.auth.signOut();
+    window.location.href = "/";
   };
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -507,10 +562,87 @@ export default function ProfileEditor() {
         </button>
       </div>
 
+      {/* 탈퇴 섹션 */}
+      <div className="mt-8 pt-6 border-t border-neutral-200">
+        <div className="rounded-lg border border-rose-200 bg-rose-50 p-4">
+          <h3 className="text-sm font-semibold text-rose-900 mb-2">계정 탈퇴</h3>
+          <p className="text-xs text-rose-700 mb-4">
+            계정을 탈퇴하면 모든 데이터가 삭제되며 복구할 수 없습니다.
+            {profile.role === "manager" && (
+              <span className="block mt-1 font-medium">
+                부서 관리자인 경우, 탈퇴 전에 다른 사용자에게 부서 관리자 권한을 양도해야 합니다.
+              </span>
+            )}
+          </p>
+          <button
+            type="button"
+            onClick={() => setShowDeleteConfirm(true)}
+            disabled={deleting}
+            className="btn-outline border-rose-300 text-rose-700 hover:bg-rose-100"
+          >
+            계정 탈퇴
+          </button>
+        </div>
+      </div>
+
       {message && (
         <p className="text-sm text-neutral-600" role="status">
           {message}
         </p>
+      )}
+
+      {/* 탈퇴 확인 모달 */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-md rounded-lg bg-white shadow-xl">
+            <div className="rounded-t-lg bg-rose-600 px-6 py-4">
+              <h3 className="text-lg font-semibold text-white">계정 탈퇴 확인</h3>
+            </div>
+            <div className="px-6 py-4 space-y-4">
+              <div className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3">
+                <p className="text-sm text-rose-900 font-medium mb-2">
+                  정말로 계정을 탈퇴하시겠습니까?
+                </p>
+                <ul className="text-xs text-rose-700 space-y-1 list-disc list-inside">
+                  <li>모든 프로필 정보가 삭제됩니다</li>
+                  <li>대여 이력 및 예약 정보가 삭제됩니다</li>
+                  <li>이 작업은 되돌릴 수 없습니다</li>
+                  {profile.role === "manager" && (
+                    <li className="font-medium text-rose-900">
+                      부서 관리자인 경우, 부서의 다른 사용자에게 권한을 양도해야 합니다
+                    </li>
+                  )}
+                </ul>
+              </div>
+              {profile.role === "manager" && (
+                <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3">
+                  <p className="text-xs text-amber-800">
+                    <strong>주의:</strong> 부서 관리자 권한을 가진 상태에서 탈퇴하면 부서 관리 기능이 중단될 수 있습니다.
+                    탈퇴 전에 관리자에게 연락하여 권한을 양도하거나 다른 사용자에게 부서 관리자 권한을 부여해주세요.
+                  </p>
+                </div>
+              )}
+            </div>
+            <div className="flex gap-3 rounded-b-lg border-t border-neutral-200 bg-neutral-50 px-6 py-4">
+              <button
+                type="button"
+                onClick={handleDeleteAccount}
+                disabled={deleting || (profile.role === "manager")}
+                className="flex-1 btn-primary bg-rose-600 hover:bg-rose-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {deleting ? "탈퇴 중..." : "탈퇴하기"}
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowDeleteConfirm(false)}
+                disabled={deleting}
+                className="flex-1 btn-ghost"
+              >
+                취소
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </form>
   );

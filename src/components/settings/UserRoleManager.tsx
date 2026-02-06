@@ -65,6 +65,9 @@ export default function UserRoleManager() {
   const [showInviteLinkModal, setShowInviteLinkModal] = useState(false);
   const [generatedInviteLink, setGeneratedInviteLink] = useState<string | null>(null);
   const [inviteLinkCopied, setInviteLinkCopied] = useState(false);
+  const [deletingUserId, setDeletingUserId] = useState<string | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [userToDelete, setUserToDelete] = useState<{ id: string; name: string } | null>(null);
 
   const load = async () => {
     setLoading(true);
@@ -156,7 +159,7 @@ export default function UserRoleManager() {
       setInvites([]);
       setPendingUsers([]);
       setLoading(false);
-      setMessage("사용자 목록은 관리자 또는 부서 관리자만 볼 수 있습니다.");
+      setMessage("사용자 목록은 최고 관리자만 볼 수 있습니다.");
       return;
     }
 
@@ -226,8 +229,8 @@ export default function UserRoleManager() {
       setAvailableDepartments(sortedDepartments.map((d) => d.name));
     }
 
-    // 부서 변경 요청 로드 (관리자 또는 부서 관리자만)
-    if (profileData.role === "admin" || profileData.role === "manager") {
+    // 부서 변경 요청 로드 (최고 관리자만)
+    if (profileData.role === "admin") {
       const { data: requestsData, error: requestsError } = await supabase
         .from("department_change_requests")
         .select(`
@@ -411,28 +414,87 @@ export default function UserRoleManager() {
     load();
   }, []);
 
+  const deleteUser = async (profileId: string, profileName: string) => {
+    setMessage(null);
+
+    if (currentUserRole !== "admin") {
+      setMessage("사용자 삭제는 최고 관리자만 가능합니다.");
+      return;
+    }
+
+    if (profileId === currentUserId) {
+      setMessage("자기 자신은 삭제할 수 없습니다.");
+      return;
+    }
+
+    if (!organizationId || !currentUserId) {
+      setMessage("기관 정보를 확인할 수 없습니다.");
+      return;
+    }
+
+    // 삭제 확인 모달 표시
+    setUserToDelete({ id: profileId, name: profileName || '이름 없음' });
+    setShowDeleteConfirm(true);
+  };
+
+  const confirmDeleteUser = async () => {
+    if (!userToDelete || !organizationId || !currentUserId) {
+      return;
+    }
+
+    const profileId = userToDelete.id;
+    const profileName = userToDelete.name;
+    const profileEmail = profiles.find(p => p.id === profileId)?.email || null;
+
+    setDeletingUserId(profileId);
+    setLoading(true);
+    setShowDeleteConfirm(false);
+    setLoading(true);
+
+    // 프로필 삭제 (실제로는 soft delete를 권장하지만, 여기서는 hard delete)
+    const { error: deleteError } = await supabase
+      .from("profiles")
+      .delete()
+      .eq("id", profileId)
+      .eq("organization_id", organizationId);
+
+    if (deleteError) {
+      setMessage(`사용자 삭제 실패: ${deleteError.message}`);
+      setLoading(false);
+      setDeletingUserId(null);
+      return;
+    }
+
+    // audit log
+    await supabase.from("audit_logs").insert({
+      organization_id: organizationId,
+      actor_id: currentUserId,
+      action: "user_deleted",
+      target_type: "profile",
+      target_id: profileId,
+      metadata: {
+        deleted_user_name: profileName,
+        deleted_user_email: profileEmail,
+      },
+    });
+
+    setMessage("사용자가 성공적으로 삭제되었습니다.");
+    setDeletingUserId(null);
+    setUserToDelete(null);
+    await load(); // 목록 새로고침
+  };
+
+  const cancelDeleteUser = () => {
+    setShowDeleteConfirm(false);
+    setUserToDelete(null);
+  };
+
   const updateRole = async (profileId: string, role: ProfileRow["role"]) => {
     setMessage(null);
 
-    if (currentUserRole === "user") {
-      setMessage("권한 변경은 관리자만 가능합니다.");
+    if (currentUserRole !== "admin") {
+      setMessage("권한 변경은 최고 관리자만 가능합니다.");
       return;
-    }
-
-    // 부서 관리자는 일반 사용자를 부서 관리자까지만 변경 가능 (관리자로는 변경 불가)
-    if (currentUserRole === "manager" && role === "admin") {
-      setMessage("부서 관리자는 사용자를 관리자로 변경할 수 없습니다.");
-      return;
-    }
-
-    // 대상 사용자의 현재 역할 확인
-    const targetProfile = profiles.find((p) => p.id === profileId);
-    if (targetProfile) {
-      // 부서 관리자는 관리자 역할을 변경할 수 없음
-      if (currentUserRole === "manager" && targetProfile.role === "admin") {
-        setMessage("부서 관리자는 관리자 역할을 변경할 수 없습니다.");
-        return;
-      }
     }
 
     const { error } = await supabase
@@ -469,8 +531,8 @@ export default function UserRoleManager() {
   const sendInvite = async () => {
     setMessage(null);
 
-    if (currentUserRole === "user") {
-      setMessage("초대는 관리자만 가능합니다.");
+    if (currentUserRole !== "admin") {
+      setMessage("초대는 최고 관리자만 가능합니다.");
       return;
     }
 
@@ -581,8 +643,8 @@ export default function UserRoleManager() {
   const resendInvite = async (invite: InviteRow) => {
     setMessage(null);
 
-    if (currentUserRole === "user") {
-      setMessage("초대 재전송은 관리자만 가능합니다.");
+    if (currentUserRole !== "admin") {
+      setMessage("초대 재전송은 최고 관리자만 가능합니다.");
       return;
     }
 
@@ -673,8 +735,8 @@ export default function UserRoleManager() {
   const revokeInvite = async (invite: InviteRow) => {
     setMessage(null);
 
-    if (currentUserRole === "user") {
-      setMessage("초대 취소는 관리자만 가능합니다.");
+    if (currentUserRole !== "admin") {
+      setMessage("초대 취소는 최고 관리자만 가능합니다.");
       return;
     }
 
@@ -779,31 +841,14 @@ export default function UserRoleManager() {
   const approveDepartmentChange = async (request: DepartmentChangeRequest) => {
     setMessage(null);
 
-    if (currentUserRole === "user") {
-      setMessage("부서 변경 승인은 관리자만 가능합니다.");
+    if (currentUserRole !== "admin") {
+      setMessage("부서 변경 승인은 최고 관리자만 가능합니다.");
       return;
     }
 
     if (!organizationId || !currentUserId) {
       setMessage("기관 정보를 확인할 수 없습니다.");
       return;
-    }
-
-    // 부서 관리자는 자신의 부서 사용자 요청만 승인 가능
-    if (currentUserRole === "manager") {
-      const { data: currentProfile } = await supabase
-        .from("profiles")
-        .select("department")
-        .eq("id", currentUserId)
-        .maybeSingle();
-
-      if (
-        currentProfile?.department !== request.from_department &&
-        currentProfile?.department !== request.to_department
-      ) {
-        setMessage("자신의 부서 사용자 요청만 승인할 수 있습니다.");
-        return;
-      }
     }
 
     // 요청 승인 및 프로필 업데이트
@@ -860,31 +905,14 @@ export default function UserRoleManager() {
   const rejectDepartmentChange = async (request: DepartmentChangeRequest) => {
     setMessage(null);
 
-    if (currentUserRole === "user") {
-      setMessage("부서 변경 거부는 관리자만 가능합니다.");
+    if (currentUserRole !== "admin") {
+      setMessage("부서 변경 거부는 최고 관리자만 가능합니다.");
       return;
     }
 
     if (!organizationId || !currentUserId) {
       setMessage("기관 정보를 확인할 수 없습니다.");
       return;
-    }
-
-    // 부서 관리자는 자신의 부서 사용자 요청만 거부 가능
-    if (currentUserRole === "manager") {
-      const { data: currentProfile } = await supabase
-        .from("profiles")
-        .select("department")
-        .eq("id", currentUserId)
-        .maybeSingle();
-
-      if (
-        currentProfile?.department !== request.from_department &&
-        currentProfile?.department !== request.to_department
-      ) {
-        setMessage("자신의 부서 사용자 요청만 거부할 수 있습니다.");
-        return;
-      }
     }
 
     const now = new Date().toISOString();
@@ -981,7 +1009,7 @@ export default function UserRoleManager() {
             placeholder="이름 (필수)"
             value={invitationName}
             onChange={(event) => setInvitationName(event.target.value)}
-            disabled={currentUserRole === "user"}
+            disabled={currentUserRole !== "admin"}
             required
           />
           <input
@@ -989,7 +1017,7 @@ export default function UserRoleManager() {
             placeholder="이메일 (선택사항, 가입 시 변경 가능)"
             value={invitationEmail}
             onChange={(event) => setInvitationEmail(event.target.value)}
-            disabled={currentUserRole === "user"}
+            disabled={currentUserRole !== "admin"}
             type="email"
           />
         </div>
@@ -1000,7 +1028,7 @@ export default function UserRoleManager() {
             onChange={(event) =>
               setInvitationRole(event.target.value as ProfileRow["role"])
             }
-            disabled={currentUserRole === "user"}
+            disabled={currentUserRole !== "admin"}
           >
             <option value="user">일반 사용자</option>
             <option value="manager">부서 관리자</option>
@@ -1013,7 +1041,7 @@ export default function UserRoleManager() {
             className="form-select flex-1 min-w-[140px]"
             value={invitationDepartment}
             onChange={(event) => setInvitationDepartment(event.target.value)}
-            disabled={currentUserRole === "user"}
+            disabled={currentUserRole !== "admin"}
           >
             <option value="">부서 선택 (선택사항)</option>
             {availableDepartments.map((dept) => (
@@ -1034,9 +1062,9 @@ export default function UserRoleManager() {
         <p className="text-xs text-neutral-500">
           이름, 역할, 부서는 초대 시 지정되며 가입 시 확인됩니다. 이메일은 가입 시 변경 가능합니다.
         </p>
-        {currentUserRole === "user" && (
+        {currentUserRole !== "admin" && (
           <span className="text-xs text-neutral-500">
-            초대는 관리자만 가능합니다.
+            초대는 최고 관리자만 가능합니다.
           </span>
         )}
       </div>
@@ -1288,7 +1316,7 @@ export default function UserRoleManager() {
                   {profile.department ?? "부서 미등록"}
                 </p>
               </div>
-              <div className="flex flex-col items-end gap-2">
+              <div className="flex items-center gap-2">
                 <select
                   className="form-select"
                   value={profile.role}
@@ -1300,20 +1328,33 @@ export default function UserRoleManager() {
                   }
                   disabled={
                     currentUserId === profile.id || 
-                    currentUserRole === "user" ||
-                    // 부서 관리자는 관리자 역할을 변경할 수 없음
-                    (currentUserRole === "manager" && profile.role === "admin")
+                    currentUserRole !== "admin"
                   }
                 >
                   <option value="admin">관리자</option>
                   <option value="manager">부서 관리자</option>
                   <option value="user">일반 사용자</option>
                 </select>
-                {/* 부서 관리자는 일반 사용자를 부서 관리자까지만 변경 가능 */}
-                {currentUserRole === "manager" && profile.role !== "admin" && (
-                  <p className="text-xs text-neutral-400">
-                    부서 관리자까지만 변경 가능
-                  </p>
+                {/* 삭제 버튼 (관리자만, 자기 자신 제외) */}
+                {currentUserRole === "admin" && profile.id !== currentUserId && (
+                  <button
+                    type="button"
+                    onClick={() => deleteUser(profile.id, profile.name || "이름 없음")}
+                    disabled={deletingUserId === profile.id || loading}
+                    className="h-10 w-10 flex items-center justify-center rounded-lg border border-rose-200 bg-white text-rose-600 transition-all hover:bg-rose-50 hover:border-rose-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                    title="사용자 삭제"
+                  >
+                    {deletingUserId === profile.id ? (
+                      <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                    ) : (
+                      <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                    )}
+                  </button>
                 )}
               </div>
             </div>
@@ -1329,6 +1370,43 @@ export default function UserRoleManager() {
               <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
             </svg>
             <span className="text-sm font-medium">{successToast}</span>
+          </div>
+        </div>
+      )}
+
+      {/* 삭제 확인 모달 */}
+      {showDeleteConfirm && userToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-md rounded-lg bg-white shadow-xl">
+            <div className="rounded-t-lg bg-rose-600 px-6 py-4">
+              <h3 className="text-lg font-semibold text-white">사용자 삭제 확인</h3>
+            </div>
+            <div className="px-6 py-4 space-y-4">
+              <div className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3">
+                <p className="text-sm text-rose-900 font-medium mb-2">
+                  정말로 "{userToDelete.name}" 사용자를 삭제하시겠습니까?
+                </p>
+                <p className="text-xs text-rose-700">
+                  이 작업은 되돌릴 수 없습니다. 사용자의 모든 데이터가 삭제됩니다.
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-3 rounded-b-lg border-t border-neutral-200 bg-neutral-50 px-6 py-4">
+              <button
+                type="button"
+                onClick={confirmDeleteUser}
+                className="flex-1 btn-primary bg-rose-600 hover:bg-rose-700"
+              >
+                삭제
+              </button>
+              <button
+                type="button"
+                onClick={cancelDeleteUser}
+                className="flex-1 btn-ghost"
+              >
+                취소
+              </button>
+            </div>
           </div>
         </div>
       )}

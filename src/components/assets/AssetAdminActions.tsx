@@ -196,13 +196,12 @@ export default function AssetAdminActions({
     );
   }
 
+  // 일반 사용자에게는 아무것도 표시하지 않음
   if (!canEdit) {
-    return (
-      <Notice variant="warning">
-        관리자/부서 관리자만 변경할 수 있습니다.
-      </Notice>
-    );
+    return null;
   }
+
+  const [showTransferForm, setShowTransferForm] = useState(false);
 
   return (
     <div className="space-y-4 rounded-xl border border-neutral-200 bg-white p-6">
@@ -213,61 +212,90 @@ export default function AssetAdminActions({
         </p>
       </div>
 
-      <div className="grid gap-3 md:grid-cols-3">
-        <label className="flex flex-col gap-2">
-          <span className="form-label">소유 범위</span>
-          <select
-            className="form-select"
-            value={nextOwnerScope}
-            onChange={(event) => {
-              const value = event.target.value as "organization" | "department";
-              setNextOwnerScope(value);
-              if (value === "organization") {
-                setNextOwnerDepartment("기관 공용");
-              } else {
-                // 부서 소유로 변경 시 첫 번째 부서를 기본값으로 설정
-                if (departments.length > 0 && !nextOwnerDepartment) {
-                  setNextOwnerDepartment(departments[0].name);
-                }
-              }
-            }}
-          >
-            <option value="department">부서 소유</option>
-            <option value="organization">기관 공용</option>
-          </select>
-        </label>
-        <label className="flex flex-col gap-2 md:col-span-2">
-          <span className="form-label">소유 부서</span>
-          {nextOwnerScope === "organization" ? (
-            <div className="form-input bg-neutral-50 text-neutral-600">
-              기관 공용
-            </div>
-          ) : (
-            <select
-              className="form-select"
-              value={nextOwnerDepartment || ""}
-              onChange={(event) => setNextOwnerDepartment(event.target.value)}
-            >
-              <option value="">부서 선택</option>
-              {departments.map((dept) => (
-                <option key={dept.id} value={dept.name}>
-                  {dept.name}
-                </option>
-              ))}
-            </select>
-          )}
-        </label>
-      </div>
-
-      <div className="flex flex-wrap items-center gap-2 text-sm">
+      {/* 소유 범위/부서 한 줄 표시 */}
+      <div className="flex items-center gap-3">
+        <span className="text-sm font-medium text-neutral-700 min-w-[80px]">소유 범위</span>
+        <span className="text-sm text-neutral-600">
+          {ownerScope === "organization" ? "기관 공용" : "부서 소유"}
+        </span>
+        {ownerScope === "department" && (
+          <>
+            <span className="text-sm font-medium text-neutral-700 min-w-[80px]">소유 부서</span>
+            <span className="text-sm text-neutral-600">{ownerDepartment}</span>
+          </>
+        )}
         <button
           type="button"
-          onClick={handleTransfer}
-          disabled={updating}
-          className="h-[38px] px-4 rounded-lg text-sm font-medium transition-all bg-white text-neutral-700 border border-neutral-200 hover:bg-neutral-50 whitespace-nowrap flex items-center justify-center"
+          onClick={() => setShowTransferForm(!showTransferForm)}
+          className="ml-auto flex-shrink-0 p-2 rounded-lg border border-neutral-200 bg-white text-neutral-700 hover:bg-neutral-50 transition-colors h-[38px] w-[38px] flex items-center justify-center"
+          title="소유 범위/부서 변경"
         >
-          부서 이동 저장
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+          </svg>
         </button>
+      </div>
+
+      {/* 소유 범위/부서 변경 폼 (접어두기) */}
+      {showTransferForm && (
+        <div className="rounded-lg border border-neutral-200 bg-neutral-50 p-4 space-y-3">
+          <div className="grid gap-3 md:grid-cols-3">
+            <label className="flex flex-col gap-2">
+              <span className="form-label">소유 범위</span>
+              <select
+                className="form-select h-[38px]"
+                value={nextOwnerScope}
+                onChange={(event) => {
+                  const value = event.target.value as "organization" | "department";
+                  setNextOwnerScope(value);
+                  if (value === "organization") {
+                    setNextOwnerDepartment("기관 공용");
+                  } else {
+                    // 부서 소유로 변경 시 첫 번째 부서를 기본값으로 설정
+                    if (departments.length > 0 && !nextOwnerDepartment) {
+                      setNextOwnerDepartment(departments[0].name);
+                    }
+                  }
+                }}
+              >
+                <option value="department">부서 소유</option>
+                <option value="organization">기관 공용</option>
+              </select>
+            </label>
+            <label className="flex flex-col gap-2 md:col-span-2">
+              <span className="form-label">소유 부서</span>
+              {nextOwnerScope === "organization" ? (
+                <div className="form-input bg-neutral-50 text-neutral-600 h-[38px]">
+                  기관 공용
+                </div>
+              ) : (
+                <select
+                  className="form-select h-[38px]"
+                  value={nextOwnerDepartment || ""}
+                  onChange={(event) => setNextOwnerDepartment(event.target.value)}
+                >
+                  <option value="">부서 선택</option>
+                  {departments.map((dept) => (
+                    <option key={dept.id} value={dept.name}>
+                      {dept.name}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </label>
+          </div>
+          <button
+            type="button"
+            onClick={handleTransfer}
+            disabled={updating}
+            className="h-[38px] px-4 rounded-lg text-sm font-medium transition-all bg-white text-neutral-700 border border-neutral-200 hover:bg-neutral-50 whitespace-nowrap flex items-center justify-center"
+          >
+            부서 이동 저장
+          </button>
+        </div>
+      )}
+
+      <div className="flex flex-wrap items-center gap-2 text-sm">
         <button
           type="button"
           onClick={handleRetire}

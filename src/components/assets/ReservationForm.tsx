@@ -56,6 +56,7 @@ export default function ReservationForm({
     loadSession();
   }, []);
 
+  // 달력에서 날짜 범위 선택 시 폼의 날짜/시간 자동 업데이트
   useEffect(() => {
     if (presetStartDate) {
       const date = new Date(presetStartDate);
@@ -111,7 +112,7 @@ export default function ReservationForm({
                   value={startDate}
                   onChange={(e) => setStartDate(e.target.value)}
                   max={endDate || undefined}
-                  className="form-input text-base md:text-sm"
+                  className="form-input text-base md:text-sm h-[38px]"
                   style={{ flex: '1 1 0', minWidth: '110px' }}
                   required
                   disabled={isDisabled}
@@ -120,7 +121,7 @@ export default function ReservationForm({
                   type="time"
                   value={startTime}
                   onChange={(e) => setStartTime(e.target.value)}
-                  className="form-input text-base md:text-sm flex-shrink-0"
+                  className="form-input text-base md:text-sm flex-shrink-0 h-[38px]"
                   style={{ width: '120px', minWidth: '120px', flexShrink: 0 }}
                   required
                   disabled={isDisabled}
@@ -135,7 +136,7 @@ export default function ReservationForm({
                   value={endDate}
                   onChange={(e) => setEndDate(e.target.value)}
                   min={startDate || undefined}
-                  className="form-input text-base md:text-sm"
+                  className="form-input text-base md:text-sm h-[38px]"
                   style={{ flex: '1 1 0', minWidth: '110px' }}
                   required
                   disabled={isDisabled}
@@ -144,7 +145,7 @@ export default function ReservationForm({
                   type="time"
                   value={endTime}
                   onChange={(e) => setEndTime(e.target.value)}
-                  className="form-input text-base md:text-sm flex-shrink-0"
+                  className="form-input text-base md:text-sm flex-shrink-0 h-[38px]"
                   style={{ width: '120px', minWidth: '120px', flexShrink: 0 }}
                   required
                   disabled={isDisabled}
@@ -164,7 +165,7 @@ export default function ReservationForm({
                     setRecurrenceEndDate("");
                   }
                 }}
-                className="form-select w-full"
+                className="form-select w-full h-[38px]"
                 disabled={isDisabled}
               >
                 <option value="none">반복 없음</option>

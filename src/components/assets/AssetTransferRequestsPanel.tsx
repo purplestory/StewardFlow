@@ -212,7 +212,14 @@ export default function AssetTransferRequestsPanel({
     return null;
   }
 
-  if (!canManage && requests.length === 0) {
+  // 내 부서의 불용품이 아니면 표시하지 않음
+  // 알림 메뉴에서 요청을 처리할 수 있으므로 여기서는 내 부서의 불용품만 관리
+  if (!canManage) {
+    return null;
+  }
+
+  // 기관 공용이 아닌 경우에만 표시 (내 부서의 불용품만)
+  if (ownerScope === "organization" || ownerDepartment === "기관 공용") {
     return null;
   }
 

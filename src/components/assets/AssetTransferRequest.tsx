@@ -201,20 +201,24 @@ export default function AssetTransferRequest({
     );
   }
 
+  // 불용품이 아니면 표시하지 않음
   if (assetStatus !== "retired") {
     return null;
   }
 
   if (!userId) {
-    return (
-      <Notice>
-        로그인 후 이동 요청을 이용할 수 있습니다.{" "}
-        <a href="/login" className="underline">
-          로그인
-        </a>
-        으로 이동해 주세요.
-      </Notice>
-    );
+    return null;
+  }
+
+  // 내 부서의 불용품이면 양도 요청할 필요 없음
+  if (currentDepartment && currentDepartment === ownerDepartment) {
+    return null;
+  }
+
+  // 기관 공용이 아닌 경우에만 표시 (타 부서의 불용품만)
+  // ownerDepartment가 "기관 공용"이면 표시하지 않음 (이미 기관 전체가 사용 가능)
+  if (ownerDepartment === "기관 공용") {
+    return null;
   }
 
   return (

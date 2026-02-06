@@ -10,7 +10,6 @@ import { listApprovalPoliciesByOrg } from "@/actions/approval-actions";
 import AssetReservationSection from "@/components/assets/AssetReservationSection";
 import AssetAdminActions from "@/components/assets/AssetAdminActions";
 import AssetTransferRequest from "@/components/assets/AssetTransferRequest";
-import AssetTransferRequestsPanel from "@/components/assets/AssetTransferRequestsPanel";
 import { useAsset, useAssetReservations, useUserRole, useUserProfile, useApprovalPolicies } from "@/hooks/useAssets";
 
 const statusLabel: Record<AssetReservationSummary["status"], string> = {
@@ -236,13 +235,23 @@ export default function AssetDetailClient() {
           </div>
           
           <div className="space-y-3">
-            <div className="flex items-start gap-3">
+            <div className="flex items-center gap-3">
               <span className="text-sm font-semibold text-neutral-700 min-w-[100px]">
-                소유 부서
+                소유 범위
               </span>
               <span className="text-sm text-neutral-600">
-                {asset.owner_scope === "organization" ? "기관 공용" : asset.owner_department}
+                {asset.owner_scope === "organization" ? "기관 공용" : "부서 소유"}
               </span>
+              {asset.owner_scope === "department" && (
+                <>
+                  <span className="text-sm font-semibold text-neutral-700 min-w-[100px]">
+                    소유 부서
+                  </span>
+                  <span className="text-sm text-neutral-600">
+                    {asset.owner_department}
+                  </span>
+                </>
+              )}
             </div>
             
             <div className="flex items-start gap-3">
@@ -345,13 +354,6 @@ export default function AssetDetailClient() {
         assetStatus={asset.status}
         ownerDepartment={asset.owner_department}
         assetName={asset.name}
-      />
-
-      <AssetTransferRequestsPanel
-        assetId={asset.id}
-        assetName={asset.name}
-        ownerDepartment={asset.owner_department}
-        ownerScope={asset.owner_scope}
       />
     </section>
   );

@@ -1050,20 +1050,76 @@ export default function UserRoleManager() {
     setMessage(null);
     setLoading(true);
 
-    const { error: updateProfileError } = await supabase
+    console.log("사용자 승인 시도:", {
+      userId: approvingUserId,
+      organizationId: approvalOrganizationId,
+      department: approvalDepartment,
+      role: approvalRole,
+    });
+
+    const { error: updateProfileError, data: updateData } = await supabase
       .from("profiles")
       .update({
         organization_id: approvalOrganizationId,
         department: approvalDepartment || null,
         role: approvalRole,
       })
-      .eq("id", approvingUserId);
+      .eq("id", approvingUserId)
+      .select();
 
     if (updateProfileError) {
+      console.error("프로필 업데이트 오류:", updateProfileError);
+      console.error("에러 상세:", {
+        code: updateProfileError.code,
+        message: updateProfileError.message,
+        details: updateProfileError.details,
+        hint: updateProfileError.hint,
+      });
       setMessage(`사용자 승인 실패: ${updateProfileError.message}`);
       setLoading(false);
       return;
     }
+
+    console.log("프로필 업데이트 결과:", updateData);
+
+    // 업데이트 후 검증: 실제로 업데이트되었는지 확인
+    const { data: verifyProfile, error: verifyError } = await supabase
+      .from("profiles")
+      .select("id, organization_id, department, role")
+      .eq("id", approvingUserId)
+      .maybeSingle();
+
+    if (verifyError) {
+      console.error("프로필 검증 오류:", verifyError);
+      setMessage(`사용자 승인은 완료되었지만, 확인 중 오류가 발생했습니다: ${verifyError.message}`);
+      setLoading(false);
+      return;
+    }
+
+    if (!verifyProfile) {
+      console.error("프로필 검증 실패: 프로필을 찾을 수 없습니다.");
+      setMessage("사용자 승인 중 오류가 발생했습니다. 프로필을 찾을 수 없습니다.");
+      setLoading(false);
+      return;
+    }
+
+    console.log("프로필 검증 결과:", verifyProfile);
+
+    if (verifyProfile.organization_id !== approvalOrganizationId) {
+      console.error("프로필 검증 실패: organization_id가 일치하지 않습니다.", {
+        expected: approvalOrganizationId,
+        actual: verifyProfile.organization_id,
+      });
+      setMessage("사용자 승인 중 오류가 발생했습니다. 기관 정보가 올바르게 저장되지 않았습니다.");
+      setLoading(false);
+      return;
+    }
+
+    console.log("프로필 업데이트 성공 확인:", {
+      organization_id: verifyProfile.organization_id,
+      department: verifyProfile.department,
+      role: verifyProfile.role,
+    });
 
     await supabase.from("audit_logs").insert({
       organization_id: approvalOrganizationId,
@@ -1081,6 +1137,9 @@ export default function UserRoleManager() {
 
     setMessage("사용자가 성공적으로 승인되었습니다.");
     setApprovingUserId(null);
+    setApprovalOrganizationId("");
+    setApprovalDepartment("");
+    setApprovalRole("user");
     await load(); // Reload all data
   };
 

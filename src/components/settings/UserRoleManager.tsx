@@ -1256,17 +1256,23 @@ export default function UserRoleManager() {
 
     // Server Action을 사용하여 auth.users와 profiles 모두 삭제
     try {
-      const { deleteUserAccount } = await import("@/actions/auth-actions");
-      const deleteResult = await deleteUserAccount(request.requester_id);
+      // 동적 import를 사용하여 Server Action을 안전하게 로드
+      const authActionsModule = await import("@/actions/auth-actions");
+      if (!authActionsModule || !authActionsModule.deleteUserAccount) {
+        throw new Error("Server Action을 로드할 수 없습니다.");
+      }
+      
+      const deleteResult = await authActionsModule.deleteUserAccount(request.requester_id);
 
-      if (!deleteResult.success) {
-        setMessage(deleteResult.error || "계정 삭제 실패");
+      if (!deleteResult || !deleteResult.success) {
+        setMessage(deleteResult?.error || "계정 삭제 실패");
         setProcessingRequestId(null);
         return;
       }
     } catch (error: any) {
       console.error("Account deletion error:", error);
-      setMessage(`계정 삭제 중 오류가 발생했습니다: ${error.message || "알 수 없는 오류"}`);
+      const errorMessage = error?.message || "알 수 없는 오류";
+      setMessage(`계정 삭제 중 오류가 발생했습니다: ${errorMessage}`);
       setProcessingRequestId(null);
       return;
     }

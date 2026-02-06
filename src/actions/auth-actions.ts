@@ -2,27 +2,6 @@
 
 import { createClient } from "@supabase/supabase-js";
 
-// 서버 사이드에서만 사용할 수 있는 Supabase 클라이언트 생성
-function getSupabaseAdmin() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
-
-  if (!supabaseUrl) {
-    throw new Error("NEXT_PUBLIC_SUPABASE_URL 환경 변수가 설정되지 않았습니다.");
-  }
-
-  if (!serviceRoleKey) {
-    throw new Error("SUPABASE_SERVICE_ROLE_KEY 환경 변수가 설정되지 않았습니다. Vercel 환경 변수 설정을 확인하세요.");
-  }
-
-  return createClient(supabaseUrl, serviceRoleKey, {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false,
-    },
-  });
-}
-
 /**
  * 사용자 계정을 완전히 삭제합니다 (auth.users와 profiles 모두 삭제)
  * @param userId 삭제할 사용자 ID
@@ -30,18 +9,31 @@ function getSupabaseAdmin() {
  */
 export async function deleteUserAccount(userId: string) {
   try {
-    // 환경 변수 확인
+    // 환경 변수 확인 (함수 내부에서만 접근)
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
     const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
 
-    if (!supabaseUrl || !serviceRoleKey) {
+    if (!supabaseUrl) {
       return {
         success: false,
-        error: "서버 설정 오류: 환경 변수가 설정되지 않았습니다. 관리자에게 문의하세요.",
+        error: "서버 설정 오류: NEXT_PUBLIC_SUPABASE_URL 환경 변수가 설정되지 않았습니다.",
       };
     }
 
-    const supabaseAdmin = getSupabaseAdmin();
+    if (!serviceRoleKey) {
+      return {
+        success: false,
+        error: "서버 설정 오류: SUPABASE_SERVICE_ROLE_KEY 환경 변수가 설정되지 않았습니다. Vercel 환경 변수 설정을 확인하세요.",
+      };
+    }
+
+    // 서버 사이드에서만 사용할 수 있는 Supabase 클라이언트 생성
+    const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+      },
+    });
 
     // 1. 먼저 profiles 삭제 (RLS 정책 때문에 먼저 삭제)
     const { error: profileError } = await supabaseAdmin

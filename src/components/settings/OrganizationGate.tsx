@@ -9,12 +9,37 @@ type OrganizationGateProps = {
   children: React.ReactNode;
 };
 
+// 권한 정보를 전역적으로 캐시 (탭 이동 시 재사용)
+let cachedOrgGate: { 
+  hasOrganization: boolean; 
+  isAuthenticated: boolean; 
+  checked: boolean;
+  userId: string | null;
+} = {
+  hasOrganization: false,
+  isAuthenticated: false,
+  checked: false,
+  userId: null,
+};
+
 export default function OrganizationGate({ children }: OrganizationGateProps) {
-  const [loading, setLoading] = useState(true);
-  const [hasOrganization, setHasOrganization] = useState(false);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [hasOrganization, setHasOrganization] = useState(cachedOrgGate.hasOrganization);
+  const [isAuthenticated, setIsAuthenticated] = useState(cachedOrgGate.isAuthenticated);
+  const [isChecking, setIsChecking] = useState(!cachedOrgGate.checked);
 
   useEffect(() => {
+    // 이미 캐시된 정보가 있고 같은 사용자면 즉시 사용
+    supabase.auth.getSession().then(({ data: sessionData }) => {
+      const user = sessionData.session?.user ?? null;
+      
+      if (cachedOrgGate.checked && cachedOrgGate.userId === user?.id) {
+        setHasOrganization(cachedOrgGate.hasOrganization);
+        setIsAuthenticated(cachedOrgGate.isAuthenticated);
+        setIsChecking(false);
+        return;
+      }
+    });
+
     let isMounted = true;
 
     const load = async () => {
@@ -23,9 +48,15 @@ export default function OrganizationGate({ children }: OrganizationGateProps) {
 
       if (!user) {
         if (isMounted) {
+          cachedOrgGate = {
+            hasOrganization: false,
+            isAuthenticated: false,
+            checked: true,
+            userId: null,
+          };
           setHasOrganization(false);
           setIsAuthenticated(false);
-          setLoading(false);
+          setIsChecking(false);
         }
         return;
       }
@@ -36,30 +67,25 @@ export default function OrganizationGate({ children }: OrganizationGateProps) {
         .eq("id", user.id)
         .maybeSingle();
 
-      console.log("OrganizationGate - Profile query result:", {
-        user_id: user.id,
-        data,
-        error,
-        hasData: !!data,
-        hasError: !!error,
-        organization_id: data?.organization_id,
-      });
-
       if (error) {
         console.error("OrganizationGate - Profile load error:", error);
-        console.error("Error details:", {
-          message: error.message,
-          code: error.code,
-          details: error.details,
-          hint: error.hint,
-        });
       }
 
       if (!isMounted) return;
 
-      setHasOrganization(Boolean(data?.organization_id));
+      const hasOrg = Boolean(data?.organization_id);
+      
+      // 캐시에 저장
+      cachedOrgGate = {
+        hasOrganization: hasOrg,
+        isAuthenticated: true,
+        checked: true,
+        userId: user.id,
+      };
+
+      setHasOrganization(hasOrg);
       setIsAuthenticated(true);
-      setLoading(false);
+      setIsChecking(false);
     };
 
     load();
@@ -69,10 +95,9 @@ export default function OrganizationGate({ children }: OrganizationGateProps) {
     };
   }, []);
 
-  if (loading) {
-    return (
-      <Notice>기관 정보를 확인하는 중입니다.</Notice>
-    );
+  // 로딩 중일 때는 로딩 메시지를 표시하지 않고 컨텐츠를 표시
+  if (isChecking) {
+    return <>{children}</>;
   }
 
   if (!isAuthenticated) {

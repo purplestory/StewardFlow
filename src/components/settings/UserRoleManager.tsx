@@ -68,6 +68,22 @@ export default function UserRoleManager() {
   const [deletingUserId, setDeletingUserId] = useState<string | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [userToDelete, setUserToDelete] = useState<{ id: string; name: string } | null>(null);
+  const [deletionRequests, setDeletionRequests] = useState<Array<{
+    id: string;
+    requester_id: string;
+    requester_name: string | null;
+    requester_email: string | null;
+    requester_role: string | null;
+    requester_department: string | null;
+    transfer_to_user_id: string | null;
+    transfer_to_user_name: string | null;
+    status: string;
+    note: string | null;
+    admin_note: string | null;
+    created_at: string;
+  }>>([]);
+  const [adminNote, setAdminNote] = useState("");
+  const [processingRequestId, setProcessingRequestId] = useState<string | null>(null);
 
   const load = async () => {
     setLoading(true);
@@ -153,13 +169,13 @@ export default function UserRoleManager() {
     setCurrentUserId(user.id);
     setCurrentUserRole(profileData.role ?? "user");
 
-    // 일반 사용자는 사용자 목록을 볼 수 없음
+    // 일반 사용자는 사용자 목록을 볼 수 없음 (페이지 접근 불가)
     if (profileData.role === "user") {
       setProfiles([]);
       setInvites([]);
       setPendingUsers([]);
       setLoading(false);
-      setMessage("사용자 목록은 최고 관리자만 볼 수 있습니다.");
+      setMessage("일반 사용자는 이 페이지에 접근할 수 없습니다.");
       return;
     }
 
@@ -229,8 +245,8 @@ export default function UserRoleManager() {
       setAvailableDepartments(sortedDepartments.map((d) => d.name));
     }
 
-    // 부서 변경 요청 로드 (최고 관리자만)
-    if (profileData.role === "admin") {
+    // 부서 변경 요청 로드 (관리자 또는 부서 관리자만)
+    if (profileData.role === "admin" || profileData.role === "manager") {
       const { data: requestsData, error: requestsError } = await supabase
         .from("department_change_requests")
         .select(`
@@ -251,11 +267,48 @@ export default function UserRoleManager() {
       }
     }
 
-    const { data, error } = await supabase
+    // 계정 탈퇴 요청 로드 (최고 관리자만)
+    if (profileData.role === "admin") {
+      const { data: deletionRequestsData, error: deletionRequestsError } = await supabase
+        .from("account_deletion_requests")
+        .select("*")
+        .eq("organization_id", profileData.organization_id)
+        .eq("status", "pending")
+        .order("created_at", { ascending: false });
+
+      if (!deletionRequestsError && deletionRequestsData) {
+        setDeletionRequests(deletionRequestsData);
+      }
+    }
+
+    // 사용자 목록 조회
+    let profilesQuery = supabase
       .from("profiles")
       .select("id,email,name,department,role,organization_id")
-      .eq("organization_id", profileData.organization_id)
-      .order("created_at", { ascending: true });
+      .eq("organization_id", profileData.organization_id);
+
+    // 부서 관리자는 같은 부서 사용자만 조회
+    if (profileData.role === "manager") {
+      const { data: currentProfile } = await supabase
+        .from("profiles")
+        .select("department")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      if (currentProfile?.department) {
+        profilesQuery = profilesQuery.eq("department", currentProfile.department);
+      } else {
+        // 부서가 없는 부서 관리자는 아무도 볼 수 없음
+        setProfiles([]);
+        setInvites([]);
+        setPendingUsers([]);
+        setLoading(false);
+        setMessage("부서가 지정되지 않은 부서 관리자는 사용자 목록을 볼 수 없습니다.");
+        return;
+      }
+    }
+
+    const { data, error } = await profilesQuery.order("created_at", { ascending: true });
     
     // 디버깅: 프로필 조회 결과 확인
     if (error) {
@@ -417,7 +470,12 @@ export default function UserRoleManager() {
   const deleteUser = async (profileId: string, profileName: string) => {
     setMessage(null);
 
-    if (currentUserRole !== "admin") {
+    if (currentUserRole === "user") {
+      setMessage("사용자 삭제는 관리자만 가능합니다.");
+      return;
+    }
+
+    if (currentUserRole === "manager") {
       setMessage("사용자 삭제는 최고 관리자만 가능합니다.");
       return;
     }
@@ -492,10 +550,58 @@ export default function UserRoleManager() {
   const updateRole = async (profileId: string, role: ProfileRow["role"]) => {
     setMessage(null);
 
-    if (currentUserRole !== "admin") {
-      setMessage("권한 변경은 최고 관리자만 가능합니다.");
+    if (currentUserRole === "user") {
+      setMessage("권한 변경은 관리자만 가능합니다.");
       return;
     }
+
+    // 대상 사용자의 현재 역할 확인
+    const targetProfile = profiles.find((p) => p.id === profileId);
+    if (!targetProfile) {
+      setMessage("사용자를 찾을 수 없습니다.");
+      return;
+    }
+
+    // 이미 같은 역할이면 변경하지 않음
+    if (targetProfile.role === role) {
+      return;
+    }
+
+    // 부서 관리자 권한 체크
+    if (currentUserRole === "manager") {
+      // 부서 관리자는 관리자 역할로 변경할 수 없음
+      if (role === "admin") {
+        setMessage("부서 관리자는 사용자를 관리자로 변경할 수 없습니다.");
+        return;
+      }
+
+      // 부서 관리자는 관리자 역할을 변경할 수 없음
+      if (targetProfile.role === "admin") {
+        setMessage("부서 관리자는 관리자 역할을 변경할 수 없습니다.");
+        return;
+      }
+
+      // 부서 관리자는 같은 부서 사용자만 변경 가능
+      const { data: currentProfile } = await supabase
+        .from("profiles")
+        .select("department")
+        .eq("id", currentUserId)
+        .maybeSingle();
+
+      if (!currentProfile?.department) {
+        setMessage("부서가 지정되지 않은 부서 관리자는 역할을 변경할 수 없습니다.");
+        return;
+      }
+
+      if (targetProfile.department !== currentProfile.department) {
+        setMessage("부서 관리자는 같은 부서의 사용자만 변경할 수 있습니다.");
+        return;
+      }
+    }
+
+    // 최고 관리자는 모든 역할 변경 가능
+    // 부서 관리자는 같은 부서의 manager ↔ user 간 변경만 가능 (admin 제외)
+    // 일반 사용자는 역할 변경 불가 (이미 위에서 체크됨)
 
     const { error } = await supabase
       .from("profiles")
@@ -504,7 +610,8 @@ export default function UserRoleManager() {
       .eq("organization_id", organizationId);
 
     if (error) {
-      setMessage(error.message);
+      console.error("Role update error:", error);
+      setMessage(`역할 변경 실패: ${error.message}`);
       return;
     }
 
@@ -520,7 +627,10 @@ export default function UserRoleManager() {
       action: "role_update",
       target_type: "profile",
       target_id: profileId,
-      metadata: { role },
+      metadata: { 
+        from_role: targetProfile.role,
+        to_role: role 
+      },
     });
 
     // 성공 토스트 표시 후 자동으로 숨김
@@ -528,11 +638,78 @@ export default function UserRoleManager() {
     setTimeout(() => setSuccessToast(null), 2000);
   };
 
+  const updateDepartment = async (profileId: string, department: string | null) => {
+    setMessage(null);
+
+    // 최고 관리자만 부서 변경 가능
+    if (currentUserRole !== "admin") {
+      setMessage("부서 변경은 최고 관리자만 가능합니다.");
+      return;
+    }
+
+    if (!organizationId || !currentUserId) {
+      setMessage("기관 정보를 확인할 수 없습니다.");
+      return;
+    }
+
+    const targetProfile = profiles.find((p) => p.id === profileId);
+    if (!targetProfile) {
+      setMessage("사용자를 찾을 수 없습니다.");
+      return;
+    }
+
+    // 이미 같은 부서면 변경하지 않음
+    if (targetProfile.department === department) {
+      return;
+    }
+
+    const { error } = await supabase
+      .from("profiles")
+      .update({ department: department || null })
+      .eq("id", profileId)
+      .eq("organization_id", organizationId);
+
+    if (error) {
+      console.error("Department update error:", error);
+      setMessage(`부서 변경 실패: ${error.message}`);
+      return;
+    }
+
+    setProfiles((prev) =>
+      prev.map((profile) =>
+        profile.id === profileId ? { ...profile, department: department || null } : profile
+      )
+    );
+
+    await supabase.from("audit_logs").insert({
+      organization_id: organizationId,
+      actor_id: currentUserId,
+      action: "department_update",
+      target_type: "profile",
+      target_id: profileId,
+      metadata: { 
+        from_department: targetProfile.department,
+        to_department: department || null,
+        updated_by_admin: true,
+      },
+    });
+
+    // 성공 토스트 표시 후 자동으로 숨김
+    setSuccessToast("부서가 변경되었습니다.");
+    setTimeout(() => setSuccessToast(null), 2000);
+  };
+
   const sendInvite = async () => {
     setMessage(null);
 
-    if (currentUserRole !== "admin") {
-      setMessage("초대는 최고 관리자만 가능합니다.");
+    if (currentUserRole === "user") {
+      setMessage("초대는 관리자 또는 부서 관리자만 가능합니다.");
+      return;
+    }
+
+    // 부서 관리자는 관리자 역할로 초대할 수 없음
+    if (currentUserRole === "manager" && invitationRole === "admin") {
+      setMessage("부서 관리자는 관리자 역할로 초대할 수 없습니다.");
       return;
     }
 
@@ -643,8 +820,14 @@ export default function UserRoleManager() {
   const resendInvite = async (invite: InviteRow) => {
     setMessage(null);
 
-    if (currentUserRole !== "admin") {
-      setMessage("초대 재전송은 최고 관리자만 가능합니다.");
+    if (currentUserRole === "user") {
+      setMessage("초대 재전송은 관리자 또는 부서 관리자만 가능합니다.");
+      return;
+    }
+
+    // 부서 관리자는 관리자 역할 초대를 재전송할 수 없음
+    if (currentUserRole === "manager" && invite.role === "admin") {
+      setMessage("부서 관리자는 관리자 역할 초대를 재전송할 수 없습니다.");
       return;
     }
 
@@ -735,8 +918,14 @@ export default function UserRoleManager() {
   const revokeInvite = async (invite: InviteRow) => {
     setMessage(null);
 
-    if (currentUserRole !== "admin") {
-      setMessage("초대 취소는 최고 관리자만 가능합니다.");
+    if (currentUserRole === "user") {
+      setMessage("초대 취소는 관리자 또는 부서 관리자만 가능합니다.");
+      return;
+    }
+
+    // 부서 관리자는 관리자 역할 초대를 취소할 수 없음
+    if (currentUserRole === "manager" && invite.role === "admin") {
+      setMessage("부서 관리자는 관리자 역할 초대를 취소할 수 없습니다.");
       return;
     }
 
@@ -841,14 +1030,31 @@ export default function UserRoleManager() {
   const approveDepartmentChange = async (request: DepartmentChangeRequest) => {
     setMessage(null);
 
-    if (currentUserRole !== "admin") {
-      setMessage("부서 변경 승인은 최고 관리자만 가능합니다.");
+    if (currentUserRole === "user") {
+      setMessage("부서 변경 승인은 관리자만 가능합니다.");
       return;
     }
 
     if (!organizationId || !currentUserId) {
       setMessage("기관 정보를 확인할 수 없습니다.");
       return;
+    }
+
+    // 부서 관리자는 자신의 부서 사용자 요청만 승인 가능
+    if (currentUserRole === "manager") {
+      const { data: currentProfile } = await supabase
+        .from("profiles")
+        .select("department")
+        .eq("id", currentUserId)
+        .maybeSingle();
+
+      if (
+        currentProfile?.department !== request.from_department &&
+        currentProfile?.department !== request.to_department
+      ) {
+        setMessage("자신의 부서 사용자 요청만 승인할 수 있습니다.");
+        return;
+      }
     }
 
     // 요청 승인 및 프로필 업데이트
@@ -905,14 +1111,31 @@ export default function UserRoleManager() {
   const rejectDepartmentChange = async (request: DepartmentChangeRequest) => {
     setMessage(null);
 
-    if (currentUserRole !== "admin") {
-      setMessage("부서 변경 거부는 최고 관리자만 가능합니다.");
+    if (currentUserRole === "user") {
+      setMessage("부서 변경 거부는 관리자만 가능합니다.");
       return;
     }
 
     if (!organizationId || !currentUserId) {
       setMessage("기관 정보를 확인할 수 없습니다.");
       return;
+    }
+
+    // 부서 관리자는 자신의 부서 사용자 요청만 거부 가능
+    if (currentUserRole === "manager") {
+      const { data: currentProfile } = await supabase
+        .from("profiles")
+        .select("department")
+        .eq("id", currentUserId)
+        .maybeSingle();
+
+      if (
+        currentProfile?.department !== request.from_department &&
+        currentProfile?.department !== request.to_department
+      ) {
+        setMessage("자신의 부서 사용자 요청만 거부할 수 있습니다.");
+        return;
+      }
     }
 
     const now = new Date().toISOString();
@@ -945,6 +1168,163 @@ export default function UserRoleManager() {
     });
 
     setMessage("부서 변경 요청이 거부되었습니다.");
+    await load();
+  };
+
+  const approveDeletionRequest = async (requestId: string) => {
+    if (currentUserRole !== "admin") {
+      setMessage("탈퇴 요청 승인은 최고 관리자만 가능합니다.");
+      return;
+    }
+
+    if (!organizationId || !currentUserId) {
+      setMessage("기관 정보를 확인할 수 없습니다.");
+      return;
+    }
+
+    setProcessingRequestId(requestId);
+    setMessage(null);
+
+    // 요청 정보 조회
+    const { data: request, error: requestError } = await supabase
+      .from("account_deletion_requests")
+      .select("*")
+      .eq("id", requestId)
+      .single();
+
+    if (requestError || !request) {
+      setMessage(`요청 조회 실패: ${requestError?.message}`);
+      setProcessingRequestId(null);
+      return;
+    }
+
+    // 부서 관리자인 경우 권한 양도
+    if (request.requester_role === "manager" && request.transfer_to_user_id) {
+      const { error: transferError } = await supabase
+        .from("profiles")
+        .update({ role: "manager" })
+        .eq("id", request.transfer_to_user_id)
+        .eq("organization_id", organizationId);
+
+      if (transferError) {
+        setMessage(`권한 양도 실패: ${transferError.message}`);
+        setProcessingRequestId(null);
+        return;
+      }
+
+      // Audit log 기록 (권한 양도)
+      await supabase.from("audit_logs").insert({
+        organization_id: organizationId,
+        actor_id: currentUserId,
+        action: "role_transferred",
+        target_type: "profile",
+        target_id: request.transfer_to_user_id,
+        metadata: {
+          from_user_id: request.requester_id,
+          from_user_name: request.requester_name,
+          to_user_id: request.transfer_to_user_id,
+          transferred_role: "manager",
+        },
+      });
+    }
+
+    // 프로필 삭제
+    const { error: deleteError } = await supabase
+      .from("profiles")
+      .delete()
+      .eq("id", request.requester_id);
+
+    if (deleteError) {
+      setMessage(`계정 삭제 실패: ${deleteError.message}`);
+      setProcessingRequestId(null);
+      return;
+    }
+
+    // 요청 상태 업데이트
+    const now = new Date().toISOString();
+    const { error: updateError } = await supabase
+      .from("account_deletion_requests")
+      .update({
+        status: "approved",
+        resolved_at: now,
+        resolved_by: currentUserId,
+        admin_note: adminNote || null,
+      })
+      .eq("id", requestId);
+
+    if (updateError) {
+      setMessage(`요청 상태 업데이트 실패: ${updateError.message}`);
+      setProcessingRequestId(null);
+      return;
+    }
+
+    // Audit log 기록 (계정 삭제)
+    await supabase.from("audit_logs").insert({
+      organization_id: organizationId,
+      actor_id: currentUserId,
+      action: "account_deleted",
+      target_type: "profile",
+      target_id: request.requester_id,
+      metadata: {
+        deleted_user_name: request.requester_name,
+        deleted_user_email: request.requester_email,
+        role_transferred: request.requester_role === "manager" && request.transfer_to_user_id ? true : false,
+        approved_by_admin: true,
+      },
+    });
+
+    setMessage("탈퇴 요청이 승인되었습니다.");
+    setAdminNote("");
+    setProcessingRequestId(null);
+    await load();
+  };
+
+  const rejectDeletionRequest = async (requestId: string) => {
+    if (currentUserRole !== "admin") {
+      setMessage("탈퇴 요청 거부는 최고 관리자만 가능합니다.");
+      return;
+    }
+
+    if (!organizationId || !currentUserId) {
+      setMessage("기관 정보를 확인할 수 없습니다.");
+      return;
+    }
+
+    setProcessingRequestId(requestId);
+    setMessage(null);
+
+    const now = new Date().toISOString();
+    const { error } = await supabase
+      .from("account_deletion_requests")
+      .update({
+        status: "rejected",
+        resolved_at: now,
+        resolved_by: currentUserId,
+        admin_note: adminNote || null,
+      })
+      .eq("id", requestId);
+
+    if (error) {
+      setMessage(`요청 거부 실패: ${error.message}`);
+      setProcessingRequestId(null);
+      return;
+    }
+
+    // audit log
+    await supabase.from("audit_logs").insert({
+      organization_id: organizationId,
+      actor_id: currentUserId,
+      action: "account_deletion_rejected",
+      target_type: "account_deletion_request",
+      target_id: requestId,
+      metadata: {
+        admin_note: adminNote || null,
+      },
+    });
+
+    setMessage("탈퇴 요청이 거부되었습니다.");
+    setAdminNote("");
+    setProcessingRequestId(null);
     await load();
   };
 
@@ -1009,7 +1389,7 @@ export default function UserRoleManager() {
             placeholder="이름 (필수)"
             value={invitationName}
             onChange={(event) => setInvitationName(event.target.value)}
-            disabled={currentUserRole !== "admin"}
+            disabled={currentUserRole === "user"}
             required
           />
           <input
@@ -1017,7 +1397,7 @@ export default function UserRoleManager() {
             placeholder="이메일 (선택사항, 가입 시 변경 가능)"
             value={invitationEmail}
             onChange={(event) => setInvitationEmail(event.target.value)}
-            disabled={currentUserRole !== "admin"}
+            disabled={currentUserRole === "user"}
             type="email"
           />
         </div>
@@ -1028,7 +1408,7 @@ export default function UserRoleManager() {
             onChange={(event) =>
               setInvitationRole(event.target.value as ProfileRow["role"])
             }
-            disabled={currentUserRole !== "admin"}
+            disabled={currentUserRole === "user"}
           >
             <option value="user">일반 사용자</option>
             <option value="manager">부서 관리자</option>
@@ -1041,7 +1421,7 @@ export default function UserRoleManager() {
             className="form-select flex-1 min-w-[140px]"
             value={invitationDepartment}
             onChange={(event) => setInvitationDepartment(event.target.value)}
-            disabled={currentUserRole !== "admin"}
+            disabled={currentUserRole === "user"}
           >
             <option value="">부서 선택 (선택사항)</option>
             {availableDepartments.map((dept) => (
@@ -1062,9 +1442,14 @@ export default function UserRoleManager() {
         <p className="text-xs text-neutral-500">
           이름, 역할, 부서는 초대 시 지정되며 가입 시 확인됩니다. 이메일은 가입 시 변경 가능합니다.
         </p>
-        {currentUserRole !== "admin" && (
+        {currentUserRole === "user" && (
           <span className="text-xs text-neutral-500">
-            초대는 최고 관리자만 가능합니다.
+            초대는 관리자 또는 부서 관리자만 가능합니다.
+          </span>
+        )}
+        {currentUserRole === "manager" && (
+          <span className="text-xs text-amber-600">
+            부서 관리자는 일반 사용자 또는 부서 관리자만 초대할 수 있습니다.
           </span>
         )}
       </div>
@@ -1169,6 +1554,83 @@ export default function UserRoleManager() {
                     className="h-10 rounded-lg border border-rose-200 bg-white px-3 text-xs font-medium text-rose-600 transition-all duration-200 hover:bg-rose-50 hover:border-rose-300 hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-rose-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     거부
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* 계정 탈퇴 요청 (최고 관리자만) */}
+      {currentUserRole === "admin" && deletionRequests.length > 0 && (
+        <div className="space-y-3 rounded-lg border border-rose-200 bg-rose-50 p-4">
+          <h3 className="text-sm font-semibold text-rose-900">계정 탈퇴 요청</h3>
+          <p className="text-xs text-rose-700">
+            부서 관리자의 계정 탈퇴 요청입니다. 승인 시 계정이 영구적으로 삭제됩니다.
+          </p>
+          {deletionRequests.map((request) => (
+            <div
+              key={request.id}
+              className="rounded-lg border border-rose-200 bg-white p-3"
+            >
+              <div className="space-y-3">
+                <div className="flex flex-wrap items-start justify-between gap-2">
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-neutral-900">
+                      {request.requester_name || request.requester_email}
+                    </p>
+                    <p className="text-xs text-neutral-500 mt-1">
+                      역할: {roleLabel[request.requester_role as ProfileRow["role"]] || request.requester_role}
+                      {request.requester_department && ` · 부서: ${request.requester_department}`}
+                    </p>
+                    {request.transfer_to_user_name && (
+                      <p className="text-xs text-amber-700 mt-1">
+                        권한 위임 대상: {request.transfer_to_user_name}
+                      </p>
+                    )}
+                    {request.note && (
+                      <p className="text-xs text-neutral-600 mt-1">탈퇴 사유: {request.note}</p>
+                    )}
+                    <p className="text-xs text-neutral-400 mt-1">
+                      요청일: {formatDateTime(request.created_at)}
+                    </p>
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-neutral-700 mb-1">
+                    관리자 메모 (선택)
+                  </label>
+                  <textarea
+                    value={adminNote}
+                    onChange={(e) => setAdminNote(e.target.value)}
+                    className="w-full form-input min-h-[60px] text-sm"
+                    placeholder="승인/거부 사유를 입력하세요"
+                    disabled={processingRequestId === request.id}
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAdminNote("");
+                      approveDeletionRequest(request.id);
+                    }}
+                    disabled={processingRequestId !== null}
+                    className="flex-1 h-10 rounded-lg border border-green-200 bg-white px-3 text-xs font-medium text-green-600 transition-all duration-200 hover:bg-green-50 hover:border-green-300 hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {processingRequestId === request.id ? "처리 중..." : "승인"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAdminNote("");
+                      rejectDeletionRequest(request.id);
+                    }}
+                    disabled={processingRequestId !== null}
+                    className="flex-1 h-10 rounded-lg border border-rose-200 bg-white px-3 text-xs font-medium text-rose-600 transition-all duration-200 hover:bg-rose-50 hover:border-rose-300 hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-rose-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {processingRequestId === request.id ? "처리 중..." : "거부"}
                   </button>
                 </div>
               </div>
@@ -1307,14 +1769,38 @@ export default function UserRoleManager() {
               key={profile.id}
               className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-neutral-200 px-3 py-2 text-xs"
             >
-              <div>
+              <div className="flex-1">
                 <p className="text-sm font-medium">
                   {profile.name ?? "이름 없음"}
                 </p>
                 <p className="text-xs text-neutral-500">{profile.email}</p>
-                <p className="text-xs text-neutral-400">
-                  {profile.department ?? "부서 미등록"}
-                </p>
+                {/* 최고 관리자는 부서를 변경할 수 있음 */}
+                {currentUserRole === "admin" ? (
+                  <div className="mt-1">
+                    <select
+                      className="form-select text-xs h-8"
+                      value={profile.department || ""}
+                      onChange={(event) =>
+                        updateDepartment(
+                          profile.id,
+                          event.target.value || null
+                        )
+                      }
+                      disabled={currentUserId === profile.id}
+                    >
+                      <option value="">부서 미지정</option>
+                      {availableDepartments.map((dept) => (
+                        <option key={dept} value={dept}>
+                          {dept}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                ) : (
+                  <p className="text-xs text-neutral-400">
+                    {profile.department ?? "부서 미등록"}
+                  </p>
+                )}
               </div>
               <div className="flex items-center gap-2">
                 <select
@@ -1328,7 +1814,9 @@ export default function UserRoleManager() {
                   }
                   disabled={
                     currentUserId === profile.id || 
-                    currentUserRole !== "admin"
+                    currentUserRole === "user" ||
+                    // 부서 관리자는 관리자 역할을 변경할 수 없음
+                    (currentUserRole === "manager" && profile.role === "admin")
                   }
                 >
                   <option value="admin">관리자</option>

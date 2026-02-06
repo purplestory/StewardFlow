@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import type { DepartmentChangeRequest } from "@/types/database";
 
@@ -14,20 +14,31 @@ type Profile = {
   organization_id: string | null;
 };
 
+type Organization = {
+  id: string;
+  name: string;
+};
+
 export default function ProfileEditor() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
-  const formRef = useRef<HTMLFormElement>(null);
   const [availableDepartments, setAvailableDepartments] = useState<string[]>([]);
   const [pendingRequest, setPendingRequest] = useState<DepartmentChangeRequest | null>(null);
-  const [showRequestForm, setShowRequestForm] = useState(false);
   const [requestedDepartment, setRequestedDepartment] = useState("");
   const [requestNote, setRequestNote] = useState("");
   const [requesting, setRequesting] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [sameDepartmentUsers, setSameDepartmentUsers] = useState<Array<{ id: string; name: string | null; email: string }>>([]);
+  const [transferToUserId, setTransferToUserId] = useState<string>("");
+  const [loadingUsers, setLoadingUsers] = useState(false);
+  const [organization, setOrganization] = useState<Organization | null>(null);
+  const [editingPhone, setEditingPhone] = useState(false);
+  const [editingDepartment, setEditingDepartment] = useState(false);
+  const [phoneValue, setPhoneValue] = useState("");
+  const [savingPhone, setSavingPhone] = useState(false);
+  const [pendingDeletionRequest, setPendingDeletionRequest] = useState<any | null>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -64,11 +75,13 @@ export default function ProfileEditor() {
       if (profileData) {
         if (isMounted) {
           setProfile(profileData as Profile);
+          setPhoneValue(profileData.phone || "");
           
-          // 부서 목록 로드
+          // 부서 목록 및 기관 정보 로드
           if (profileData.organization_id) {
             loadDepartments(profileData.organization_id);
             loadPendingRequest(user.id);
+            loadOrganization(profileData.organization_id);
           }
           
           setLoading(false);
@@ -190,6 +203,18 @@ export default function ProfileEditor() {
     }
   };
 
+  const loadOrganization = async (organizationId: string) => {
+    const { data, error } = await supabase
+      .from("organizations")
+      .select("id, name")
+      .eq("id", organizationId)
+      .maybeSingle();
+
+    if (!error && data) {
+      setOrganization(data as Organization);
+    }
+  };
+
   const handleRequestDepartmentChange = async () => {
     if (!profile || !requestedDepartment || requestedDepartment === profile.department) {
       setMessage("변경할 부서를 선택해주세요.");
@@ -223,15 +248,15 @@ export default function ProfileEditor() {
 
     if (error) {
       setMessage(`부서 변경 요청 실패: ${error.message}`);
+      setRequesting(false);
     } else {
       setPendingRequest(data as DepartmentChangeRequest);
-      setShowRequestForm(false);
       setRequestedDepartment("");
       setRequestNote("");
       setMessage("부서 변경 요청이 제출되었습니다. 승인 대기 중입니다.");
+      setTimeout(() => setMessage(null), 2000);
+      setRequesting(false);
     }
-
-    setRequesting(false);
   };
 
   const handleCancelRequest = async () => {
@@ -253,14 +278,36 @@ export default function ProfileEditor() {
     setRequesting(false);
   };
 
-  const handleDeleteAccount = async () => {
-    if (!profile) return;
-
-    // 부서 관리자인 경우 경고
-    if (profile.role === "manager") {
-      setMessage("부서 관리자는 탈퇴 전에 관리자에게 연락하여 권한을 양도해야 합니다.");
+  const loadSameDepartmentUsers = async () => {
+    if (!profile || !profile.department || !profile.organization_id) {
+      setSameDepartmentUsers([]);
       return;
     }
+
+    setLoadingUsers(true);
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("id, name, email")
+      .eq("organization_id", profile.organization_id)
+      .eq("department", profile.department)
+      .neq("id", profile.id) // 자기 자신 제외
+      .order("name", { ascending: true });
+
+    if (error) {
+      console.error("Error loading same department users:", error);
+      setSameDepartmentUsers([]);
+    } else {
+      setSameDepartmentUsers((data || []).map(u => ({
+        id: u.id,
+        name: u.name,
+        email: u.email,
+      })));
+    }
+    setLoadingUsers(false);
+  };
+
+  const handleDeleteAccount = async () => {
+    if (!profile) return;
 
     setDeleting(true);
     setMessage(null);
@@ -274,6 +321,54 @@ export default function ProfileEditor() {
       return;
     }
 
+    // 부서 관리자인 경우 탈퇴 요청 생성 (최고 관리자 승인 필요)
+    if (profile.role === "manager") {
+      if (!transferToUserId) {
+        setMessage("부서 관리자 권한을 위임할 사용자를 선택해주세요.");
+        setDeleting(false);
+        return;
+      }
+
+      // 위임받을 사용자 정보 조회
+      const { data: transferUser } = await supabase
+        .from("profiles")
+        .select("name, email")
+        .eq("id", transferToUserId)
+        .single();
+
+      // 탈퇴 요청 생성
+      const { data: requestData, error: requestError } = await supabase
+        .from("account_deletion_requests")
+        .insert({
+          organization_id: profile.organization_id,
+          requester_id: user.id,
+          requester_name: profile.name,
+          requester_email: profile.email,
+          requester_role: profile.role,
+          requester_department: profile.department,
+          transfer_to_user_id: transferToUserId,
+          transfer_to_user_name: transferUser?.name || null,
+          status: "pending",
+          note: requestNote || null,
+        })
+        .select()
+        .single();
+
+      if (requestError) {
+        setMessage(`탈퇴 요청 생성 실패: ${requestError.message}`);
+        setDeleting(false);
+        return;
+      }
+
+      setPendingDeletionRequest(requestData);
+      setShowDeleteConfirm(false);
+      setMessage("탈퇴 요청이 제출되었습니다. 최고 관리자의 승인을 기다리는 중입니다.");
+      setTimeout(() => setMessage(null), 3000);
+      setDeleting(false);
+      return;
+    }
+
+    // 일반 사용자는 즉시 탈퇴
     // 프로필 삭제
     const { error: deleteError } = await supabase
       .from("profiles")
@@ -286,7 +381,7 @@ export default function ProfileEditor() {
       return;
     }
 
-    // Audit log 기록
+    // Audit log 기록 (계정 삭제)
     if (profile.organization_id) {
       await supabase.from("audit_logs").insert({
         organization_id: profile.organization_id,
@@ -306,58 +401,69 @@ export default function ProfileEditor() {
     window.location.href = "/";
   };
 
-  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const handleCancelDeletionRequest = async () => {
+    if (!pendingDeletionRequest) return;
+
+    setRequesting(true);
+    const { error } = await supabase
+      .from("account_deletion_requests")
+      .update({ status: "cancelled" })
+      .eq("id", pendingDeletionRequest.id);
+
+    if (error) {
+      setMessage(`요청 취소 실패: ${error.message}`);
+      setRequesting(false);
+    } else {
+      setPendingDeletionRequest(null);
+      setMessage("탈퇴 요청이 취소되었습니다.");
+      setTimeout(() => setMessage(null), 2000);
+      setRequesting(false);
+    }
+  };
+
+  const handleSavePhone = async () => {
+    if (!profile) return;
+
+    setSavingPhone(true);
     setMessage(null);
-    setSaving(true);
 
     const { data: sessionData } = await supabase.auth.getSession();
     const user = sessionData.session?.user;
 
-    if (!user || !profile) {
+    if (!user) {
       setMessage("로그인 후 프로필 정보를 수정할 수 있습니다.");
-      setSaving(false);
+      setSavingPhone(false);
       return;
     }
-
-    // Get form element - try multiple methods
-    const formElement = 
-      (event.currentTarget instanceof HTMLFormElement ? event.currentTarget : null) ||
-      (event.target instanceof HTMLFormElement ? event.target : null) ||
-      (event.target instanceof HTMLElement ? (event.target as HTMLElement).closest('form') : null);
-    
-    if (!(formElement instanceof HTMLFormElement)) {
-      console.error("Could not find form element:", { 
-        currentTarget: event.currentTarget, 
-        target: event.target,
-        targetType: event.target?.constructor?.name 
-      });
-      setMessage("폼 제출 중 오류가 발생했습니다.");
-      setSaving(false);
-      return;
-    }
-
-    const formData = new FormData(formElement);
-    const updates = {
-      name: formData.get("name")?.toString() || null,
-      // department는 사용자가 직접 변경할 수 없도록 제외
-      phone: formData.get("phone")?.toString() || null,
-    };
 
     const { error } = await supabase
       .from("profiles")
-      .update(updates)
+      .update({ phone: phoneValue || null })
       .eq("id", user.id);
 
     if (error) {
-      setMessage(error.message);
+      setMessage(`연락처 저장 실패: ${error.message}`);
+      setSavingPhone(false);
     } else {
-      setProfile({ ...profile, ...updates });
-      setMessage("프로필이 저장되었습니다.");
+      setProfile({ ...profile, phone: phoneValue || null });
+      setEditingPhone(false);
+      setMessage("연락처가 저장되었습니다.");
+      setTimeout(() => setMessage(null), 2000);
+      setSavingPhone(false);
     }
-
-    setSaving(false);
   };
+
+  const handleCancelPhone = () => {
+    setPhoneValue(profile?.phone || "");
+    setEditingPhone(false);
+  };
+
+  // 모달이 열릴 때 부서 관리자인 경우 사용자 목록 로드
+  useEffect(() => {
+    if (showDeleteConfirm && profile?.role === "manager") {
+      loadSameDepartmentUsers();
+    }
+  }, [showDeleteConfirm, profile?.role]);
 
   if (loading) {
     return <p className="text-sm text-neutral-500">프로필 정보를 불러오는 중...</p>;
@@ -378,210 +484,277 @@ export default function ProfileEditor() {
   };
 
   return (
-    <form ref={formRef} onSubmit={handleSubmit} className="space-y-4">
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div className="flex flex-col gap-2">
-          <label className="form-label">이메일</label>
-          <input
-            type="email"
-            value={profile.email}
-            disabled
-            className="form-input bg-neutral-50 text-neutral-600"
-          />
-          <p className="text-xs text-neutral-500">이메일은 변경할 수 없습니다.</p>
-        </div>
-
-        <div className="flex flex-col gap-2">
-          <label className="form-label">역할</label>
-          <input
-            type="text"
-            value={roleLabel[profile.role || "user"] || profile.role || "일반 사용자"}
-            disabled
-            className="form-input bg-neutral-50 text-neutral-600"
-          />
-          <p className="text-xs text-neutral-500">역할은 관리자가 변경할 수 있습니다.</p>
-        </div>
-
-        <div className="flex flex-col gap-2">
-          <label htmlFor="name" className="form-label">
-            이름
-          </label>
-          <input
-            id="name"
-            name="name"
-            type="text"
-            defaultValue={profile.name || ""}
-            className="form-input"
-            placeholder="예: 김철수"
-          />
-        </div>
-
-        <div className="flex flex-col gap-2">
-          <label htmlFor="department" className="form-label">
-            소속 부서
-          </label>
-          <div className="flex items-center gap-2">
+    <div className="space-y-6">
+      {/* 프로필 정보 표시 섹션 */}
+      <div className="rounded-xl border border-neutral-200 bg-white p-6">
+        <h2 className="text-lg font-semibold mb-4">프로필 정보</h2>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="flex flex-col gap-2">
+            <label className="form-label">이름</label>
             <input
-              id="department"
-              name="department"
               type="text"
-              value={profile.department || ""}
+              value={profile.name || ""}
               disabled
-              className="form-input bg-neutral-50 text-neutral-600 flex-1"
-              placeholder="예: 유년부"
+              className="form-input bg-neutral-50 text-neutral-600"
             />
-            {!pendingRequest && (
-              <button
-                type="button"
-                onClick={() => setShowRequestForm(!showRequestForm)}
-                className="flex-shrink-0 p-2 rounded-lg border border-neutral-200 bg-white text-neutral-700 hover:bg-neutral-50 transition-colors"
-                title="부서 변경 요청"
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  strokeWidth={1.5}
-                  stroke="currentColor"
-                  className="w-5 h-5"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10"
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <label className="form-label">전화번호</label>
+            <div className="flex items-center gap-2">
+              {editingPhone ? (
+                <>
+                  <input
+                    type="tel"
+                    value={phoneValue}
+                    onChange={(e) => setPhoneValue(e.target.value)}
+                    className="form-input flex-1"
+                    placeholder="010-0000-0000"
+                    autoFocus
                   />
-                </svg>
-              </button>
+                  <button
+                    type="button"
+                    onClick={handleSavePhone}
+                    disabled={savingPhone}
+                    className="flex-shrink-0 h-10 px-3 rounded-lg text-sm font-medium bg-neutral-900 text-white hover:bg-neutral-800 disabled:opacity-50"
+                  >
+                    {savingPhone ? "저장 중..." : "저장"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleCancelPhone}
+                    disabled={savingPhone}
+                    className="flex-shrink-0 h-10 px-3 rounded-lg text-sm font-medium border border-neutral-300 bg-white text-neutral-700 hover:bg-neutral-50 disabled:opacity-50"
+                  >
+                    취소
+                  </button>
+                </>
+              ) : (
+                <>
+                  <input
+                    type="tel"
+                    value={profile.phone || ""}
+                    disabled
+                    className="form-input bg-neutral-50 text-neutral-600 flex-1"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPhoneValue(profile.phone || "");
+                      setEditingPhone(true);
+                    }}
+                    className="flex-shrink-0 p-2 rounded-lg border border-neutral-200 bg-white text-neutral-700 hover:bg-neutral-50 transition-colors"
+                    title="연락처 수정"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      strokeWidth={1.5}
+                      stroke="currentColor"
+                      className="w-5 h-5"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10"
+                      />
+                    </svg>
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <label className="form-label">이메일</label>
+            <input
+              type="email"
+              value={profile.email}
+              disabled
+              className="form-input bg-neutral-50 text-neutral-600"
+            />
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <label className="form-label">기관</label>
+            <input
+              type="text"
+              value={organization?.name || "기관 정보 없음"}
+              disabled
+              className="form-input bg-neutral-50 text-neutral-600"
+            />
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <label className="form-label">소속 부서</label>
+            <div className="flex items-center gap-2">
+              {editingDepartment ? (
+                <>
+                  <select
+                    value={requestedDepartment}
+                    onChange={(e) => setRequestedDepartment(e.target.value)}
+                    className="form-select flex-1"
+                  >
+                    <option value="">부서 선택</option>
+                    {availableDepartments
+                      .filter((dept) => dept !== profile.department)
+                      .map((dept) => (
+                        <option key={dept} value={dept}>
+                          {dept}
+                        </option>
+                      ))}
+                  </select>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      if (!requestedDepartment || requestedDepartment === profile.department) {
+                        setEditingDepartment(false);
+                        setRequestedDepartment("");
+                        setRequestNote("");
+                        return;
+                      }
+                      await handleRequestDepartmentChange();
+                      setEditingDepartment(false);
+                    }}
+                    disabled={requesting || !requestedDepartment}
+                    className="flex-shrink-0 h-10 px-3 rounded-lg text-sm font-medium bg-neutral-900 text-white hover:bg-neutral-800 disabled:opacity-50"
+                  >
+                    {requesting ? "요청 중..." : "요청"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditingDepartment(false);
+                      setRequestedDepartment("");
+                      setRequestNote("");
+                    }}
+                    disabled={requesting}
+                    className="flex-shrink-0 h-10 px-3 rounded-lg text-sm font-medium border border-neutral-300 bg-white text-neutral-700 hover:bg-neutral-50 disabled:opacity-50"
+                  >
+                    취소
+                  </button>
+                </>
+              ) : (
+                <>
+                  <input
+                    type="text"
+                    value={profile.department || "부서 미등록"}
+                    disabled
+                    className="form-input bg-neutral-50 text-neutral-600 flex-1"
+                  />
+                  {!pendingRequest && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditingDepartment(true);
+                        setRequestedDepartment("");
+                        setRequestNote("");
+                      }}
+                      className="flex-shrink-0 p-2 rounded-lg border border-neutral-200 bg-white text-neutral-700 hover:bg-neutral-50 transition-colors"
+                      title="부서 변경 요청"
+                    >
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        strokeWidth={1.5}
+                        stroke="currentColor"
+                        className="w-5 h-5"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10"
+                        />
+                      </svg>
+                    </button>
+                  )}
+                </>
+              )}
+            </div>
+            {pendingRequest && (
+              <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                <p className="text-sm text-blue-900 font-medium">부서 변경 요청 대기 중</p>
+                <p className="text-xs text-blue-700 mt-1">
+                  {profile.department || "(없음)"} → {pendingRequest.to_department}
+                </p>
+                {pendingRequest.note && (
+                  <p className="text-xs text-blue-600 mt-1">사유: {pendingRequest.note}</p>
+                )}
+                <button
+                  type="button"
+                  onClick={handleCancelRequest}
+                  disabled={requesting}
+                  className="mt-2 text-xs text-blue-600 hover:text-blue-800 underline"
+                >
+                  {requesting ? "취소 중..." : "요청 취소"}
+                </button>
+              </div>
+            )}
+            {editingDepartment && (
+              <div className="mt-2">
+                <label className="text-xs text-neutral-600 mb-1 block">변경 사유 (선택)</label>
+                <textarea
+                  value={requestNote}
+                  onChange={(e) => setRequestNote(e.target.value)}
+                  className="form-input min-h-[60px] text-sm"
+                  placeholder="부서 변경 사유를 입력해주세요"
+                />
+              </div>
             )}
           </div>
-          <p className="text-xs text-neutral-500">부서는 관리자가 변경할 수 있습니다.</p>
-          
-          {pendingRequest && (
-            <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-              <p className="text-sm text-blue-900 font-medium">부서 변경 요청 대기 중</p>
-              <p className="text-xs text-blue-700 mt-1">
-                {profile.department || "(없음)"} → {pendingRequest.to_department}
-              </p>
-              {pendingRequest.note && (
-                <p className="text-xs text-blue-600 mt-1">사유: {pendingRequest.note}</p>
-              )}
+
+          <div className="flex flex-col gap-2">
+            <label className="form-label">역할</label>
+            <input
+              type="text"
+              value={roleLabel[profile.role || "user"] || profile.role || "일반 사용자"}
+              disabled
+              className="form-input bg-neutral-50 text-neutral-600"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* 탈퇴 섹션 */}
+      <div className="rounded-xl border border-neutral-200 bg-white p-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-sm font-semibold text-neutral-900 mb-1">계정 탈퇴</h3>
+            <p className="text-xs text-neutral-500">
+              {profile.role === "manager" 
+                ? "부서 관리자는 최고 관리자 승인 후 탈퇴됩니다"
+                : "계정을 영구적으로 삭제합니다"}
+            </p>
+          </div>
+          {pendingDeletionRequest ? (
+            <div className="flex items-center gap-3">
+              <div className="text-right">
+                <p className="text-xs text-blue-900 font-medium">탈퇴 요청 대기 중</p>
+                <p className="text-xs text-blue-700">최고 관리자 승인 대기</p>
+              </div>
               <button
                 type="button"
-                onClick={handleCancelRequest}
+                onClick={handleCancelDeletionRequest}
                 disabled={requesting}
-                className="mt-2 text-xs text-blue-600 hover:text-blue-800 underline"
+                className="btn-outline border-neutral-300 text-neutral-700 hover:bg-neutral-50 text-sm"
               >
                 {requesting ? "취소 중..." : "요청 취소"}
               </button>
             </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => {
+                setShowDeleteConfirm(true);
+              }}
+              disabled={deleting}
+              className="btn-outline border-rose-300 text-rose-700 hover:bg-rose-50"
+            >
+              계정 탈퇴
+            </button>
           )}
-          
-          {showRequestForm && !pendingRequest && (
-            <div className="mt-3 p-4 bg-neutral-50 border border-neutral-200 rounded-lg space-y-3">
-              <div className="flex flex-col gap-2">
-                <label htmlFor="requestedDepartment" className="text-sm font-medium text-neutral-700">
-                  변경할 부서
-                </label>
-                <select
-                  id="requestedDepartment"
-                  value={requestedDepartment}
-                  onChange={(e) => setRequestedDepartment(e.target.value)}
-                  className="form-select"
-                >
-                  <option value="">부서 선택</option>
-                  {availableDepartments
-                    .filter((dept) => dept !== profile.department)
-                    .map((dept) => (
-                      <option key={dept} value={dept}>
-                        {dept}
-                      </option>
-                    ))}
-                </select>
-              </div>
-              
-              <div className="flex flex-col gap-2">
-                <label htmlFor="requestNote" className="text-sm font-medium text-neutral-700">
-                  변경 사유 (선택)
-                </label>
-                <textarea
-                  id="requestNote"
-                  value={requestNote}
-                  onChange={(e) => setRequestNote(e.target.value)}
-                  className="form-input min-h-[80px]"
-                  placeholder="부서 변경 사유를 입력해주세요"
-                />
-              </div>
-              
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={handleRequestDepartmentChange}
-                  disabled={requesting || !requestedDepartment}
-                  className="btn-primary flex-1"
-                >
-                  {requesting ? "요청 중..." : "요청 제출"}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowRequestForm(false);
-                    setRequestedDepartment("");
-                    setRequestNote("");
-                  }}
-                  className="btn-secondary"
-                >
-                  취소
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
-
-        <div className="flex flex-col gap-2 sm:col-span-2">
-          <label htmlFor="phone" className="form-label">
-            연락처
-          </label>
-          <input
-            id="phone"
-            name="phone"
-            type="tel"
-            defaultValue={profile.phone || ""}
-            className="form-input"
-            placeholder="010-0000-0000"
-          />
-        </div>
-      </div>
-
-      <div className="flex items-center justify-between">
-        <button
-          type="submit"
-          disabled={saving}
-          className="btn-primary w-full"
-        >
-          {saving ? "저장 중..." : "프로필 저장"}
-        </button>
-      </div>
-
-      {/* 탈퇴 섹션 */}
-      <div className="mt-8 pt-6 border-t border-neutral-200">
-        <div className="rounded-lg border border-rose-200 bg-rose-50 p-4">
-          <h3 className="text-sm font-semibold text-rose-900 mb-2">계정 탈퇴</h3>
-          <p className="text-xs text-rose-700 mb-4">
-            계정을 탈퇴하면 모든 데이터가 삭제되며 복구할 수 없습니다.
-            {profile.role === "manager" && (
-              <span className="block mt-1 font-medium">
-                부서 관리자인 경우, 탈퇴 전에 다른 사용자에게 부서 관리자 권한을 양도해야 합니다.
-              </span>
-            )}
-          </p>
-          <button
-            type="button"
-            onClick={() => setShowDeleteConfirm(true)}
-            disabled={deleting}
-            className="btn-outline border-rose-300 text-rose-700 hover:bg-rose-100"
-          >
-            계정 탈퇴
-          </button>
         </div>
       </div>
 
@@ -603,23 +776,75 @@ export default function ProfileEditor() {
                 <p className="text-sm text-rose-900 font-medium mb-2">
                   정말로 계정을 탈퇴하시겠습니까?
                 </p>
+                <p className="text-xs text-rose-700 mb-3">
+                  계정을 탈퇴하면 모든 데이터가 삭제되며 복구할 수 없습니다.
+                </p>
                 <ul className="text-xs text-rose-700 space-y-1 list-disc list-inside">
                   <li>모든 프로필 정보가 삭제됩니다</li>
                   <li>대여 이력 및 예약 정보가 삭제됩니다</li>
                   <li>이 작업은 되돌릴 수 없습니다</li>
-                  {profile.role === "manager" && (
-                    <li className="font-medium text-rose-900">
-                      부서 관리자인 경우, 부서의 다른 사용자에게 권한을 양도해야 합니다
-                    </li>
-                  )}
                 </ul>
-              </div>
-              {profile.role === "manager" && (
-                <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3">
-                  <p className="text-xs text-amber-800">
-                    <strong>주의:</strong> 부서 관리자 권한을 가진 상태에서 탈퇴하면 부서 관리 기능이 중단될 수 있습니다.
-                    탈퇴 전에 관리자에게 연락하여 권한을 양도하거나 다른 사용자에게 부서 관리자 권한을 부여해주세요.
+                {profile.role === "manager" && (
+                  <p className="text-xs text-rose-800 font-medium mt-3 pt-3 border-t border-rose-300">
+                    부서 관리자인 경우, 탈퇴 전에 다른 사용자에게 부서 관리자 권한을 양도해야 합니다.
                   </p>
+                )}
+              </div>
+              
+              {/* 부서 관리자 권한 양도 섹션 */}
+              {profile.role === "manager" && (
+                <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 space-y-3">
+                  <div>
+                    <p className="text-sm text-amber-900 font-medium mb-1">
+                      부서 관리자 권한 위임 (필수)
+                    </p>
+                    <p className="text-xs text-amber-800">
+                      탈퇴 전에 같은 부서의 다른 사용자에게 부서 관리자 권한을 반드시 위임해야 합니다.
+                    </p>
+                  </div>
+                  {loadingUsers ? (
+                    <div className="py-2">
+                      <p className="text-xs text-amber-700">사용자 목록을 불러오는 중...</p>
+                    </div>
+                  ) : sameDepartmentUsers.length === 0 ? (
+                    <div className="rounded border border-amber-300 bg-amber-100 px-3 py-2">
+                      <p className="text-xs text-amber-900 font-medium mb-1">
+                        ⚠️ 같은 부서의 다른 사용자가 없습니다
+                      </p>
+                      <p className="text-xs text-amber-800">
+                        최고 관리자에게 연락하여 권한을 위임한 후 탈퇴할 수 있습니다.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <label className="block text-xs font-medium text-amber-900">
+                        부서 관리자 권한을 위임할 사용자 선택 <span className="text-rose-600">*</span>
+                      </label>
+                      <select
+                        value={transferToUserId}
+                        onChange={(e) => setTransferToUserId(e.target.value)}
+                        className="w-full form-select text-sm h-10"
+                        required
+                      >
+                        <option value="">-- 사용자를 선택하세요 --</option>
+                        {sameDepartmentUsers.map((user) => (
+                          <option key={user.id} value={user.id}>
+                            {user.name || "이름 없음"} ({user.email})
+                          </option>
+                        ))}
+                      </select>
+                      {transferToUserId && (
+                        <p className="text-xs text-amber-700 bg-amber-100 px-2 py-1 rounded">
+                          ✓ 선택한 사용자가 부서 관리자 권한을 받게 됩니다.
+                        </p>
+                      )}
+                      {!transferToUserId && (
+                        <p className="text-xs text-amber-700">
+                          사용자를 선택해야 탈퇴할 수 있습니다.
+                        </p>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -627,14 +852,20 @@ export default function ProfileEditor() {
               <button
                 type="button"
                 onClick={handleDeleteAccount}
-                disabled={deleting || (profile.role === "manager")}
+                disabled={
+                  deleting || 
+                  (profile.role === "manager" && (!transferToUserId || sameDepartmentUsers.length === 0))
+                }
                 className="flex-1 btn-primary bg-rose-600 hover:bg-rose-700 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {deleting ? "탈퇴 중..." : "탈퇴하기"}
               </button>
               <button
                 type="button"
-                onClick={() => setShowDeleteConfirm(false)}
+                onClick={() => {
+                  setShowDeleteConfirm(false);
+                  setTransferToUserId("");
+                }}
                 disabled={deleting}
                 className="flex-1 btn-ghost"
               >
@@ -644,6 +875,6 @@ export default function ProfileEditor() {
           </div>
         </div>
       )}
-    </form>
+    </div>
   );
 }

@@ -30,8 +30,8 @@ export default function UsersSettingsPage() {
         .eq("id", user.id)
         .maybeSingle();
 
-      // 최고 관리자만 접근 가능
-      const isAuthorized = profileData?.role === "admin";
+      // 관리자 또는 부서 관리자만 접근 가능
+      const isAuthorized = profileData?.role === "admin" || profileData?.role === "manager";
       setHasPermission(isAuthorized);
       setLoading(false);
     };
@@ -48,7 +48,7 @@ export default function UsersSettingsPage() {
   if (!hasPermission) {
     return (
       <Notice variant="warning" className="text-left">
-        최고 관리자만 접근할 수 있습니다.
+        관리자 또는 부서 관리자만 접근할 수 있습니다.
       </Notice>
     );
   }

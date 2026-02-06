@@ -105,7 +105,7 @@ export default function CategoryTabs() {
   const currentTab = tabs.find((tab) => pathname.startsWith(tab.href));
 
   return (
-    <div className="mb-6 border-b border-neutral-200">
+    <div className="mb-6 border-b border-neutral-300">
       <nav className="-mb-px flex space-x-1" aria-label="카테고리 탭">
         {tabs.map((tab) => {
           const isActive = pathname.startsWith(tab.href);
@@ -117,8 +117,8 @@ export default function CategoryTabs() {
                 whitespace-nowrap border-b-2 px-4 py-3 text-sm font-medium transition-colors
                 ${
                   isActive
-                    ? "border-black text-black"
-                    : "border-transparent text-neutral-500 hover:border-neutral-300 hover:text-neutral-700"
+                    ? "border-blue-600 text-blue-600"
+                    : "border-transparent text-neutral-500 hover:border-blue-300 hover:text-blue-600"
                 }
               `}
             >

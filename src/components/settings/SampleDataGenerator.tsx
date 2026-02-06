@@ -1231,7 +1231,7 @@ export default function SampleDataGenerator({
           type="button"
           onClick={deleteSampleData}
           disabled={generating || deleting}
-          className="h-10 w-full sm:flex-1 rounded-lg text-sm font-medium transition-all bg-white text-red-600 border border-red-300 hover:bg-red-50 hover:border-red-400 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white whitespace-nowrap flex items-center justify-center"
+          className="h-[38px] w-full sm:flex-1 rounded-lg text-sm font-medium transition-all bg-white text-red-600 border border-red-300 hover:bg-red-50 hover:border-red-400 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white whitespace-nowrap flex items-center justify-center"
         >
           {deleting ? "삭제 중..." : "샘플 데이터 삭제"}
         </button>

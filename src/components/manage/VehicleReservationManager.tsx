@@ -252,13 +252,13 @@ export default function VehicleReservationManager() {
         </div>
         <div className="flex flex-wrap gap-2">
           <input
-            className="form-input h-10 text-xs"
+            className="form-input h-[38px] text-xs"
             placeholder="차량명/신청자 검색"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
           />
           <select
-            className="form-select h-10 text-xs"
+            className="form-select h-[38px] text-xs"
             value={statusFilter}
             onChange={(event) =>
               setStatusFilter(

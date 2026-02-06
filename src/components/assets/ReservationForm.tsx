@@ -234,7 +234,7 @@ export default function ReservationForm({
                             type="button"
                             onClick={() => handleDayOfWeekToggle(index)}
                             disabled={isDisabled}
-                            className={`day-button h-10 w-10 rounded-lg border text-sm transition-colors ${
+                            className={`day-button h-[38px] w-[38px] rounded-lg border text-sm transition-colors ${
                               selectedDaysOfWeek.includes(index)
                                 ? "border-black bg-black text-white"
                                 : "border-neutral-300 bg-white text-neutral-700 hover:border-neutral-400"

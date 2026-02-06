@@ -487,21 +487,20 @@ export default function ProfileEditor() {
     <div className="space-y-6">
       {/* 프로필 정보 표시 섹션 */}
       <div className="rounded-xl border border-neutral-200 bg-white p-6">
-        <h2 className="text-lg font-semibold mb-4">프로필 정보</h2>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className="flex flex-col gap-2">
-            <label className="form-label">이름</label>
+        <div className="space-y-3">
+          <div className="flex items-center gap-3">
+            <label className="text-sm font-medium text-neutral-700 min-w-[80px]">이름</label>
             <input
               type="text"
               value={profile.name || ""}
               disabled
-              className="form-input bg-neutral-50 text-neutral-600"
+              className="form-input bg-neutral-50 text-neutral-600 flex-1"
             />
           </div>
 
-          <div className="flex flex-col gap-2">
-            <label className="form-label">전화번호</label>
-            <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
+            <label className="text-sm font-medium text-neutral-700 min-w-[80px]">전화번호</label>
+            <div className="flex items-center gap-2 flex-1">
               {editingPhone ? (
                 <>
                   <input
@@ -516,7 +515,7 @@ export default function ProfileEditor() {
                     type="button"
                     onClick={handleSavePhone}
                     disabled={savingPhone}
-                    className="flex-shrink-0 h-10 px-3 rounded-lg text-sm font-medium bg-neutral-900 text-white hover:bg-neutral-800 disabled:opacity-50"
+                    className="flex-shrink-0 h-[38px] px-3 rounded-lg text-sm font-medium bg-neutral-900 text-white hover:bg-neutral-800 disabled:opacity-50"
                   >
                     {savingPhone ? "저장 중..." : "저장"}
                   </button>
@@ -524,7 +523,7 @@ export default function ProfileEditor() {
                     type="button"
                     onClick={handleCancelPhone}
                     disabled={savingPhone}
-                    className="flex-shrink-0 h-10 px-3 rounded-lg text-sm font-medium border border-neutral-300 bg-white text-neutral-700 hover:bg-neutral-50 disabled:opacity-50"
+                    className="flex-shrink-0 h-[38px] px-3 rounded-lg text-sm font-medium border border-neutral-300 bg-white text-neutral-700 hover:bg-neutral-50 disabled:opacity-50"
                   >
                     취소
                   </button>
@@ -543,7 +542,7 @@ export default function ProfileEditor() {
                       setPhoneValue(profile.phone || "");
                       setEditingPhone(true);
                     }}
-                    className="flex-shrink-0 p-2 rounded-lg border border-neutral-200 bg-white text-neutral-700 hover:bg-neutral-50 transition-colors"
+                    className="flex-shrink-0 p-2 rounded-lg border border-neutral-200 bg-white text-neutral-700 hover:bg-neutral-50 transition-colors h-[38px] w-[38px] flex items-center justify-center"
                     title="연락처 수정"
                   >
                     <svg
@@ -566,35 +565,35 @@ export default function ProfileEditor() {
             </div>
           </div>
 
-          <div className="flex flex-col gap-2">
-            <label className="form-label">이메일</label>
+          <div className="flex items-center gap-3">
+            <label className="text-sm font-medium text-neutral-700 min-w-[80px]">이메일</label>
             <input
               type="email"
               value={profile.email}
               disabled
-              className="form-input bg-neutral-50 text-neutral-600"
+              className="form-input bg-neutral-50 text-neutral-600 flex-1"
             />
           </div>
 
-          <div className="flex flex-col gap-2">
-            <label className="form-label">기관</label>
+          <div className="flex items-center gap-3">
+            <label className="text-sm font-medium text-neutral-700 min-w-[80px]">기관</label>
             <input
               type="text"
               value={organization?.name || "기관 정보 없음"}
               disabled
-              className="form-input bg-neutral-50 text-neutral-600"
+              className="form-input bg-neutral-50 text-neutral-600 flex-1"
             />
           </div>
 
-          <div className="flex flex-col gap-2">
-            <label className="form-label">소속 부서</label>
-            <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
+            <label className="text-sm font-medium text-neutral-700 min-w-[80px]">소속 부서</label>
+            <div className="flex items-center gap-2 flex-1">
               {editingDepartment ? (
                 <>
                   <select
                     value={requestedDepartment}
                     onChange={(e) => setRequestedDepartment(e.target.value)}
-                    className="form-select flex-1"
+                    className="form-select flex-1 h-[38px]"
                   >
                     <option value="">부서 선택</option>
                     {availableDepartments
@@ -618,7 +617,7 @@ export default function ProfileEditor() {
                       setEditingDepartment(false);
                     }}
                     disabled={requesting || !requestedDepartment}
-                    className="flex-shrink-0 h-10 px-3 rounded-lg text-sm font-medium bg-neutral-900 text-white hover:bg-neutral-800 disabled:opacity-50"
+                    className="flex-shrink-0 h-[38px] px-3 rounded-lg text-sm font-medium bg-neutral-900 text-white hover:bg-neutral-800 disabled:opacity-50"
                   >
                     {requesting ? "요청 중..." : "요청"}
                   </button>
@@ -630,7 +629,7 @@ export default function ProfileEditor() {
                       setRequestNote("");
                     }}
                     disabled={requesting}
-                    className="flex-shrink-0 h-10 px-3 rounded-lg text-sm font-medium border border-neutral-300 bg-white text-neutral-700 hover:bg-neutral-50 disabled:opacity-50"
+                    className="flex-shrink-0 h-[38px] px-3 rounded-lg text-sm font-medium border border-neutral-300 bg-white text-neutral-700 hover:bg-neutral-50 disabled:opacity-50"
                   >
                     취소
                   </button>
@@ -651,7 +650,7 @@ export default function ProfileEditor() {
                         setRequestedDepartment("");
                         setRequestNote("");
                       }}
-                      className="flex-shrink-0 p-2 rounded-lg border border-neutral-200 bg-white text-neutral-700 hover:bg-neutral-50 transition-colors"
+                      className="flex-shrink-0 p-2 rounded-lg border border-neutral-200 bg-white text-neutral-700 hover:bg-neutral-50 transition-colors h-[38px] w-[38px] flex items-center justify-center"
                       title="부서 변경 요청"
                     >
                       <svg
@@ -673,45 +672,45 @@ export default function ProfileEditor() {
                 </>
               )}
             </div>
-            {pendingRequest && (
-              <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                <p className="text-sm text-blue-900 font-medium">부서 변경 요청 대기 중</p>
-                <p className="text-xs text-blue-700 mt-1">
-                  {profile.department || "(없음)"} → {pendingRequest.to_department}
-                </p>
-                {pendingRequest.note && (
-                  <p className="text-xs text-blue-600 mt-1">사유: {pendingRequest.note}</p>
-                )}
-                <button
-                  type="button"
-                  onClick={handleCancelRequest}
-                  disabled={requesting}
-                  className="mt-2 text-xs text-blue-600 hover:text-blue-800 underline"
-                >
-                  {requesting ? "취소 중..." : "요청 취소"}
-                </button>
-              </div>
-            )}
-            {editingDepartment && (
-              <div className="mt-2">
-                <label className="text-xs text-neutral-600 mb-1 block">변경 사유 (선택)</label>
-                <textarea
-                  value={requestNote}
-                  onChange={(e) => setRequestNote(e.target.value)}
-                  className="form-input min-h-[60px] text-sm"
-                  placeholder="부서 변경 사유를 입력해주세요"
-                />
-              </div>
-            )}
           </div>
+          {pendingRequest && (
+            <div className="ml-[92px] mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <p className="text-sm text-blue-900 font-medium">부서 변경 요청 대기 중</p>
+              <p className="text-xs text-blue-700 mt-1">
+                {profile.department || "(없음)"} → {pendingRequest.to_department}
+              </p>
+              {pendingRequest.note && (
+                <p className="text-xs text-blue-600 mt-1">사유: {pendingRequest.note}</p>
+              )}
+              <button
+                type="button"
+                onClick={handleCancelRequest}
+                disabled={requesting}
+                className="mt-2 text-xs text-blue-600 hover:text-blue-800 underline"
+              >
+                {requesting ? "취소 중..." : "요청 취소"}
+              </button>
+            </div>
+          )}
+          {editingDepartment && (
+            <div className="ml-[92px] mt-2">
+              <label className="text-xs text-neutral-600 mb-1 block">변경 사유 (선택)</label>
+              <textarea
+                value={requestNote}
+                onChange={(e) => setRequestNote(e.target.value)}
+                className="form-input min-h-[60px] text-sm"
+                placeholder="부서 변경 사유를 입력해주세요"
+              />
+            </div>
+          )}
 
-          <div className="flex flex-col gap-2">
-            <label className="form-label">역할</label>
+          <div className="flex items-center gap-3">
+            <label className="text-sm font-medium text-neutral-700 min-w-[80px]">역할</label>
             <input
               type="text"
               value={roleLabel[profile.role || "user"] || profile.role || "일반 사용자"}
               disabled
-              className="form-input bg-neutral-50 text-neutral-600"
+              className="form-input bg-neutral-50 text-neutral-600 flex-1"
             />
           </div>
         </div>
@@ -823,7 +822,7 @@ export default function ProfileEditor() {
                       <select
                         value={transferToUserId}
                         onChange={(e) => setTransferToUserId(e.target.value)}
-                        className="w-full form-select text-sm h-10"
+                        className="w-full form-select text-sm h-[38px]"
                         required
                       >
                         <option value="">-- 사용자를 선택하세요 --</option>

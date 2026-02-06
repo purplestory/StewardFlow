@@ -252,7 +252,7 @@ export default function ReservationManager() {
         </div>
         <div className="flex flex-wrap gap-2">
           <input
-            className="form-input h-10 text-xs"
+            className="form-input h-[38px] text-xs"
             placeholder="자산명/신청자 검색"
             value={query}
             onChange={(event) => setQuery(event.target.value)}

@@ -360,12 +360,18 @@ export default function Header() {
       return [];
     }
 
-    return [
+    const items = [
       { href: "/notifications", label: "알림" },
       { href: "/my", label: "마이페이지" },
-      { href: "/assets/manage", label: "관리페이지" },
     ];
-  }, [isAuthed, hasOrganization]);
+
+    // 관리자 또는 부서 관리자만 관리페이지 메뉴 표시
+    if (isManager) {
+      items.push({ href: "/assets/manage", label: "관리페이지" });
+    }
+
+    return items;
+  }, [isAuthed, hasOrganization, isManager]);
 
   // 사용자 메뉴명 생성: '이름(부서)' 형식
   const userMenuLabel = useMemo(() => {

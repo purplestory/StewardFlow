@@ -139,7 +139,7 @@ body {
 
 /* Professional Form Styles - Unified Design System */
 .form-input {
-  @apply h-10 w-full rounded-lg border border-neutral-200 bg-white text-sm font-normal text-neutral-900 placeholder:text-neutral-400 transition-all duration-200;
+  @apply h-[38px] w-full rounded-lg border border-neutral-200 bg-white text-sm font-normal text-neutral-900 placeholder:text-neutral-400 transition-all duration-200;
   @apply focus:border-slate-600 focus:outline-none focus:ring-2 focus:ring-slate-500/20 focus:shadow-sm;
   @apply disabled:bg-neutral-50 disabled:text-neutral-500 disabled:cursor-not-allowed;
   @apply hover:border-neutral-300;
@@ -150,7 +150,7 @@ body {
 }
 
 .form-select {
-  @apply h-10 w-full rounded-lg border border-neutral-200 bg-white text-sm font-normal text-neutral-900 transition-all duration-200;
+  @apply h-[38px] w-full rounded-lg border border-neutral-200 bg-white text-sm font-normal text-neutral-900 transition-all duration-200;
   @apply focus:border-slate-600 focus:outline-none focus:ring-2 focus:ring-slate-500/20 focus:shadow-sm;
   @apply disabled:bg-neutral-50 disabled:text-neutral-500 disabled:cursor-not-allowed;
   @apply hover:border-neutral-300;
@@ -271,7 +271,7 @@ input[type="time"] {
 
 /* Unified Button Styles */
 .btn-primary {
-  @apply h-10 px-4 rounded-lg text-sm font-medium transition-all bg-neutral-900 text-white;
+  @apply h-[38px] px-4 rounded-lg text-sm font-medium transition-all bg-neutral-900 text-white;
   @apply hover:bg-neutral-800;
   @apply focus:outline-none focus:ring-2 focus:ring-neutral-500 focus:ring-offset-2;
   @apply disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-neutral-900;
@@ -279,7 +279,7 @@ input[type="time"] {
 }
 
 .btn-secondary {
-  @apply h-10 px-4 rounded-lg text-sm font-medium transition-all bg-white text-neutral-700 border border-neutral-200;
+  @apply h-[38px] px-4 rounded-lg text-sm font-medium transition-all bg-white text-neutral-700 border border-neutral-200;
   @apply hover:bg-neutral-50 hover:border-neutral-300;
   @apply focus:outline-none focus:ring-2 focus:ring-neutral-500 focus:ring-offset-2;
   @apply disabled:opacity-50 disabled:cursor-not-allowed;
@@ -287,7 +287,7 @@ input[type="time"] {
 }
 
 .btn-sm {
-  @apply h-10 px-4 rounded-lg text-sm font-medium transition-all bg-white text-neutral-700 border border-neutral-200;
+  @apply h-[38px] px-4 rounded-lg text-sm font-medium transition-all bg-white text-neutral-700 border border-neutral-200;
   @apply hover:bg-neutral-50 hover:border-neutral-300;
   @apply focus:outline-none focus:ring-2 focus:ring-neutral-500 focus:ring-offset-2;
   @apply disabled:opacity-50 disabled:cursor-not-allowed;
@@ -295,7 +295,7 @@ input[type="time"] {
 }
 
 .btn-outline {
-  @apply h-10 px-4 rounded-lg text-sm font-medium transition-all bg-white text-neutral-700 border border-neutral-200;
+  @apply h-[38px] px-4 rounded-lg text-sm font-medium transition-all bg-white text-neutral-700 border border-neutral-200;
   @apply hover:bg-neutral-50 hover:border-neutral-300;
   @apply focus:outline-none focus:ring-2 focus:ring-neutral-500 focus:ring-offset-2;
   @apply disabled:opacity-50 disabled:cursor-not-allowed;
@@ -303,7 +303,7 @@ input[type="time"] {
 }
 
 .btn-ghost {
-  @apply h-10 px-4 rounded-lg text-sm font-medium transition-all bg-white text-neutral-700 border border-neutral-200;
+  @apply h-[38px] px-4 rounded-lg text-sm font-medium transition-all bg-white text-neutral-700 border border-neutral-200;
   @apply hover:bg-neutral-50 hover:border-neutral-300;
   @apply focus:outline-none focus:ring-2 focus:ring-neutral-500 focus:ring-offset-2;
   @apply disabled:opacity-50 disabled:cursor-not-allowed;

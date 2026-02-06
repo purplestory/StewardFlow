@@ -628,7 +628,7 @@ export default function AssetTransferRequestsBoard() {
           <button
             type="button"
             onClick={() => setStatusFilter("all")}
-            className={`h-10 px-4 rounded-lg text-sm font-medium transition-all whitespace-nowrap flex items-center justify-center ${
+            className={`h-[38px] px-4 rounded-lg text-sm font-medium transition-all whitespace-nowrap flex items-center justify-center ${
               statusFilter === "all"
                 ? "bg-neutral-900 text-white"
                 : "bg-white text-neutral-700 border border-neutral-200 hover:bg-neutral-50"
@@ -639,7 +639,7 @@ export default function AssetTransferRequestsBoard() {
           <button
             type="button"
             onClick={() => setStatusFilter("pending")}
-            className={`h-10 px-4 rounded-lg text-sm font-medium transition-all whitespace-nowrap flex items-center justify-center ${
+            className={`h-[38px] px-4 rounded-lg text-sm font-medium transition-all whitespace-nowrap flex items-center justify-center ${
               statusFilter === "pending"
                 ? "bg-amber-600 text-white"
                 : "bg-white text-amber-700 border border-amber-200 hover:bg-amber-50"
@@ -650,7 +650,7 @@ export default function AssetTransferRequestsBoard() {
           <button
             type="button"
             onClick={() => setStatusFilter("approved")}
-            className={`h-10 px-4 rounded-lg text-sm font-medium transition-all whitespace-nowrap flex items-center justify-center ${
+            className={`h-[38px] px-4 rounded-lg text-sm font-medium transition-all whitespace-nowrap flex items-center justify-center ${
               statusFilter === "approved"
                 ? "bg-emerald-600 text-white"
                 : "bg-white text-emerald-700 border border-emerald-200 hover:bg-emerald-50"
@@ -661,7 +661,7 @@ export default function AssetTransferRequestsBoard() {
           <button
             type="button"
             onClick={() => setStatusFilter("rejected")}
-            className={`h-10 px-4 rounded-lg text-sm font-medium transition-all whitespace-nowrap flex items-center justify-center ${
+            className={`h-[38px] px-4 rounded-lg text-sm font-medium transition-all whitespace-nowrap flex items-center justify-center ${
               statusFilter === "rejected"
                 ? "bg-rose-600 text-white"
                 : "bg-white text-rose-700 border border-rose-200 hover:bg-rose-50"
@@ -672,7 +672,7 @@ export default function AssetTransferRequestsBoard() {
           <button
             type="button"
             onClick={() => setStatusFilter("cancelled")}
-            className={`h-10 px-4 rounded-lg text-sm font-medium transition-all whitespace-nowrap flex items-center justify-center ${
+            className={`h-[38px] px-4 rounded-lg text-sm font-medium transition-all whitespace-nowrap flex items-center justify-center ${
               statusFilter === "cancelled"
                 ? "bg-neutral-700 text-white"
                 : "bg-white text-neutral-700 border border-neutral-200 hover:bg-neutral-50"
@@ -762,7 +762,7 @@ export default function AssetTransferRequestsBoard() {
                         type="button"
                         onClick={() => handleCancel(request)}
                         disabled={updatingId === request.id}
-                        className="h-10 px-4 rounded-lg text-sm font-medium transition-all bg-white text-neutral-700 border border-neutral-200 hover:bg-neutral-50 whitespace-nowrap flex items-center justify-center"
+                        className="h-[38px] px-4 rounded-lg text-sm font-medium transition-all bg-white text-neutral-700 border border-neutral-200 hover:bg-neutral-50 whitespace-nowrap flex items-center justify-center"
                       >
                         취소
                       </button>
@@ -773,7 +773,7 @@ export default function AssetTransferRequestsBoard() {
                           type="button"
                           onClick={() => handleResolve(request, "approved")}
                           disabled={updatingId === request.id}
-                          className="h-10 px-4 rounded-lg text-sm font-medium transition-all bg-neutral-900 text-white hover:bg-neutral-800 whitespace-nowrap flex items-center justify-center"
+                          className="h-[38px] px-4 rounded-lg text-sm font-medium transition-all bg-neutral-900 text-white hover:bg-neutral-800 whitespace-nowrap flex items-center justify-center"
                         >
                           승인
                         </button>
@@ -781,7 +781,7 @@ export default function AssetTransferRequestsBoard() {
                           type="button"
                           onClick={() => handleResolve(request, "rejected")}
                           disabled={updatingId === request.id}
-                          className="h-10 px-4 rounded-lg text-sm font-medium transition-all bg-white text-rose-600 border border-rose-200 hover:bg-rose-50 hover:border-rose-300 whitespace-nowrap flex items-center justify-center"
+                          className="h-[38px] px-4 rounded-lg text-sm font-medium transition-all bg-white text-rose-600 border border-rose-200 hover:bg-rose-50 hover:border-rose-300 whitespace-nowrap flex items-center justify-center"
                         >
                           거절
                         </button>

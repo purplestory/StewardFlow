@@ -317,7 +317,7 @@ export default function FeatureSettings({ organizationId }: FeatureSettingsProps
                           setEditingMenuLabel("");
                         }
                       }}
-                      className="form-input flex-1 h-10 text-sm"
+                      className="form-input flex-1 h-[38px] text-sm"
                       placeholder={
                         labelKey === "equipment" ? "물품" :
                         labelKey === "spaces" ? "공간" : "차량"

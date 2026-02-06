@@ -219,26 +219,26 @@ export default function AuditLogList() {
     <div className="space-y-3 text-xs">
       <div className="flex flex-wrap items-center gap-2">
         <input
-          className="form-input h-10 text-xs"
+          className="form-input h-[38px] text-xs"
           placeholder="검색어 입력"
           value={query}
           onChange={(event) => setQuery(event.target.value)}
         />
         <input
-          className="form-input h-10 text-xs"
+          className="form-input h-[38px] text-xs"
           placeholder="담당자 이름/이메일"
           value={actorQuery}
           onChange={(event) => setActorQuery(event.target.value)}
         />
         <input
           type="date"
-          className="form-input h-10 text-xs"
+          className="form-input h-[38px] text-xs"
           value={dateFrom}
           onChange={(event) => setDateFrom(event.target.value)}
         />
         <input
           type="date"
-          className="form-input h-10 text-xs"
+          className="form-input h-[38px] text-xs"
           value={dateTo}
           onChange={(event) => setDateTo(event.target.value)}
         />

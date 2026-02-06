@@ -264,7 +264,7 @@ export default function AssetAdminActions({
           type="button"
           onClick={handleTransfer}
           disabled={updating}
-          className="h-10 px-4 rounded-lg text-sm font-medium transition-all bg-white text-neutral-700 border border-neutral-200 hover:bg-neutral-50 whitespace-nowrap flex items-center justify-center"
+          className="h-[38px] px-4 rounded-lg text-sm font-medium transition-all bg-white text-neutral-700 border border-neutral-200 hover:bg-neutral-50 whitespace-nowrap flex items-center justify-center"
         >
           부서 이동 저장
         </button>
@@ -272,7 +272,7 @@ export default function AssetAdminActions({
           type="button"
           onClick={handleRetire}
           disabled={updating || localStatus === "retired"}
-          className="h-10 px-4 rounded-lg text-sm font-medium transition-all bg-white text-rose-600 border border-rose-200 hover:bg-rose-50 hover:border-rose-300 whitespace-nowrap flex items-center justify-center"
+          className="h-[38px] px-4 rounded-lg text-sm font-medium transition-all bg-white text-rose-600 border border-rose-200 hover:bg-rose-50 hover:border-rose-300 whitespace-nowrap flex items-center justify-center"
         >
           불용품 전환
         </button>

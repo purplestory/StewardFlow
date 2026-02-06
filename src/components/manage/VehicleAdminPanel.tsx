@@ -201,7 +201,7 @@ export default function VehicleAdminPanel() {
         </div>
         <div className="flex flex-wrap gap-2">
           <input
-            className="form-input h-10 text-xs"
+            className="form-input h-[38px] text-xs"
             placeholder="차량명/소유 부서 검색"
             value={query}
             onChange={(event) => setQuery(event.target.value)}

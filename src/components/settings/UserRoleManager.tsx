@@ -1532,7 +1532,7 @@ export default function UserRoleManager() {
                   <button
                     type="button"
                     onClick={() => revokeInvite(invite)}
-                    className="h-10 rounded-lg border border-rose-200 bg-white px-3 text-xs font-medium text-rose-600 transition-all duration-200 hover:bg-rose-50 hover:border-rose-300 hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-rose-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="h-[38px] rounded-lg border border-rose-200 bg-white px-3 text-xs font-medium text-rose-600 transition-all duration-200 hover:bg-rose-50 hover:border-rose-300 hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-rose-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     취소
                   </button>
@@ -1570,14 +1570,14 @@ export default function UserRoleManager() {
                   <button
                     type="button"
                     onClick={() => approveDepartmentChange(request)}
-                    className="h-10 rounded-lg border border-green-200 bg-white px-3 text-xs font-medium text-green-600 transition-all duration-200 hover:bg-green-50 hover:border-green-300 hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="h-[38px] rounded-lg border border-green-200 bg-white px-3 text-xs font-medium text-green-600 transition-all duration-200 hover:bg-green-50 hover:border-green-300 hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     승인
                   </button>
                   <button
                     type="button"
                     onClick={() => rejectDepartmentChange(request)}
-                    className="h-10 rounded-lg border border-rose-200 bg-white px-3 text-xs font-medium text-rose-600 transition-all duration-200 hover:bg-rose-50 hover:border-rose-300 hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-rose-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="h-[38px] rounded-lg border border-rose-200 bg-white px-3 text-xs font-medium text-rose-600 transition-all duration-200 hover:bg-rose-50 hover:border-rose-300 hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-rose-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     거부
                   </button>
@@ -1643,7 +1643,7 @@ export default function UserRoleManager() {
                       approveDeletionRequest(request.id);
                     }}
                     disabled={processingRequestId !== null}
-                    className="flex-1 h-10 rounded-lg border border-green-200 bg-white px-3 text-xs font-medium text-green-600 transition-all duration-200 hover:bg-green-50 hover:border-green-300 hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="flex-1 h-[38px] rounded-lg border border-green-200 bg-white px-3 text-xs font-medium text-green-600 transition-all duration-200 hover:bg-green-50 hover:border-green-300 hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {processingRequestId === request.id ? "처리 중..." : "승인"}
                   </button>
@@ -1654,7 +1654,7 @@ export default function UserRoleManager() {
                       rejectDeletionRequest(request.id);
                     }}
                     disabled={processingRequestId !== null}
-                    className="flex-1 h-10 rounded-lg border border-rose-200 bg-white px-3 text-xs font-medium text-rose-600 transition-all duration-200 hover:bg-rose-50 hover:border-rose-300 hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-rose-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="flex-1 h-[38px] rounded-lg border border-rose-200 bg-white px-3 text-xs font-medium text-rose-600 transition-all duration-200 hover:bg-rose-50 hover:border-rose-300 hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-rose-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {processingRequestId === request.id ? "처리 중..." : "거부"}
                   </button>
@@ -1690,7 +1690,7 @@ export default function UserRoleManager() {
                 <button
                   type="button"
                   onClick={() => handleStartApproval(user.id)}
-                  className="h-10 px-4 rounded-lg text-sm font-medium transition-all bg-amber-600 text-white hover:bg-amber-700 whitespace-nowrap"
+                  className="h-[38px] px-4 rounded-lg text-sm font-medium transition-all bg-amber-600 text-white hover:bg-amber-700 whitespace-nowrap"
                 >
                   승인하기
                 </button>
@@ -1793,24 +1793,19 @@ export default function UserRoleManager() {
           profiles.map((profile) => (
             <div
               key={profile.id}
-              className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-neutral-200 px-3 py-2 text-xs"
+              className="flex items-center gap-3 rounded-lg border border-neutral-200 px-3 py-2 text-xs"
             >
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium">
                   {profile.name ?? "이름 없음"}
                 </p>
                 <p className="text-xs text-neutral-500">{profile.email}</p>
-                {currentUserRole !== "admin" && (
-                  <p className="text-xs text-neutral-400 mt-1">
-                    {profile.department ?? "부서 미등록"}
-                  </p>
-                )}
               </div>
-              <div className="flex items-center gap-2 flex-wrap">
+              <div className="flex items-center gap-2 flex-shrink-0">
                 {/* 최고 관리자는 부서를 변경할 수 있음 */}
-                {currentUserRole === "admin" && (
+                {currentUserRole === "admin" ? (
                   <select
-                    className="form-select h-10 min-w-[140px]"
+                    className="form-select h-[38px] min-w-[120px]"
                     value={profile.department || ""}
                     onChange={(event) =>
                       updateDepartment(
@@ -1827,9 +1822,13 @@ export default function UserRoleManager() {
                       </option>
                     ))}
                   </select>
+                ) : (
+                  <span className="text-xs text-neutral-400 min-w-[120px]">
+                    {profile.department ?? "부서 미등록"}
+                  </span>
                 )}
                 <select
-                  className="form-select h-10 min-w-[140px]"
+                  className="form-select h-10 min-w-[120px]"
                   value={profile.role}
                   onChange={(event) =>
                     updateRole(
@@ -1854,7 +1853,7 @@ export default function UserRoleManager() {
                     type="button"
                     onClick={() => deleteUser(profile.id, profile.name || "이름 없음")}
                     disabled={deletingUserId === profile.id || loading}
-                    className="h-10 w-10 flex items-center justify-center rounded-lg border border-rose-200 bg-white text-rose-600 transition-all hover:bg-rose-50 hover:border-rose-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="h-[38px] w-[38px] flex items-center justify-center rounded-lg border border-rose-200 bg-white text-rose-600 transition-all hover:bg-rose-50 hover:border-rose-300 disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
                     title="사용자 삭제"
                   >
                     {deletingUserId === profile.id ? (

@@ -603,24 +603,37 @@ export default function UserRoleManager() {
     // 부서 관리자는 같은 부서의 manager ↔ user 간 변경만 가능 (admin 제외)
     // 일반 사용자는 역할 변경 불가 (이미 위에서 체크됨)
 
-    const { error } = await supabase
+    const { data: updatedData, error } = await supabase
       .from("profiles")
       .update({ role })
       .eq("id", profileId)
-      .eq("organization_id", organizationId);
+      .eq("organization_id", organizationId)
+      .select()
+      .single();
 
     if (error) {
       console.error("Role update error:", error);
       setMessage(`역할 변경 실패: ${error.message}`);
+      // 실패 시 원래 상태로 복구
+      await load();
       return;
     }
 
+    if (!updatedData) {
+      console.error("Role update: No data returned");
+      setMessage("역할 변경 실패: 업데이트된 데이터를 받지 못했습니다.");
+      await load();
+      return;
+    }
+
+    // 상태 업데이트
     setProfiles((prev) =>
       prev.map((profile) =>
-        profile.id === profileId ? { ...profile, role } : profile
+        profile.id === profileId ? { ...profile, role: updatedData.role } : profile
       )
     );
 
+    // Audit log 기록
     await supabase.from("audit_logs").insert({
       organization_id: organizationId,
       actor_id: currentUserId,
@@ -663,24 +676,37 @@ export default function UserRoleManager() {
       return;
     }
 
-    const { error } = await supabase
+    const { data: updatedData, error } = await supabase
       .from("profiles")
       .update({ department: department || null })
       .eq("id", profileId)
-      .eq("organization_id", organizationId);
+      .eq("organization_id", organizationId)
+      .select()
+      .single();
 
     if (error) {
       console.error("Department update error:", error);
       setMessage(`부서 변경 실패: ${error.message}`);
+      // 실패 시 원래 상태로 복구
+      await load();
       return;
     }
 
+    if (!updatedData) {
+      console.error("Department update: No data returned");
+      setMessage("부서 변경 실패: 업데이트된 데이터를 받지 못했습니다.");
+      await load();
+      return;
+    }
+
+    // 상태 업데이트
     setProfiles((prev) =>
       prev.map((profile) =>
-        profile.id === profileId ? { ...profile, department: department || null } : profile
+        profile.id === profileId ? { ...profile, department: updatedData.department } : profile
       )
     );
 
+    // Audit log 기록
     await supabase.from("audit_logs").insert({
       organization_id: organizationId,
       actor_id: currentUserId,
@@ -1769,42 +1795,41 @@ export default function UserRoleManager() {
               key={profile.id}
               className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-neutral-200 px-3 py-2 text-xs"
             >
-              <div className="flex-1">
+              <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium">
                   {profile.name ?? "이름 없음"}
                 </p>
                 <p className="text-xs text-neutral-500">{profile.email}</p>
-                {/* 최고 관리자는 부서를 변경할 수 있음 */}
-                {currentUserRole === "admin" ? (
-                  <div className="mt-1">
-                    <select
-                      className="form-select text-xs h-8"
-                      value={profile.department || ""}
-                      onChange={(event) =>
-                        updateDepartment(
-                          profile.id,
-                          event.target.value || null
-                        )
-                      }
-                      disabled={currentUserId === profile.id}
-                    >
-                      <option value="">부서 미지정</option>
-                      {availableDepartments.map((dept) => (
-                        <option key={dept} value={dept}>
-                          {dept}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                ) : (
-                  <p className="text-xs text-neutral-400">
+                {currentUserRole !== "admin" && (
+                  <p className="text-xs text-neutral-400 mt-1">
                     {profile.department ?? "부서 미등록"}
                   </p>
                 )}
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
+                {/* 최고 관리자는 부서를 변경할 수 있음 */}
+                {currentUserRole === "admin" && (
+                  <select
+                    className="form-select h-10 min-w-[140px]"
+                    value={profile.department || ""}
+                    onChange={(event) =>
+                      updateDepartment(
+                        profile.id,
+                        event.target.value || null
+                      )
+                    }
+                    disabled={currentUserId === profile.id}
+                  >
+                    <option value="">부서 미지정</option>
+                    {availableDepartments.map((dept) => (
+                      <option key={dept} value={dept}>
+                        {dept}
+                      </option>
+                    ))}
+                  </select>
+                )}
                 <select
-                  className="form-select"
+                  className="form-select h-10 min-w-[140px]"
                   value={profile.role}
                   onChange={(event) =>
                     updateRole(

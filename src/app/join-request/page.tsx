@@ -91,9 +91,9 @@ export default function JoinRequestPage() {
     setMessage("가입 신청이 완료되었습니다. 관리자 승인 후 서비스를 이용하실 수 있습니다.");
     setSubmitting(false);
     
-    // 2초 후 메인 페이지로 리다이렉트
+    // 2초 후 메인 페이지로 리다이렉트 (skip_redirect 파라미터 추가)
     setTimeout(() => {
-      router.push("/");
+      router.push("/?skip_redirect=true");
     }, 2000);
   };
 

@@ -41,7 +41,7 @@ function PlatformIntroContent() {
           return;
         }
 
-        if (profileData.organization_id) {
+        if (profileData?.organization_id) {
           const { data: orgData } = await supabase
             .from("organizations")
             .select("features")

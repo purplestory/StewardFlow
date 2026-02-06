@@ -55,7 +55,12 @@ function formatDateTime(dateString: string): string {
 
 export default function AssetDetailClient() {
   const params = useParams();
-  const id = params.id as string;
+  const id = (params?.id as string) || null;
+
+  // id가 없으면 404
+  if (!id) {
+    notFound();
+  }
 
   // React Query를 사용한 데이터 페칭
   const { data: asset, isLoading: assetLoading, error: assetError } = useAsset(id);
@@ -97,7 +102,21 @@ export default function AssetDetailClient() {
     );
   }
 
-  if (assetError || !asset) {
+  if (assetError) {
+    console.error("Asset detail error:", assetError);
+    return (
+      <section className="space-y-6">
+        <div className="rounded-2xl border border-red-200 bg-red-50 p-6">
+          <p className="text-center text-red-600">
+            물품 정보를 불러오는 중 오류가 발생했습니다.
+            {assetError instanceof Error && ` (${assetError.message})`}
+          </p>
+        </div>
+      </section>
+    );
+  }
+
+  if (!asset) {
     notFound();
   }
 

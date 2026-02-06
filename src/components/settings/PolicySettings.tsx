@@ -10,9 +10,11 @@ type OrganizationFeatures = {
   vehicles?: boolean;
 };
 
+type OwnershipPolicyValue = "organization_only" | "department_allowed";
+
 type OwnershipPolicies = {
-  spaces?: "organization_only" | "department_allowed";
-  vehicles?: "organization_only" | "department_allowed";
+  spaces?: OwnershipPolicyValue;
+  vehicles?: OwnershipPolicyValue;
 };
 
 type ReturnVerificationPolicy = {
@@ -143,9 +145,14 @@ export default function PolicySettings({ organizationId }: PolicySettingsProps) 
                     name="spaces_ownership"
                     value="organization_only"
                     checked={ownershipPolicies.spaces === "organization_only"}
-                    onChange={() =>
-                      setOwnershipPolicies({ ...ownershipPolicies, spaces: "organization_only" })
-                    }
+                    onChange={() => {
+                      const spacesValue: OwnershipPolicyValue = "organization_only";
+                      const vehiclesValue: OwnershipPolicyValue | undefined = ownershipPolicies.vehicles;
+                      setOwnershipPolicies({
+                        spaces: spacesValue,
+                        vehicles: vehiclesValue,
+                      });
+                    }}
                     className="w-4 h-4"
                   />
                   <span className="text-sm">항상 기관 소유 (일반적)</span>
@@ -156,9 +163,14 @@ export default function PolicySettings({ organizationId }: PolicySettingsProps) 
                     name="spaces_ownership"
                     value="department_allowed"
                     checked={ownershipPolicies.spaces === "department_allowed"}
-                    onChange={() =>
-                      setOwnershipPolicies({ ...ownershipPolicies, spaces: "department_allowed" })
-                    }
+                    onChange={() => {
+                      const spacesValue: OwnershipPolicyValue = "department_allowed";
+                      const vehiclesValue: OwnershipPolicyValue | undefined = ownershipPolicies.vehicles;
+                      setOwnershipPolicies({
+                        spaces: spacesValue,
+                        vehicles: vehiclesValue,
+                      });
+                    }}
                     className="w-4 h-4"
                   />
                   <span className="text-sm">부서 소유 허용</span>
@@ -179,9 +191,14 @@ export default function PolicySettings({ organizationId }: PolicySettingsProps) 
                     name="vehicles_ownership"
                     value="organization_only"
                     checked={ownershipPolicies.vehicles === "organization_only"}
-                    onChange={() =>
-                      setOwnershipPolicies({ ...ownershipPolicies, vehicles: "organization_only" })
-                    }
+                    onChange={() => {
+                      const spacesValue: OwnershipPolicyValue | undefined = ownershipPolicies.spaces;
+                      const vehiclesValue: OwnershipPolicyValue = "organization_only";
+                      setOwnershipPolicies({
+                        spaces: spacesValue,
+                        vehicles: vehiclesValue,
+                      });
+                    }}
                     className="w-4 h-4"
                   />
                   <span className="text-sm">항상 기관 소유 (일반적)</span>
@@ -192,9 +209,14 @@ export default function PolicySettings({ organizationId }: PolicySettingsProps) 
                     name="vehicles_ownership"
                     value="department_allowed"
                     checked={ownershipPolicies.vehicles === "department_allowed"}
-                    onChange={() =>
-                      setOwnershipPolicies({ ...ownershipPolicies, vehicles: "department_allowed" })
-                    }
+                    onChange={() => {
+                      const spacesValue: OwnershipPolicyValue | undefined = ownershipPolicies.spaces;
+                      const vehiclesValue: OwnershipPolicyValue = "department_allowed";
+                      setOwnershipPolicies({
+                        spaces: spacesValue,
+                        vehicles: vehiclesValue,
+                      });
+                    }}
                     className="w-4 h-4"
                   />
                   <span className="text-sm">부서 소유 허용</span>

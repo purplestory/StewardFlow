@@ -36,16 +36,16 @@ function JoinPageContent() {
   const [availableDepartments, setAvailableDepartments] = useState<string[]>([]);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
-  // Check if user is already logged in
+  // Check if user is already logged in (카카오 로그인 시 이메일/이름 자동 채움)
   useEffect(() => {
     const checkAuth = async () => {
       const { data: sessionData } = await supabase.auth.getSession();
       const user = sessionData.session?.user;
       setIsAuthenticated(!!user);
-      
-      // If logged in via Kakao, pre-fill email
-      if (user?.email) {
-        setEmail(user.email);
+      if (user) {
+        if (user.email) setEmail(user.email);
+        const displayName = user.user_metadata?.name || user.user_metadata?.full_name;
+        if (displayName) setName(displayName);
       }
     };
     checkAuth();
@@ -140,18 +140,10 @@ function JoinPageContent() {
         name: result.invite.name || null,
         inviter: result.invite.inviter,
       });
-      // 초대 시 지정한 이메일이 있으면 기본값으로 설정 (변경 가능)
-      if (result.invite.email) {
-        setEmail(result.invite.email);
-      }
-      // 초대 시 지정한 이름이 있으면 기본값으로 설정 (수정 가능)
-      if (result.invite.name) {
-        setName(result.invite.name);
-      }
-      // 초대 시 지정한 부서가 있으면 기본값으로 설정 (수정 가능)
-      if (result.invite.department) {
-        setDepartment(result.invite.department);
-      }
+      // 초대 시 지정한 값으로 기본값 설정 (카카오 로그인 사용자는 checkAuth에서 이메일/이름이 이미 채워짐)
+      setEmail((prev) => prev || result.invite?.email || "");
+      setName((prev) => prev || result.invite?.name || "");
+      setDepartment((prev) => prev || result.invite?.department || "");
       setLoading(false);
     };
 
@@ -194,70 +186,11 @@ function JoinPageContent() {
       name: result.invite.name || null,
       inviter: result.invite.inviter,
     });
-    
-    // 초대 시 지정한 이메일이 있으면 기본값으로 설정 (변경 가능)
-    if (result.invite.email) {
-      setEmail(result.invite.email);
-    }
-    // 초대 시 지정한 이름이 있으면 기본값으로 설정 (수정 가능)
-    if (result.invite.name) {
-      setName(result.invite.name);
-    }
-    // 초대 시 지정한 부서가 있으면 기본값으로 설정 (수정 가능)
-    if (result.invite.department) {
-      setDepartment(result.invite.department);
-    }
+    setEmail((prev) => prev || result.invite?.email || "");
+    setName((prev) => prev || result.invite?.name || "");
+    setDepartment((prev) => prev || result.invite?.department || "");
     setLoading(false);
   };
-
-  const handleSignUp = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    setMessage(null);
-    setSigningUp(true);
-
-    if (!token) {
-      setMessage("초대 링크가 올바르지 않습니다.");
-      setSigningUp(false);
-      return;
-    }
-
-    const inviteResult = await getInviteByToken(token);
-    if (!inviteResult.ok || !inviteResult.invite) {
-      setMessage(inviteResult.message ?? "초대 정보를 불러올 수 없습니다.");
-      setSigningUp(false);
-      return;
-    }
-
-    // 사용자가 입력한 이메일 또는 초대 정보의 이메일 사용
-    const signUpEmail = email.trim() || inviteResult.invite.email;
-    
-    if (!signUpEmail) {
-      setMessage("이메일을 입력해주세요.");
-      setSigningUp(false);
-      return;
-    }
-
-    // Send magic link
-    const { error: signInError } = await supabase.auth.signInWithOtp({
-      email: signUpEmail,
-      options: {
-        emailRedirectTo: `${window.location.origin}/join?token=${token}`,
-      },
-    });
-
-    if (signInError) {
-      setMessage(signInError.message);
-      setSigningUp(false);
-      return;
-    }
-
-    setMessage(
-      "가입 링크를 이메일로 보냈습니다. 이메일의 링크를 클릭하여 가입을 완료하세요."
-    );
-    setSigningUp(false);
-  };
-
-  // 자동 수락 로직 제거: 사용자가 명시적으로 "초대 수락" 버튼을 눌러야 함
 
   if (loading) {
     return (
@@ -450,7 +383,7 @@ function JoinPageContent() {
           </div>
         </div>
 
-        {/* 이미 로그인된 사용자는 초대 수락 버튼, 로그인되지 않은 사용자는 이메일 가입 폼 */}
+        {/* 초대 링크(토큰)로 들어온 경우: 카카오 로그인만 제공. 로그인 후 초대 수락 폼 표시 */}
         {isAuthenticated ? (
           <div className="space-y-4">
             <p className="text-sm text-neutral-600">
@@ -719,124 +652,31 @@ function JoinPageContent() {
             </form>
           </div>
         ) : (
-          <form onSubmit={handleSignUp} className="space-y-4">
-            {/* 카카오 로그인 버튼 추가 */}
-            <div className="space-y-3 pb-4 border-b border-neutral-100">
-              <button
-                type="button"
-                onClick={handleKakaoSignIn}
-                disabled={signingUp}
-                className="flex w-full items-center justify-center gap-2 h-12 rounded-lg bg-[#FEE500] px-6 text-sm font-semibold text-black transition-all duration-200 hover:bg-[#FDD835] hover:shadow-md active:bg-[#FBC02D] active:shadow-sm focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <svg
-                  width="18"
-                  height="18"
-                  viewBox="0 0 18 18"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path
-                    d="M9 0C4.03 0 0 3.27 0 7.3c0 2.55 1.7 4.8 4.25 6.05L3 18l5.25-2.8c.5.05 1 .1 1.5.1 4.97 0 9-3.27 9-7.3S13.97 0 9 0z"
-                    fill="currentColor"
-                  />
-                </svg>
-                카카오톡으로 시작하기
-              </button>
-              <div className="relative">
-                <div className="absolute inset-0 flex items-center">
-                  <span className="w-full border-t border-neutral-200" />
-                </div>
-                <div className="relative flex justify-center text-xs uppercase">
-                  <span className="bg-white px-2 text-neutral-500">또는 이메일로 가입</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="space-y-2 text-sm">
-              <label className="font-medium">이메일</label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full rounded-lg border border-neutral-200 px-3 py-2"
-                placeholder="예: user@example.com"
-                required
-              />
-              <p className="text-xs text-neutral-500">
-                초대 시 지정된 이메일: {inviteInfo.email || "없음"} (변경 가능)
-              </p>
-            </div>
-
-            <div className="space-y-2 text-sm">
-              <label className="font-medium">이름</label>
-              <input
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="w-full rounded-lg border border-neutral-200 px-3 py-2"
-                placeholder="예: 김철수"
-                required
-              />
-              {inviteInfo.name && (
-                <p className="text-xs text-neutral-500">
-                  초대 시 지정된 이름: {inviteInfo.name}
-                </p>
-              )}
-            </div>
-
-            <div className="space-y-2 text-sm">
-              <label className="font-medium">소속 부서</label>
-              {availableDepartments.length > 0 ? (
-                <select
-                  value={department}
-                  onChange={(e) => setDepartment(e.target.value)}
-                  className="w-full rounded-lg border border-neutral-200 px-3 py-2"
-                >
-                  <option value="">부서 선택</option>
-                  {availableDepartments.map((dept) => (
-                    <option key={dept} value={dept}>
-                      {dept}
-                    </option>
-                  ))}
-                </select>
-              ) : (
-                <input
-                  type="text"
-                  value={department}
-                  onChange={(e) => setDepartment(e.target.value)}
-                  className="w-full rounded-lg border border-neutral-200 px-3 py-2"
-                  placeholder="예: 유년부"
-                />
-              )}
-              {inviteInfo.department && (
-                <p className="text-xs text-neutral-500">
-                  초대 시 지정된 부서: {inviteInfo.department}
-                </p>
-              )}
-              <p className="text-xs text-neutral-500 mt-1">
-                역할: {inviteInfo.role === "admin" ? "관리자" : inviteInfo.role === "manager" ? "부서 관리자" : "일반 사용자"} (초대 시 지정됨)
-              </p>
-            </div>
-
-            <div className="space-y-2 text-sm">
-              <label className="font-medium">연락처</label>
-              <input
-                type="tel"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                className="w-full rounded-lg border border-neutral-200 px-3 py-2"
-                placeholder="010-0000-0000"
-              />
-            </div>
-
+          <div className="space-y-4">
+            <p className="text-sm text-neutral-600">
+              카카오톡으로 로그인하면 초대를 바로 수락할 수 있습니다.
+            </p>
             <button
-              type="submit"
+              type="button"
+              onClick={handleKakaoSignIn}
               disabled={signingUp}
-              className="btn-primary w-full"
+              className="flex w-full items-center justify-center gap-2 h-12 rounded-lg bg-[#FEE500] px-6 text-sm font-semibold text-black transition-all duration-200 hover:bg-[#FDD835] hover:shadow-md active:bg-[#FBC02D] active:shadow-sm focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {signingUp ? "처리 중..." : "가입 링크 받기"}
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 18 18"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M9 0C4.03 0 0 3.27 0 7.3c0 2.55 1.7 4.8 4.25 6.05L3 18l5.25-2.8c.5.05 1 .1 1.5.1 4.97 0 9-3.27 9-7.3S13.97 0 9 0z"
+                  fill="currentColor"
+                />
+              </svg>
+              카카오톡으로 로그인 후 초대 수락
             </button>
-          </form>
+          </div>
         )}
 
         {message && (

@@ -5,6 +5,16 @@ import { NextResponse, type NextRequest } from "next/server";
 // 하지만 Supabase SSR의 경우 middleware가 여전히 필요하므로
 // 경고를 억제하기 위해 주석 추가 및 최신 패턴 적용
 export async function middleware(request: NextRequest) {
+  // RSC(React Server Components) 요청은 수정하지 않고 그대로 통과시킴.
+  // 미들웨어에서 응답/쿠키를 건드리면 CORS "access control checks" 오류가 발생할 수 있음.
+  const isRsc =
+    request.nextUrl.searchParams.has("_rsc") ||
+    request.headers.get("RSC") === "1" ||
+    request.headers.get("Next-Router-Prefetch") === "1";
+  if (isRsc) {
+    return NextResponse.next();
+  }
+
   let supabaseResponse = NextResponse.next({
     request: {
       headers: request.headers,

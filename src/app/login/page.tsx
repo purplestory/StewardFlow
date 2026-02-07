@@ -100,7 +100,7 @@ function LoginPageContent() {
         <div className="text-center">
           <h1 className="text-2xl font-semibold">로그인 / 가입</h1>
           <p className="text-sm text-neutral-600 mt-2">
-            이 서비스는 기관 내부 사용자만 이용할 수 있습니다.
+            카카오톡으로만 로그인할 수 있습니다.
             <br />
             관리자가 보낸 초대 링크가 있어야 가입할 수 있습니다.
           </p>

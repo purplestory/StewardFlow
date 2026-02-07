@@ -20,7 +20,6 @@ type Profile = {
 
 export default function AuthCard() {
   const router = useRouter();
-  const [email, setEmail] = useState("");
   const [status, setStatus] = useState<AuthState>({
     userId: null,
     email: null,
@@ -234,28 +233,6 @@ export default function AuthCard() {
       subscription?.subscription?.unsubscribe();
     };
   }, []);
-
-  const handleSignIn = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    setMessage(null);
-    setLoading(true);
-
-    const origin = getOrigin();
-    const { error } = await supabase.auth.signInWithOtp({
-      email,
-      options: {
-        emailRedirectTo: `${origin}/auth/callback?next=/`,
-      },
-    });
-
-    if (error) {
-      setMessage(error.message);
-    } else {
-      setMessage("로그인 링크를 이메일로 보냈습니다. 이메일을 확인해주세요.");
-    }
-
-    setLoading(false);
-  };
 
   const handleSignOut = async () => {
     setLoading(true);

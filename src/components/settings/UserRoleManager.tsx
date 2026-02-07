@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { generateShortId } from "@/lib/short-id";
+import { deleteUserAccount } from "@/actions/auth-actions";
 import type { DepartmentChangeRequest } from "@/types/database";
 
 type ProfileRow = {
@@ -535,42 +536,45 @@ export default function UserRoleManager() {
     const profileName = userToDelete.name;
     const profileEmail = profiles.find(p => p.id === profileId)?.email || null;
 
+    setMessage(null);
     setDeletingUserId(profileId);
     setLoading(true);
     setShowDeleteConfirm(false);
-    setLoading(true);
 
-    // 프로필 삭제 (실제로는 soft delete를 권장하지만, 여기서는 hard delete)
-    const { error: deleteError } = await supabase
-      .from("profiles")
-      .delete()
-      .eq("id", profileId)
-      .eq("organization_id", organizationId);
+    try {
+      // Server Action 사용: RLS 우회하여 profiles + auth.users 모두 삭제
+      const result = await deleteUserAccount(profileId);
 
-    if (deleteError) {
-      setMessage(`사용자 삭제 실패: ${deleteError.message}`);
-      setLoading(false);
+      if (!result.success) {
+        setMessage(result.error ?? "사용자 삭제에 실패했습니다.");
+        setDeletingUserId(null);
+        setLoading(false);
+        return;
+      }
+
+      // 감사 로그 기록
+      await supabase.from("audit_logs").insert({
+        organization_id: organizationId,
+        actor_id: currentUserId,
+        action: "user_deleted",
+        target_type: "profile",
+        target_id: profileId,
+        metadata: {
+          deleted_user_name: profileName,
+          deleted_user_email: profileEmail,
+        },
+      });
+
+      setMessage("사용자가 성공적으로 삭제되었습니다.");
+      setUserToDelete(null);
+      await load();
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "알 수 없는 오류가 발생했습니다.";
+      setMessage(`사용자 삭제 실패: ${errorMessage}`);
+    } finally {
       setDeletingUserId(null);
-      return;
+      setLoading(false);
     }
-
-    // audit log
-    await supabase.from("audit_logs").insert({
-      organization_id: organizationId,
-      actor_id: currentUserId,
-      action: "user_deleted",
-      target_type: "profile",
-      target_id: profileId,
-      metadata: {
-        deleted_user_name: profileName,
-        deleted_user_email: profileEmail,
-      },
-    });
-
-    setMessage("사용자가 성공적으로 삭제되었습니다.");
-    setDeletingUserId(null);
-    setUserToDelete(null);
-    await load(); // 목록 새로고침
   };
 
   const cancelDeleteUser = () => {

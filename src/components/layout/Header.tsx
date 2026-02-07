@@ -292,57 +292,56 @@ export default function Header() {
     if (!hasOrganization) {
       return [];
     }
-    // Don't show menu items until data is loaded
-    if (!features || !menuLabels) {
-      return [];
-    }
 
     const items: Array<{ href: string; label: string }> = [];
 
-    // Use menu_order if available, otherwise fall back to default order
-    // 메인 화면과 동일한 순서: 물품, 공간, 차량
-    const orderToUse = menuOrder.length > 0 ? menuOrder : [
-      { key: "equipment", enabled: features.equipment !== false },
-      { key: "spaces", enabled: features.spaces !== false },
-      { key: "vehicles", enabled: features.vehicles === true },
-    ];
+    // features와 menuLabels가 로드된 경우에만 자원 메뉴 추가
+    if (features && menuLabels) {
+      // Use menu_order if available, otherwise fall back to default order
+      // 메인 화면과 동일한 순서: 물품, 공간, 차량
+      const orderToUse = menuOrder.length > 0 ? menuOrder : [
+        { key: "equipment", enabled: features.equipment !== false },
+        { key: "spaces", enabled: features.spaces !== false },
+        { key: "vehicles", enabled: features.vehicles === true },
+      ];
 
-    orderToUse.forEach((item) => {
-      const key = item.key as "equipment" | "spaces" | "vehicles";
-      
-      // Check both menuOrder.enabled and features
-      const isFeatureEnabled = 
-        key === "equipment" ? features.equipment !== false :
-        key === "spaces" ? features.spaces !== false :
-        features.vehicles === true;
-      
-      // Only show if both menuOrder says enabled AND feature is enabled
-      // For vehicles, both features.vehicles must be true AND menuOrder.enabled must be true
-      if (key === "vehicles") {
-        // Vehicles must have feature enabled AND menuOrder enabled
-        if (features.vehicles !== true || !item.enabled) return;
-      } else {
-        if (!item.enabled || !isFeatureEnabled) return;
-      }
+      orderToUse.forEach((item) => {
+        const key = item.key as "equipment" | "spaces" | "vehicles";
+        
+        // Check both menuOrder.enabled and features
+        const isFeatureEnabled = 
+          key === "equipment" ? features.equipment !== false :
+          key === "spaces" ? features.spaces !== false :
+          features.vehicles === true;
+        
+        // Only show if both menuOrder says enabled AND feature is enabled
+        // For vehicles, both features.vehicles must be true AND menuOrder.enabled must be true
+        if (key === "vehicles") {
+          // Vehicles must have feature enabled AND menuOrder enabled
+          if (features.vehicles !== true || !item.enabled) return;
+        } else {
+          if (!item.enabled || !isFeatureEnabled) return;
+        }
 
-      const href =
-        key === "equipment"
-          ? "/assets"
-          : key === "spaces"
-          ? "/spaces"
-          : "/vehicles";
-      const label =
-        menuLabels[key] ||
-        (key === "equipment" ? "물품" : key === "spaces" ? "공간" : "차량");
+        const href =
+          key === "equipment"
+            ? "/assets"
+            : key === "spaces"
+            ? "/spaces"
+            : "/vehicles";
+        const label =
+          menuLabels[key] ||
+          (key === "equipment" ? "물품" : key === "spaces" ? "공간" : "차량");
 
-      items.push({ href, label });
-    });
+        items.push({ href, label });
+      });
+    }
 
-    // 피드백 메뉴 추가 (모든 사용자에게 표시)
+    // 피드백 메뉴 추가 (features와 무관하게 항상 표시)
     items.push({ href: "/feedback", label: "피드백" });
 
     return items;
-  }, [features, menuLabels, menuOrder]);
+  }, [features, menuLabels, menuOrder, hasOrganization]);
 
   // Management menu items (for managers/admins)
   const managementItems = useMemo(() => {

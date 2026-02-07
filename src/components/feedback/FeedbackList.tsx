@@ -102,11 +102,15 @@ export default function FeedbackList() {
         return;
       }
 
-      const feedbacksWithAuthor = (data || []).map((fb: any) => ({
-        ...fb,
-        author_name: fb.author?.name || null,
-        author_email: fb.author?.email || null,
-      }));
+      const feedbacksWithAuthor = (data || []).map((fb: any) => {
+        // author는 배열일 수 있으므로 첫 번째 요소를 가져옴
+        const author = Array.isArray(fb.author) ? fb.author[0] : fb.author;
+        return {
+          ...fb,
+          author_name: author?.name || null,
+          author_email: author?.email || null,
+        };
+      });
 
       setFeedbacks(feedbacksWithAuthor);
       setLoading(false);

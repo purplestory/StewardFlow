@@ -119,11 +119,15 @@ export default function FeedbackDetail({ feedbackId }: { feedbackId: string }) {
         return;
       }
 
+      // author와 responder는 배열일 수 있으므로 첫 번째 요소를 가져옴
+      const author = Array.isArray(data.author) ? data.author[0] : data.author;
+      const responder = Array.isArray(data.responder) ? data.responder[0] : data.responder;
+
       const feedbackData: Feedback = {
         ...data,
-        author_name: data.author?.name || null,
-        author_email: data.author?.email || null,
-        responded_by_name: data.responder?.name || null,
+        author_name: author?.name || null,
+        author_email: author?.email || null,
+        responded_by_name: responder?.name || null,
       };
 
       setFeedback(feedbackData);
@@ -195,11 +199,15 @@ export default function FeedbackDetail({ feedbackId }: { feedbackId: string }) {
       .maybeSingle();
 
     if (data) {
+      // author와 responder는 배열일 수 있으므로 첫 번째 요소를 가져옴
+      const author = Array.isArray(data.author) ? data.author[0] : data.author;
+      const responder = Array.isArray(data.responder) ? data.responder[0] : data.responder;
+
       const feedbackData: Feedback = {
         ...data,
-        author_name: data.author?.name || null,
-        author_email: data.author?.email || null,
-        responded_by_name: data.responder?.name || null,
+        author_name: author?.name || null,
+        author_email: author?.email || null,
+        responded_by_name: responder?.name || null,
       };
       setFeedback(feedbackData);
       setStatus(feedbackData.status);

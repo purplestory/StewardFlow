@@ -39,6 +39,15 @@ CREATE TRIGGER trigger_update_feedbacks_updated_at
   FOR EACH ROW
   EXECUTE FUNCTION public.update_feedbacks_updated_at();
 
+-- 기존 정책 삭제 (이미 존재하는 경우를 대비)
+DROP POLICY IF EXISTS "feedbacks_select_own" ON public.feedbacks;
+DROP POLICY IF EXISTS "feedbacks_select_same_org" ON public.feedbacks;
+DROP POLICY IF EXISTS "feedbacks_select_all_by_admin" ON public.feedbacks;
+DROP POLICY IF EXISTS "feedbacks_insert_own" ON public.feedbacks;
+DROP POLICY IF EXISTS "feedbacks_update_own" ON public.feedbacks;
+DROP POLICY IF EXISTS "feedbacks_update_admin_same_org" ON public.feedbacks;
+DROP POLICY IF EXISTS "feedbacks_update_all_by_admin" ON public.feedbacks;
+
 -- RLS 정책: 본인이 작성한 피드백 조회 가능
 CREATE POLICY "feedbacks_select_own"
 ON public.feedbacks

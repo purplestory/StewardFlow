@@ -164,9 +164,18 @@ function JoinPageContent() {
       return;
     }
 
+    // 사용자가 입력한 이메일 또는 초대 정보의 이메일 사용
+    const signUpEmail = email.trim() || inviteResult.invite.email;
+    
+    if (!signUpEmail) {
+      setMessage("이메일을 입력해주세요.");
+      setSigningUp(false);
+      return;
+    }
+
     // Send magic link
     const { error: signInError } = await supabase.auth.signInWithOtp({
-      email: inviteResult.invite.email,
+      email: signUpEmail,
       options: {
         emailRedirectTo: `${window.location.origin}/join?token=${token}`,
       },

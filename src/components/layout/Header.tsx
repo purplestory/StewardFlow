@@ -338,6 +338,9 @@ export default function Header() {
       items.push({ href, label });
     });
 
+    // 피드백 메뉴 추가 (모든 사용자에게 표시)
+    items.push({ href: "/feedback", label: "피드백" });
+
     return items;
   }, [features, menuLabels, menuOrder]);
 

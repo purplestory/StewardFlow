@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Notice from "@/components/common/Notice";
 import { supabase } from "@/lib/supabase";
+import ReservationCalendarView from "./ReservationCalendarView";
 
 type ReservationRow = {
   id: string;
@@ -52,6 +53,9 @@ export default function ReservationManager() {
     ReservationRow["status"] | "all"
   >("all");
   const [query, setQuery] = useState("");
+  const [viewMode, setViewMode] = useState<"list" | "calendar">("list");
+  const [calendarViewMode, setCalendarViewMode] = useState<"month" | "week" | "day">("month");
+  const [currentDate, setCurrentDate] = useState(new Date());
 
   const roleRank: Record<ProfileRole, number> = {
     admin: 3,
@@ -237,6 +241,18 @@ export default function ReservationManager() {
     });
   }, [reservations, query, statusFilter]);
 
+  // 달력 뷰용 예약 데이터 변환
+  const calendarReservations = useMemo(() => {
+    return filteredReservations.map((reservation) => ({
+      id: reservation.id,
+      start_date: reservation.start_date,
+      end_date: reservation.end_date,
+      status: reservation.status,
+      resource_name: reservation.assets?.name ?? "자산",
+      borrower_id: reservation.borrower_id,
+    }));
+  }, [filteredReservations]);
+
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-neutral-600">
@@ -250,30 +266,74 @@ export default function ReservationManager() {
             새로고침
           </button>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <input
-            className="form-input h-[38px] text-xs"
-            placeholder="자산명/신청자 검색"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-          />
-          <select
-            className="form-select h-10 text-xs"
-            value={statusFilter}
-            onChange={(event) =>
-              setStatusFilter(
-                event.target.value as ReservationRow["status"] | "all"
-              )
-            }
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setViewMode("list")}
+            className={`h-[38px] rounded-lg px-4 text-sm font-medium transition-all ${
+              viewMode === "list"
+                ? "bg-slate-900 text-white"
+                : "bg-white border border-neutral-200 text-neutral-700 hover:bg-neutral-50"
+            }`}
           >
-            <option value="all">전체 상태</option>
-            <option value="pending">승인 대기</option>
-            <option value="approved">승인됨</option>
-            <option value="returned">반납 완료</option>
-            <option value="rejected">반려</option>
-          </select>
+            목록
+          </button>
+          <button
+            type="button"
+            onClick={() => setViewMode("calendar")}
+            className={`h-[38px] rounded-lg px-4 text-sm font-medium transition-all ${
+              viewMode === "calendar"
+                ? "bg-slate-900 text-white"
+                : "bg-white border border-neutral-200 text-neutral-700 hover:bg-neutral-50"
+            }`}
+          >
+            달력
+          </button>
+          {viewMode === "list" && (
+            <>
+              <input
+                className="form-input h-[38px] text-xs"
+                placeholder="자산명/신청자 검색"
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+              />
+              <select
+                className="form-select h-[38px] text-xs"
+                value={statusFilter}
+                onChange={(event) =>
+                  setStatusFilter(
+                    event.target.value as ReservationRow["status"] | "all"
+                  )
+                }
+              >
+                <option value="all">전체 상태</option>
+                <option value="pending">승인 대기</option>
+                <option value="approved">승인됨</option>
+                <option value="returned">반납 완료</option>
+                <option value="rejected">반려</option>
+              </select>
+            </>
+          )}
         </div>
       </div>
+
+      {viewMode === "calendar" ? (
+        <ReservationCalendarView
+          reservations={calendarReservations}
+          viewMode={calendarViewMode}
+          currentDate={currentDate}
+          onDateChange={setCurrentDate}
+          onViewModeChange={setCalendarViewMode}
+          onReservationClick={(reservation) => {
+            // 예약 클릭 시 상세 정보 표시 (선택사항)
+            const found = filteredReservations.find((r) => r.id === reservation.id);
+            if (found) {
+              // 모달이나 상세 페이지로 이동할 수 있음
+              console.log("Selected reservation:", found);
+            }
+          }}
+        />
+      ) : (
       {filteredReservations.length === 0 ? (
         <Notice>
           <p>조건에 맞는 예약이 없습니다.</p>
@@ -343,6 +403,7 @@ export default function ReservationManager() {
           )}
         </div>
         ))
+      )}
       )}
     </div>
   );

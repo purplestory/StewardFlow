@@ -331,22 +331,24 @@ export default function SpaceReservationManager() {
             }
           }}
         />
-      ) : filteredReservations.length === 0 ? (
-        <Notice>
-          <p>조건에 맞는 예약이 없습니다.</p>
-          <button
-            type="button"
-            onClick={() => {
-              setQuery("");
-              setStatusFilter("all");
-            }}
-            className="btn-ghost mt-3"
-          >
-            필터 초기화
-          </button>
-        </Notice>
       ) : (
-        filteredReservations.map((reservation) => (
+        <>
+          {filteredReservations.length === 0 ? (
+            <Notice>
+              <p>조건에 맞는 예약이 없습니다.</p>
+              <button
+                type="button"
+                onClick={() => {
+                  setQuery("");
+                  setStatusFilter("all");
+                }}
+                className="btn-ghost mt-3"
+              >
+                필터 초기화
+              </button>
+            </Notice>
+          ) : (
+            filteredReservations.map((reservation) => (
         <div
           key={reservation.id}
           className="rounded-lg border border-neutral-200 px-4 py-3"
@@ -399,8 +401,9 @@ export default function SpaceReservationManager() {
             </p>
           )}
         </div>
-        ))
-      )}
+            ))
+          )}
+        </>
       )}
     </div>
   );

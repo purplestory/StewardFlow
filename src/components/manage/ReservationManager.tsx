@@ -334,7 +334,8 @@ export default function ReservationManager() {
           }}
         />
       ) : (
-      {filteredReservations.length === 0 ? (
+        <>
+          {filteredReservations.length === 0 ? (
         <Notice>
           <p>조건에 맞는 예약이 없습니다.</p>
           <button
@@ -404,6 +405,7 @@ export default function ReservationManager() {
         </div>
         ))
       )}
+        </>
       )}
     </div>
   );

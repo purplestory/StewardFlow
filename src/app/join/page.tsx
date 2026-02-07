@@ -49,7 +49,15 @@ function JoinPageContent() {
       return;
     }
 
+    // 기관 이름 조회 실패해도 초대 정보는 반환 (organization_id는 있음)
+    // RLS 문제로 인해 클라이언트에서 조회 실패할 수 있으므로, 
+    // 여기서 실패하더라도 로직은 계속 진행되어야 함.
+    // 하지만 Admin Client를 사용하여 해결했으므로 이 문제는 발생하지 않아야 함.
+
     const loadInvite = async () => {
+      // 로딩 시작 시 에러 메시지 초기화
+      setMessage(null);
+      
       const result = await getInviteByToken(token);
       if (!result.ok || !result.invite) {
         setMessage(result.message ?? "초대 정보를 불러올 수 없습니다.");
@@ -197,25 +205,33 @@ function JoinPageContent() {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
-        <div className="rounded-xl border border-neutral-200 bg-white p-8 text-center">
-          <p className="text-sm text-neutral-600">초대 정보를 확인하는 중...</p>
+      <div className="flex min-h-screen items-center justify-center bg-neutral-50">
+        <div className="flex flex-col items-center space-y-4">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-neutral-200 border-t-neutral-900"></div>
+          <p className="text-neutral-600">초대 정보를 확인하고 있습니다...</p>
         </div>
       </div>
     );
   }
 
   // 토큰이 없고 이미 로그인된 사용자인 경우: 토큰 입력 UI 표시
-  if (!token && isAuthenticated) {
+  // 또는 토큰이 있었으나 유효하지 않아 inviteInfo가 없는 경우
+  if ((!token && isAuthenticated) || (token && !inviteInfo)) {
     return (
-      <div className="flex min-h-screen items-center justify-center p-4">
-        <div className="w-full max-w-md space-y-6 rounded-xl border border-neutral-200 bg-white p-8">
-          <div>
-            <h1 className="text-2xl font-semibold">초대 토큰 입력</h1>
+      <div className="flex min-h-screen items-center justify-center p-4 bg-neutral-50">
+        <div className="w-full max-w-md space-y-6 rounded-xl border border-neutral-200 bg-white p-8 shadow-sm">
+          <div className="text-center">
+            <h1 className="text-2xl font-bold text-neutral-900">초대 토큰 입력</h1>
             <p className="mt-2 text-sm text-neutral-600">
               관리자가 보낸 초대 링크의 토큰을 입력해주세요.
             </p>
           </div>
+
+          {message && (
+            <div className="rounded-lg bg-red-50 p-4 text-sm text-red-600 border border-red-100">
+              {message}
+            </div>
+          )}
 
           <form onSubmit={handleTokenSubmit} className="space-y-4">
             <div className="space-y-2 text-sm">
@@ -431,12 +447,23 @@ function JoinPageContent() {
 
                 // Create/update profile
                 let profileError = null;
+                
+                // 이메일 값 결정 (우선순위: 사용자 입력 > 소셜 로그인 이메일 > 초대 이메일)
+                // 이메일은 필수값이므로 반드시 값이 있어야 함
+                const finalEmail = email || user.email || inviteResult.invite.email;
+                
+                if (!finalEmail) {
+                  setMessage("이메일 정보가 없습니다. 이메일을 입력해주세요.");
+                  setSigningUp(false);
+                  return;
+                }
+
                 if (existingProfile) {
                   // Update existing profile
                   const { error: updateError } = await supabase
                     .from("profiles")
                     .update({
-                      email: (user.email ?? email) || inviteResult.invite.email,
+                      email: finalEmail,
                       organization_id: finalOrganizationId,
                       role: finalRole,
                       name: name || inviteResult.invite.name || existingProfile?.name || null,
@@ -451,7 +478,7 @@ function JoinPageContent() {
                     .from("profiles")
                     .insert({
                       id: user.id,
-                      email: (user.email ?? email) || inviteResult.invite.email,
+                      email: finalEmail,
                       organization_id: finalOrganizationId,
                       role: finalRole,
                       name: name || inviteResult.invite.name || null,

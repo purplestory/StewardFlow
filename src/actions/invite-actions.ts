@@ -1,6 +1,7 @@
 "use server";
 
 import { createSupabaseServerClient } from "@/lib/supabase-server";
+import { createSupabaseAdmin } from "@/lib/supabase-admin";
 import { generateShortId } from "@/lib/short-id";
 
 // 초대 링크 유효기간 (일)
@@ -126,7 +127,9 @@ export async function getInviteByToken(
   message?: string;
 }> {
   try {
-    const supabase = await createSupabaseServerClient();
+    // 관리자 권한 클라이언트를 사용하여 RLS 우회 (기관명, 초대한 사람 정보 조회를 위해 필수)
+    // 일반 클라이언트는 anon/user 권한이므로 organizations/profiles 접근이 제한될 수 있음
+    const supabase = createSupabaseAdmin();
     
     // 먼저 토큰으로 초대를 찾기 (상태 무관)
     // RLS 정책이 anon 사용자도 허용하도록 설정되어 있어야 함
@@ -179,7 +182,7 @@ export async function getInviteByToken(
       };
     }
 
-    // 기관 이름 조회 (서버 액션에서 조회하여 클라이언트에서 RLS 문제 방지)
+    // 기관 이름 조회 (Admin 클라이언트로 조회하여 RLS 문제 해결)
     let organizationName: string | undefined;
     try {
       const { data: orgData, error: orgError } = await supabase
@@ -216,7 +219,7 @@ export async function getInviteByToken(
     } | undefined;
     
     try {
-      // audit_logs에서 초대를 생성한 사람 찾기
+      // audit_logs에서 초대를 생성한 사람 찾기 (Admin 클라이언트로 조회)
       const { data: auditLog } = await supabase
         .from("audit_logs")
         .select("actor_id")

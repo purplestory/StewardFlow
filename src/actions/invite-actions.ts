@@ -185,6 +185,7 @@ export async function getInviteByToken(
     // 기관 이름 조회 (Admin 클라이언트로 조회하여 RLS 문제 해결)
     let organizationName: string | undefined;
     try {
+      console.log("Fetching organization name for ID:", allInvites.organization_id);
       const { data: orgData, error: orgError } = await supabase
         .from("organizations")
         .select("name")
@@ -202,9 +203,10 @@ export async function getInviteByToken(
         });
         // 기관 이름 조회 실패해도 초대 정보는 반환 (organization_id는 있음)
       } else if (orgData) {
+        console.log("Organization name fetched:", orgData.name);
         organizationName = orgData.name;
       } else {
-        console.warn("Organization not found:", allInvites.organization_id);
+        console.warn("Organization not found for ID:", allInvites.organization_id);
       }
     } catch (orgError) {
       // 기관 이름 조회 실패해도 초대 정보는 반환

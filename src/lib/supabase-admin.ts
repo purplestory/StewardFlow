@@ -1,10 +1,9 @@
 import { createClient } from "@supabase/supabase-js";
-import { Database } from "@/types/database";
 
 // Admin client using Service Role Key - Bypasses RLS
 // USE WITH CAUTION: Only use in server-side contexts (Server Actions, API Routes)
 export const createSupabaseAdmin = () => {
-  return createClient<Database>(
+  return createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
     {

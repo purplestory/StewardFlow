@@ -7,6 +7,8 @@ import { getInviteByToken } from "@/actions/invite-actions";
 import Link from "next/link";
 import LogoIcon from "@/components/common/LogoIcon";
 
+import { getOrigin } from "@/lib/utils";
+
 function JoinPageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -38,10 +40,64 @@ function JoinPageContent() {
   useEffect(() => {
     const checkAuth = async () => {
       const { data: sessionData } = await supabase.auth.getSession();
-      setIsAuthenticated(!!sessionData.session?.user);
+      const user = sessionData.session?.user;
+      setIsAuthenticated(!!user);
+      
+      // If logged in via Kakao, pre-fill email
+      if (user?.email) {
+        setEmail(user.email);
+      }
     };
     checkAuth();
   }, []);
+
+  const handleKakaoSignIn = async () => {
+    setMessage(null);
+    setSigningUp(true);
+
+    try {
+      const origin = getOrigin();
+      // 카카오 로그인 후 다시 이 페이지로 돌아오도록 설정 (토큰 유지)
+      const nextUrl = token ? `/join?token=${token}` : `/join`;
+      const redirectUrl = `${origin}/auth/callback?next=${encodeURIComponent(nextUrl)}`;
+      
+      console.log("Starting Kakao login from join page:", {
+        origin,
+        redirectUrl,
+        token
+      });
+      
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: "kakao",
+        options: {
+          redirectTo: redirectUrl,
+          queryParams: {
+            redirect_to: redirectUrl,
+            prompt: "select_account",
+          },
+        },
+      });
+
+      if (error) {
+        console.error("Kakao login error:", error);
+        setMessage(`로그인 오류: ${error.message}`);
+        setSigningUp(false);
+        return;
+      }
+
+      if (data?.url) {
+        // Redirect to Kakao
+        window.location.href = data.url;
+      } else {
+        setMessage("로그인 URL을 생성할 수 없습니다.");
+        setSigningUp(false);
+      }
+    } catch (error) {
+      console.error("Kakao login exception:", error);
+      setMessage(error instanceof Error ? error.message : "로그인 중 오류가 발생했습니다.");
+      setSigningUp(false);
+    }
+  };
 
   useEffect(() => {
     if (!token) {
@@ -664,6 +720,38 @@ function JoinPageContent() {
           </div>
         ) : (
           <form onSubmit={handleSignUp} className="space-y-4">
+            {/* 카카오 로그인 버튼 추가 */}
+            <div className="space-y-3 pb-4 border-b border-neutral-100">
+              <button
+                type="button"
+                onClick={handleKakaoSignIn}
+                disabled={signingUp}
+                className="flex w-full items-center justify-center gap-2 h-12 rounded-lg bg-[#FEE500] px-6 text-sm font-semibold text-black transition-all duration-200 hover:bg-[#FDD835] hover:shadow-md active:bg-[#FBC02D] active:shadow-sm focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <svg
+                  width="18"
+                  height="18"
+                  viewBox="0 0 18 18"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    d="M9 0C4.03 0 0 3.27 0 7.3c0 2.55 1.7 4.8 4.25 6.05L3 18l5.25-2.8c.5.05 1 .1 1.5.1 4.97 0 9-3.27 9-7.3S13.97 0 9 0z"
+                    fill="currentColor"
+                  />
+                </svg>
+                카카오톡으로 시작하기
+              </button>
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t border-neutral-200" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-white px-2 text-neutral-500">또는 이메일로 가입</span>
+                </div>
+              </div>
+            </div>
+
             <div className="space-y-2 text-sm">
               <label className="font-medium">이메일</label>
               <input

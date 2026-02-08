@@ -281,3 +281,112 @@ export async function getInviteByToken(
     };
   }
 }
+
+/**
+ * 초대 수락 - Admin 클라이언트 사용하여 RLS 우회
+ * organization_invites_update_accept 정책은 email 일치만 허용하므로,
+ * 카카오 이메일·초대 시 지정 이메일 불일치·이메일 null 초대 시 실패함.
+ */
+export async function acceptInviteByToken(
+  token: string,
+  profileData: {
+    email: string;
+    name: string | null;
+    department: string | null;
+    phone: string | null;
+  }
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const supabaseServer = await createSupabaseServerClient();
+    const { data: sessionData } = await supabaseServer.auth.getSession();
+    const user = sessionData.session?.user;
+    if (!user) {
+      return { success: false, error: "로그인이 필요합니다." };
+    }
+
+    const inviteResult = await getInviteByToken(token);
+    if (!inviteResult.ok || !inviteResult.invite) {
+      return { success: false, error: inviteResult.message ?? "유효하지 않은 초대입니다." };
+    }
+
+    const invite = inviteResult.invite;
+    const finalEmail = profileData.email || user.email || invite.email;
+    if (!finalEmail) {
+      return { success: false, error: "이메일이 필요합니다." };
+    }
+
+    const supabaseAdmin = createSupabaseAdmin();
+
+    // 기존 프로필 확인
+    const { data: existingProfile } = await supabaseAdmin
+      .from("profiles")
+      .select("id,role,organization_id")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    const finalRole = existingProfile?.organization_id
+      ? existingProfile.role
+      : invite.role;
+
+    if (existingProfile) {
+      const { error: updateError } = await supabaseAdmin
+        .from("profiles")
+        .update({
+          email: finalEmail,
+          organization_id: invite.organization_id,
+          role: finalRole,
+          name: profileData.name || invite.name || null,
+          department: profileData.department || invite.department || null,
+          phone: profileData.phone || null,
+        })
+        .eq("id", user.id);
+
+      if (updateError) {
+        return { success: false, error: `프로필 업데이트 실패: ${updateError.message}` };
+      }
+    } else {
+      const { error: insertError } = await supabaseAdmin
+        .from("profiles")
+        .insert({
+          id: user.id,
+          email: finalEmail,
+          organization_id: invite.organization_id,
+          role: finalRole,
+          name: profileData.name || invite.name || null,
+          department: profileData.department || invite.department || null,
+          phone: profileData.phone || null,
+        });
+
+      if (insertError) {
+        return { success: false, error: `프로필 생성 실패: ${insertError.message}` };
+      }
+    }
+
+    // 초대 수락 처리 (RLS 우회)
+    const { error: acceptError } = await supabaseAdmin
+      .from("organization_invites")
+      .update({ accepted_at: new Date().toISOString() })
+      .eq("token", token);
+
+    if (acceptError) {
+      return { success: false, error: `초대 수락 처리 실패: ${acceptError.message}` };
+    }
+
+    // 감사 로그
+    await supabaseAdmin.from("audit_logs").insert({
+      organization_id: invite.organization_id,
+      actor_id: user.id,
+      action: "invite_accepted",
+      target_type: "organization_invite",
+      target_id: invite.id,
+      metadata: { email: finalEmail, role: invite.role },
+    });
+
+    return { success: true };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "알 수 없는 오류",
+    };
+  }
+}

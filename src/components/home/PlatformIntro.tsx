@@ -56,10 +56,12 @@ function PlatformIntroContent() {
         // skip_redirect 파라미터가 있으면 리다이렉트하지 않음
         const skipRedirect = searchParams.get("skip_redirect") === "true";
         
-        // organization_id가 없으면 가입 신청 페이지로 리다이렉트 (skip_redirect가 아닐 때만)
+        // organization_id가 없으면 초대 토큰 입력 페이지로 리다이렉트 (skip_redirect가 아닐 때만)
+        // - 초대 링크로 가입하는 사용자는 /join에서 토큰 입력 후 수락
+        // - 초대 없이 가입하려는 사용자는 /join에서 "가입 신청" 링크로 이동 가능
         if (!profileData?.organization_id && !skipRedirect) {
-          console.log("PlatformIntro - organization_id가 없어서 가입 신청 페이지로 리다이렉트");
-          router.push("/join-request");
+          console.log("PlatformIntro - organization_id가 없어서 초대 토큰 입력 페이지로 리다이렉트");
+          router.push("/join");
           return;
         }
 

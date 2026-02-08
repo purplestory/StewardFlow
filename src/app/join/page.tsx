@@ -9,6 +9,23 @@ import LogoIcon from "@/components/common/LogoIcon";
 
 import { getOrigin } from "@/lib/utils";
 
+function extractTokenFromInput(input: string): string | null {
+  const trimmed = input.trim();
+  if (!trimmed) return null;
+  if (trimmed.startsWith("http://") || trimmed.startsWith("https://") || trimmed.startsWith("/")) {
+    try {
+      const url = trimmed.startsWith("/") ? new URL(trimmed, window.location.origin) : new URL(trimmed);
+      const t = url.searchParams.get("token");
+      if (t) return decodeURIComponent(t).trim();
+      const m = url.pathname.match(/\/join\/([^/?]+)/);
+      if (m?.[1]) return decodeURIComponent(m[1]).trim();
+    } catch {
+      /* ignore */
+    }
+  }
+  return trimmed;
+}
+
 function JoinPageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -35,6 +52,15 @@ function JoinPageContent() {
   } | null>(null);
   const [availableDepartments, setAvailableDepartments] = useState<string[]>([]);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+  // URL의 token 파라미터가 변경되면 state 동기화 (예: 카카오 콜백 후 /join?token=xxx 로 복귀)
+  useEffect(() => {
+    const t = searchParams.get("token");
+    if (t && t !== token) {
+      setToken(t);
+      setMessage(null);
+    }
+  }, [searchParams, token]);
 
   // Check if user is already logged in (카카오 로그인 시 이메일/이름 자동 채움)
   useEffect(() => {
@@ -111,10 +137,13 @@ function JoinPageContent() {
     // 하지만 Admin Client를 사용하여 해결했으므로 이 문제는 발생하지 않아야 함.
 
     const loadInvite = async () => {
-      // 로딩 시작 시 에러 메시지 초기화
       setMessage(null);
-      
-      const result = await getInviteByToken(token);
+      const actualToken = extractTokenFromInput(token);
+      if (!actualToken) {
+        setLoading(false);
+        return;
+      }
+      const result = await getInviteByToken(actualToken);
       if (!result.ok || !result.invite) {
         setMessage(result.message ?? "초대 정보를 불러올 수 없습니다.");
         setLoading(false);
@@ -140,7 +169,7 @@ function JoinPageContent() {
         name: result.invite.name || null,
         inviter: result.invite.inviter,
       });
-      // 초대 시 지정한 값으로 기본값 설정 (카카오 로그인 사용자는 checkAuth에서 이메일/이름이 이미 채워짐)
+      setToken(actualToken); // 전체 URL 붙여넣은 경우 토큰만 저장
       setEmail((prev) => prev || result.invite?.email || "");
       setName((prev) => prev || result.invite?.name || "");
       setDepartment((prev) => prev || result.invite?.department || "");
@@ -150,17 +179,18 @@ function JoinPageContent() {
     loadInvite();
   }, [token]);
 
-  // Handle token input (when user manually enters token)
+  // Handle token input (when user manually enters token or pastes full URL)
   const handleTokenSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!token.trim()) {
-      setMessage("초대 토큰을 입력해주세요.");
+    const actualToken = extractTokenFromInput(token);
+    if (!actualToken) {
+      setMessage("초대 토큰 또는 초대 링크를 입력해주세요.");
       return;
     }
     setLoading(true);
     setMessage(null);
     
-    const result = await getInviteByToken(token.trim());
+    const result = await getInviteByToken(actualToken);
     if (!result.ok || !result.invite) {
       setMessage(result.message ?? "초대 정보를 불러올 수 없습니다.");
       setLoading(false);
@@ -186,6 +216,7 @@ function JoinPageContent() {
       name: result.invite.name || null,
       inviter: result.invite.inviter,
     });
+    setToken(actualToken);
     setEmail((prev) => prev || result.invite?.email || "");
     setName((prev) => prev || result.invite?.name || "");
     setDepartment((prev) => prev || result.invite?.department || "");

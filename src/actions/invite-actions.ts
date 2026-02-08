@@ -127,16 +127,17 @@ export async function getInviteByToken(
   message?: string;
 }> {
   try {
-    // 관리자 권한 클라이언트를 사용하여 RLS 우회 (기관명, 초대한 사람 정보 조회를 위해 필수)
-    // 일반 클라이언트는 anon/user 권한이므로 organizations/profiles 접근이 제한될 수 있음
+    const cleanToken = String(token || "").trim();
+    if (!cleanToken) {
+      return { ok: false, message: "초대 토큰이 없습니다." };
+    }
+
     const supabase = createSupabaseAdmin();
-    
-    // 먼저 토큰으로 초대를 찾기 (상태 무관)
-    // RLS 정책이 anon 사용자도 허용하도록 설정되어 있어야 함
+
     const { data: allInvites, error: searchError } = await supabase
       .from("organization_invites")
       .select("id,organization_id,email,role,department,name,created_at,accepted_at,revoked_at")
-      .eq("token", token)
+      .eq("token", cleanToken)
       .maybeSingle();
 
     if (searchError) {

@@ -3,6 +3,8 @@
 import { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import { getJoinRedirectCookie, clearJoinRedirectCookie } from "@/lib/utils";
+import { getAndClearPendingJoinTokenCookie } from "@/actions/invite-actions";
 
 function AuthCallbackPageContent() {
   const router = useRouter();
@@ -94,12 +96,16 @@ function AuthCallbackPageContent() {
             return; // 여기서 반드시 종료 - 리다이렉트하지 않음
           }
           
-          // 일반 페이지 리다이렉트 - 현재 origin 확인 후 리다이렉트
-          const next = searchParams.get("next") || "/";
+          // 리다이렉트 대상: next 쿼리 → 서버 httpOnly 쿠키(초대 토큰) → 클라이언트 저장 → /
+          let next = searchParams.get("next");
+          if (!next) {
+            const { token: pendingToken } = await getAndClearPendingJoinTokenCookie();
+            if (pendingToken) next = `/join?token=${encodeURIComponent(pendingToken)}`;
+          }
+          if (!next) next = getJoinRedirectCookie() || "/";
+          clearJoinRedirectCookie();
           const currentOrigin = window.location.origin;
-          const nextUrl = next.startsWith("http") ? next : `${currentOrigin}${next}`;
-          console.log("Redirecting after OAuth (hash flow):", { currentOrigin, next, nextUrl });
-          // replace를 사용하여 히스토리에 남기지 않음
+          const nextUrl = next.startsWith("http") ? next : `${currentOrigin}${next.startsWith("/") ? next : `/${next}`}`;
           window.location.replace(nextUrl);
           return;
         }
@@ -168,12 +174,16 @@ function AuthCallbackPageContent() {
             return; // 여기서 반드시 종료 - 리다이렉트하지 않음
           }
           
-          // 일반 페이지 리다이렉트 - 현재 origin 확인 후 리다이렉트
-          const next = searchParams.get("next") || "/";
+          // 리다이렉트 대상: next 쿼리 → 서버 httpOnly 쿠키(초대 토큰) → 클라이언트 저장 → /
+          let next = searchParams.get("next");
+          if (!next) {
+            const { token: pendingToken } = await getAndClearPendingJoinTokenCookie();
+            if (pendingToken) next = `/join?token=${encodeURIComponent(pendingToken)}`;
+          }
+          if (!next) next = getJoinRedirectCookie() || "/";
+          clearJoinRedirectCookie();
           const currentOrigin = window.location.origin;
-          const nextUrl = next.startsWith("http") ? next : `${currentOrigin}${next}`;
-          console.log("Redirecting after OAuth (code flow):", { currentOrigin, next, nextUrl });
-          // replace를 사용하여 히스토리에 남기지 않음
+          const nextUrl = next.startsWith("http") ? next : `${currentOrigin}${next.startsWith("/") ? next : `/${next}`}`;
           window.location.replace(nextUrl);
           return;
         }

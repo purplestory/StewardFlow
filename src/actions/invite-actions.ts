@@ -1,11 +1,48 @@
 "use server";
 
+import { cookies } from "next/headers";
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { createSupabaseAdmin } from "@/lib/supabase-admin";
 import { generateShortId } from "@/lib/short-id";
 
 // 초대 링크 유효기간 (일)
 const INVITE_EXPIRES_DAYS = 7;
+
+const PENDING_JOIN_TOKEN_COOKIE = "pending_join_token";
+const PENDING_JOIN_MAX_AGE = 60 * 10; // 10분
+
+/** 카카오 OAuth 리다이렉트 전에 초대 토큰을 httpOnly 쿠키에 저장 (브라우저 컨텍스트 변경 시에도 복원 가능) */
+export async function setPendingJoinTokenCookie(token: string): Promise<{ ok: boolean; error?: string }> {
+  try {
+    const cookieStore = await cookies();
+    cookieStore.set(PENDING_JOIN_TOKEN_COOKIE, token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: PENDING_JOIN_MAX_AGE,
+      path: "/",
+    });
+    return { ok: true };
+  } catch (e) {
+    console.error("setPendingJoinTokenCookie:", e);
+    return { ok: false, error: e instanceof Error ? e.message : "쿠키 설정 실패" };
+  }
+}
+
+/** OAuth 콜백/join 페이지에서 저장된 초대 토큰 조회 후 쿠키 삭제 */
+export async function getAndClearPendingJoinTokenCookie(): Promise<{ token: string | null; error?: string }> {
+  try {
+    const cookieStore = await cookies();
+    const value = cookieStore.get(PENDING_JOIN_TOKEN_COOKIE)?.value ?? null;
+    if (value) {
+      cookieStore.delete(PENDING_JOIN_TOKEN_COOKIE);
+    }
+    return { token: value };
+  } catch (e) {
+    console.error("getAndClearPendingJoinTokenCookie:", e);
+    return { token: null, error: e instanceof Error ? e.message : "쿠키 조회 실패" };
+  }
+}
 
 export async function generateInviteToken(
   organizationId: string,
@@ -105,6 +142,15 @@ export async function generateInviteToken(
   }
 }
 
+function ensureAdminClient() {
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
+  if (!serviceRoleKey) {
+    console.error("SUPABASE_SERVICE_ROLE_KEY is not set. Check Vercel environment variables.");
+    return null;
+  }
+  return createSupabaseAdmin();
+}
+
 export async function getInviteByToken(
   token: string
 ): Promise<{
@@ -132,7 +178,13 @@ export async function getInviteByToken(
       return { ok: false, message: "초대 토큰이 없습니다." };
     }
 
-    const supabase = createSupabaseAdmin();
+    const supabase = ensureAdminClient();
+    if (!supabase) {
+      return {
+        ok: false,
+        message: "서버 설정 오류: SUPABASE_SERVICE_ROLE_KEY가 설정되지 않았습니다. Vercel 환경 변수를 확인하세요.",
+      };
+    }
 
     const { data: allInvites, error: searchError } = await supabase
       .from("organization_invites")
@@ -298,6 +350,11 @@ export async function acceptInviteByToken(
   }
 ): Promise<{ success: boolean; error?: string }> {
   try {
+    const cleanToken = String(token || "").trim();
+    if (!cleanToken) {
+      return { success: false, error: "초대 토큰이 없습니다." };
+    }
+
     const supabaseServer = await createSupabaseServerClient();
     const { data: sessionData } = await supabaseServer.auth.getSession();
     const user = sessionData.session?.user;
@@ -305,7 +362,8 @@ export async function acceptInviteByToken(
       return { success: false, error: "로그인이 필요합니다." };
     }
 
-    const inviteResult = await getInviteByToken(token);
+    // 1. 초대 정보 확인
+    const inviteResult = await getInviteByToken(cleanToken);
     if (!inviteResult.ok || !inviteResult.invite) {
       return { success: false, error: inviteResult.message ?? "유효하지 않은 초대입니다." };
     }
@@ -316,64 +374,57 @@ export async function acceptInviteByToken(
       return { success: false, error: "이메일이 필요합니다." };
     }
 
-    const supabaseAdmin = createSupabaseAdmin();
+    const supabaseAdmin = ensureAdminClient();
+    if (!supabaseAdmin) {
+      return {
+        success: false,
+        error: "서버 설정 오류: SUPABASE_SERVICE_ROLE_KEY가 설정되지 않았습니다.",
+      };
+    }
 
-    // 기존 프로필 확인
+    // 2. 기존 프로필 조회 (권한 결정을 위해 필요)
+    // 기존에 조직이 있는 경우 역할을 유지할지, 초대의 역할을 따를지 결정
     const { data: existingProfile } = await supabaseAdmin
       .from("profiles")
       .select("id,role,organization_id")
       .eq("id", user.id)
       .maybeSingle();
 
+    // 기존에 조직이 있다면 기존 role 유지, 없다면 초대의 role 사용
     const finalRole = existingProfile?.organization_id
       ? existingProfile.role
       : invite.role;
 
-    if (existingProfile) {
-      const { error: updateError } = await supabaseAdmin
-        .from("profiles")
-        .update({
-          email: finalEmail,
-          organization_id: invite.organization_id,
-          role: finalRole,
-          name: profileData.name || invite.name || null,
-          department: profileData.department || invite.department || null,
-          phone: profileData.phone || null,
-        })
-        .eq("id", user.id);
+    // 3. 프로필 Upsert (핵심 수정 부분)
+    // Insert와 Update를 분기하지 않고, ID가 같으면 덮어쓰도록 처리하여 에러 방지
+    const { error: upsertError } = await supabaseAdmin
+      .from("profiles")
+      .upsert({
+        id: user.id, // Primary Key (충돌 시 update로 전환됨)
+        email: finalEmail,
+        organization_id: invite.organization_id,
+        role: finalRole,
+        name: profileData.name || invite.name || null,
+        department: profileData.department || invite.department || null,
+        phone: profileData.phone || null,
+        updated_at: new Date().toISOString(), // 수정일 갱신
+      });
 
-      if (updateError) {
-        return { success: false, error: `프로필 업데이트 실패: ${updateError.message}` };
-      }
-    } else {
-      const { error: insertError } = await supabaseAdmin
-        .from("profiles")
-        .insert({
-          id: user.id,
-          email: finalEmail,
-          organization_id: invite.organization_id,
-          role: finalRole,
-          name: profileData.name || invite.name || null,
-          department: profileData.department || invite.department || null,
-          phone: profileData.phone || null,
-        });
-
-      if (insertError) {
-        return { success: false, error: `프로필 생성 실패: ${insertError.message}` };
-      }
+    if (upsertError) {
+      return { success: false, error: `프로필 업데이트 실패: ${upsertError.message}` };
     }
 
-    // 초대 수락 처리 (RLS 우회)
+    // 4. 초대 수락 처리 (완료)
     const { error: acceptError } = await supabaseAdmin
       .from("organization_invites")
       .update({ accepted_at: new Date().toISOString() })
-      .eq("token", token);
+      .eq("token", cleanToken);
 
     if (acceptError) {
       return { success: false, error: `초대 수락 처리 실패: ${acceptError.message}` };
     }
 
-    // 감사 로그
+    // 5. 감사 로그
     await supabaseAdmin.from("audit_logs").insert({
       organization_id: invite.organization_id,
       actor_id: user.id,

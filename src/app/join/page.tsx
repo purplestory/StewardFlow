@@ -36,6 +36,20 @@ function extractTokenFromInput(input: string): string | null {
   return trimmed;
 }
 
+function isAbortError(error: unknown): boolean {
+  if (error instanceof DOMException && error.name === "AbortError") return true;
+  if (error instanceof Error && error.name === "AbortError") return true;
+  if (
+    typeof error === "object" &&
+    error !== null &&
+    "name" in error &&
+    (error as { name?: string }).name === "AbortError"
+  ) {
+    return true;
+  }
+  return false;
+}
+
 function JoinPageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -92,7 +106,10 @@ function JoinPageContent() {
       const displayName = user.user_metadata?.name || user.user_metadata?.full_name;
       if (displayName) setName(displayName);
     };
-    checkAuth();
+    void checkAuth().catch((error) => {
+      if (isAbortError(error)) return;
+      console.error("Join checkAuth error:", error);
+    });
   }, []);
 
   // 3. 리다이렉트 후 토큰 복원 (OAuth 복귀 시)
@@ -118,7 +135,10 @@ function JoinPageContent() {
         } catch { /* ignore */ }
       }
     };
-    restore();
+    void restore().catch((error) => {
+      if (isAbortError(error)) return;
+      console.error("Join restore token error:", error);
+    });
   }, [tokenFromUrl, router]);
 
   // 초대 정보 로딩
@@ -174,7 +194,12 @@ function JoinPageContent() {
       setLoading(false);
     };
 
-    loadInvite();
+    void loadInvite().catch((error) => {
+      if (isAbortError(error)) return;
+      console.error("Join loadInvite error:", error);
+      setMessage("초대 정보를 불러오는 중 오류가 발생했습니다.");
+      setLoading(false);
+    });
   }, [token]);
 
   // 카카오 로그인 핸들러

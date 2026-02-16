@@ -5,6 +5,20 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import AuthCard from "@/components/auth/AuthCard";
 
+function isAbortError(error: unknown): boolean {
+  if (error instanceof DOMException && error.name === "AbortError") return true;
+  if (error instanceof Error && error.name === "AbortError") return true;
+  if (
+    typeof error === "object" &&
+    error !== null &&
+    "name" in error &&
+    (error as { name?: string }).name === "AbortError"
+  ) {
+    return true;
+  }
+  return false;
+}
+
 function LoginPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -28,7 +42,10 @@ function LoginPageContent() {
       }
     };
 
-    checkSession();
+    void checkSession().catch((error) => {
+      if (isAbortError(error)) return;
+      console.error("Login checkSession error:", error);
+    });
 
     // Listen for auth state changes
     const { data: subscription } = supabase.auth.onAuthStateChange(

@@ -6,6 +6,20 @@ import { supabase } from "@/lib/supabase";
 import { getJoinRedirectCookie, clearJoinRedirectCookie } from "@/lib/utils";
 import { getAndClearPendingJoinTokenCookie } from "@/actions/invite-actions";
 
+function isAbortError(error: unknown): boolean {
+  if (error instanceof DOMException && error.name === "AbortError") return true;
+  if (error instanceof Error && error.name === "AbortError") return true;
+  if (
+    typeof error === "object" &&
+    error !== null &&
+    "name" in error &&
+    (error as { name?: string }).name === "AbortError"
+  ) {
+    return true;
+  }
+  return false;
+}
+
 function AuthCallbackPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -259,7 +273,12 @@ function AuthCallbackPageContent() {
       }
     };
 
-    handleCallback();
+    void handleCallback().catch((error) => {
+      if (isAbortError(error)) return;
+      console.error("Auth callback unhandled error:", error);
+      setError("오류가 발생했습니다.");
+      window.location.replace("/login?error=오류가 발생했습니다");
+    });
   }, [router, searchParams]);
 
   // 리다이렉트 중이면 아무것도 표시하지 않음 (깜빡임 방지)

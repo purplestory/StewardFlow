@@ -179,7 +179,6 @@ function NewItemPageContent() {
         <button
           type="button"
           onClick={() => {
-            setCategory(null);
             router.push("/new");
           }}
           className="text-lg text-neutral-500 hover:text-black"

@@ -861,15 +861,27 @@ export default function SampleDataGenerator({
           console.error(`차량 삽입 실패 (${vehicle.name}):`, errorInfo);
           
           // RLS 정책 위반 가능성 체크
-          if (vehicleInsertError?.code === "42501" || vehicleInsertError?.message?.includes("row-level security")) {
+          const vehicleErrorLike = vehicleInsertError as ErrorLike | null;
+          if (
+            vehicleErrorLike?.code === "42501" ||
+            vehicleErrorLike?.message?.includes("row-level security")
+          ) {
             console.error("RLS 정책 위반 가능성: 차량 삽입은 admin 또는 manager 역할이 필요합니다.");
           }
           
           failedVehicles++;
           // 에러가 발생해도 나머지 차량은 계속 생성 시도
-        } else if (vehicleInsertData && vehicleInsertData.length > 0) {
-          console.log(`차량 삽입 성공 (${vehicle.name}):`, vehicleInsertData[0].id);
-          successfulVehicles++;
+        } else if (vehicleInsertData) {
+          const vehicleRows = Array.isArray(vehicleInsertData)
+            ? (vehicleInsertData as Array<{ id?: string }>)
+            : [];
+          if (vehicleRows.length > 0) {
+            console.log(`차량 삽입 성공 (${vehicle.name}):`, vehicleRows[0]?.id);
+            successfulVehicles++;
+          } else {
+            console.warn(`차량 삽입 데이터 없음 (${vehicle.name})`);
+            failedVehicles++;
+          }
         } else {
           console.warn(`차량 삽입 데이터 없음 (${vehicle.name})`);
           failedVehicles++;

@@ -413,7 +413,8 @@ export default function UserRoleManager() {
     }
 
     if (inviteError) {
-      setMessage(inviteError.message);
+      const inviteErr = inviteError as { message?: string } | null;
+      setMessage(inviteErr?.message ?? "초대 목록 조회 오류가 발생했습니다.");
       setInvites([]);
     } else {
       const pendingInvites = (inviteData ?? []) as InviteRow[];

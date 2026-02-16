@@ -14,11 +14,27 @@ function AuthCallbackPageContent() {
   useEffect(() => {
     const handleCallback = async () => {
       try {
-        // 팝업 창인지 먼저 확인 (가장 먼저 확인)
-        // window.opener가 있고, window.opener가 window 자신이 아닌 경우
-        const isPopup = typeof window.opener !== 'undefined' && 
-                       window.opener !== null && 
-                       window.opener !== window;
+        const hasOpener = (() => {
+          try {
+            return (
+              typeof window.opener !== "undefined" &&
+              window.opener !== null &&
+              window.opener !== window &&
+              !window.opener.closed
+            );
+          } catch {
+            return false;
+          }
+        })();
+        const isIframe = (() => {
+          try {
+            return window.self !== window.top;
+          } catch {
+            // cross-origin 프레임 접근 오류가 나면 iframe으로 간주
+            return true;
+          }
+        })();
+        const isPopup = hasOpener;
         
         // Check for hash fragment (OAuth callback with tokens)
         const hash = window.location.hash.substring(1);
@@ -38,8 +54,8 @@ function AuthCallbackPageContent() {
           if (sessionError) {
             setError("인증에 실패했습니다.");
             // 팝업 창 또는 iframe인지 확인
-            if (isPopup || window.self !== window.top) {
-              const target = (window.opener && !window.opener.closed) ? window.opener : window.parent;
+            if (isPopup || isIframe) {
+              const target = hasOpener ? window.opener : window.parent;
               if (target && target !== window) {
                 target.postMessage({ 
                   type: "OAUTH_ERROR", 
@@ -60,7 +76,7 @@ function AuthCallbackPageContent() {
           window.history.replaceState(null, "", window.location.pathname);
           
           // 팝업 창 또는 iframe인 경우 - 절대 리다이렉트하지 않음
-          if (isPopup || window.self !== window.top) {
+          if (isPopup || isIframe) {
             // Wait for session to be fully established and verify
             let retries = 0;
             while (retries < 10) {
@@ -74,9 +90,9 @@ function AuthCallbackPageContent() {
             
             try {
               // 부모 창에 메시지 전송 (팝업 또는 iframe)
-              if (window.opener && !window.opener.closed) {
+              if (hasOpener && window.opener) {
                 window.opener.postMessage({ type: "OAUTH_SUCCESS" }, window.location.origin);
-              } else if (window.parent && window.parent !== window) {
+              } else if (isIframe && window.parent && window.parent !== window) {
                 // iframe인 경우
                 window.parent.postMessage({ type: "OAUTH_SUCCESS" }, window.location.origin);
               }
@@ -97,12 +113,16 @@ function AuthCallbackPageContent() {
           }
           
           // 리다이렉트 대상: next 쿼리 → 서버 httpOnly 쿠키(초대 토큰) → 클라이언트 저장 → /
-          let next = searchParams.get("next");
-          if (!next) {
-            const { token: pendingToken } = await getAndClearPendingJoinTokenCookie();
-            if (pendingToken) next = `/join?token=${encodeURIComponent(pendingToken)}`;
+          let next = searchParams.get("next") || "/";
+          if (!searchParams.get("next")) {
+            try {
+              const { token: pendingToken } = await getAndClearPendingJoinTokenCookie();
+              if (pendingToken) next = `/join?token=${encodeURIComponent(pendingToken)}`;
+            } catch (tokenError) {
+              console.warn("Failed to restore pending join token:", tokenError);
+            }
           }
-          if (!next) next = getJoinRedirectCookie() || "/";
+          if (!next || next === "/") next = getJoinRedirectCookie() || "/";
           clearJoinRedirectCookie();
           const currentOrigin = window.location.origin;
           const nextUrl = next.startsWith("http") ? next : `${currentOrigin}${next.startsWith("/") ? next : `/${next}`}`;
@@ -119,8 +139,8 @@ function AuthCallbackPageContent() {
           if (exchangeError) {
             setError("인증에 실패했습니다.");
             // 팝업 창 또는 iframe인지 확인
-            if (isPopup || window.self !== window.top) {
-              const target = (window.opener && !window.opener.closed) ? window.opener : window.parent;
+            if (isPopup || isIframe) {
+              const target = hasOpener ? window.opener : window.parent;
               if (target && target !== window) {
                 target.postMessage({ 
                   type: "OAUTH_ERROR", 
@@ -138,7 +158,7 @@ function AuthCallbackPageContent() {
           }
           
           // 팝업 창 또는 iframe인 경우 - 절대 리다이렉트하지 않음
-          if (isPopup || window.self !== window.top) {
+          if (isPopup || isIframe) {
             // Wait for session to be fully established and verify
             let retries = 0;
             while (retries < 10) {
@@ -152,9 +172,9 @@ function AuthCallbackPageContent() {
             
             try {
               // 부모 창에 메시지 전송 (팝업 또는 iframe)
-              if (window.opener && !window.opener.closed) {
+              if (hasOpener && window.opener) {
                 window.opener.postMessage({ type: "OAUTH_SUCCESS" }, window.location.origin);
-              } else if (window.parent && window.parent !== window) {
+              } else if (isIframe && window.parent && window.parent !== window) {
                 // iframe인 경우
                 window.parent.postMessage({ type: "OAUTH_SUCCESS" }, window.location.origin);
               }
@@ -175,12 +195,16 @@ function AuthCallbackPageContent() {
           }
           
           // 리다이렉트 대상: next 쿼리 → 서버 httpOnly 쿠키(초대 토큰) → 클라이언트 저장 → /
-          let next = searchParams.get("next");
-          if (!next) {
-            const { token: pendingToken } = await getAndClearPendingJoinTokenCookie();
-            if (pendingToken) next = `/join?token=${encodeURIComponent(pendingToken)}`;
+          let next = searchParams.get("next") || "/";
+          if (!searchParams.get("next")) {
+            try {
+              const { token: pendingToken } = await getAndClearPendingJoinTokenCookie();
+              if (pendingToken) next = `/join?token=${encodeURIComponent(pendingToken)}`;
+            } catch (tokenError) {
+              console.warn("Failed to restore pending join token:", tokenError);
+            }
           }
-          if (!next) next = getJoinRedirectCookie() || "/";
+          if (!next || next === "/") next = getJoinRedirectCookie() || "/";
           clearJoinRedirectCookie();
           const currentOrigin = window.location.origin;
           const nextUrl = next.startsWith("http") ? next : `${currentOrigin}${next.startsWith("/") ? next : `/${next}`}`;
@@ -199,11 +223,24 @@ function AuthCallbackPageContent() {
           // replace를 사용하여 히스토리에 남기지 않음
           window.location.replace("/login?error=인증 정보를 찾을 수 없습니다");
         }
-      } catch {
+      } catch (callbackError) {
+        console.error("Auth callback error:", callbackError);
         setError("오류가 발생했습니다.");
         // 팝업 창 또는 iframe인지 확인
-        const isPopupError = window.opener !== null && !window.opener.closed;
-        const isIframe = window.self !== window.top;
+        const isPopupError = (() => {
+          try {
+            return window.opener !== null && !window.opener.closed;
+          } catch {
+            return false;
+          }
+        })();
+        const isIframe = (() => {
+          try {
+            return window.self !== window.top;
+          } catch {
+            return true;
+          }
+        })();
         if ((isPopupError && window.opener) || isIframe) {
           const target = (window.opener && !window.opener.closed) ? window.opener : window.parent;
           if (target && target !== window) {

@@ -3,6 +3,13 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
+import {
+  addNotificationBadgeSyncListener,
+} from "@/lib/notification-ui-events";
+
+type NotificationRealtimeRow = {
+  user_id?: string | null;
+};
 
 export default function NotificationBadge() {
   const [count, setCount] = useState(0);
@@ -47,17 +54,23 @@ export default function NotificationBadge() {
         "postgres_changes",
         { event: "*", schema: "public", table: "notifications" },
         (payload) => {
-          const newRecord = payload.new as { user_id?: string } | null;
-          if (
-            newRecord &&
-            newRecord.user_id &&
-            newRecord.user_id === userIdRef.current
-          ) {
-            load();
+          const newRecord = payload.new as NotificationRealtimeRow | null;
+          const oldRecord = payload.old as NotificationRealtimeRow | null;
+          const affectedUserId = newRecord?.user_id ?? oldRecord?.user_id;
+          if (affectedUserId && affectedUserId === userIdRef.current) {
+            void load();
           }
         }
       )
       .subscribe();
+
+    const removeSyncListener = addNotificationBadgeSyncListener((nextCount) => {
+      if (typeof nextCount === "number") {
+        setCount(Math.max(0, nextCount));
+        return;
+      }
+      void load();
+    });
 
     const handleVisibility = () => {
       if (document.visibilityState === "visible") {
@@ -72,6 +85,7 @@ export default function NotificationBadge() {
       subscription?.subscription?.unsubscribe();
       supabase.removeChannel(channel);
       document.removeEventListener("visibilitychange", handleVisibility);
+      removeSyncListener();
     };
   }, []);
 

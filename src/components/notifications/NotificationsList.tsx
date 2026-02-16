@@ -5,6 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { supabase } from "@/lib/supabase";
 import Notice from "@/components/common/Notice";
+import { emitNotificationBadgeSync } from "@/lib/notification-ui-events";
 
 type NotificationRow = {
   id: string;
@@ -13,6 +14,10 @@ type NotificationRow = {
   payload: Record<string, unknown> | null;
   read_at: string | null;
   created_at: string;
+};
+
+type NotificationRealtimeRow = {
+  user_id?: string | null;
 };
 
 const typeLabel: Record<string, string> = {
@@ -72,6 +77,9 @@ export default function NotificationsList() {
 
     if (!user) {
       setNotifications([]);
+      setTotalCount(0);
+      setUnreadTotal(0);
+      emitNotificationBadgeSync(0);
       setLoading(false);
       userIdRef.current = null;
       return;
@@ -131,7 +139,9 @@ export default function NotificationsList() {
       setTotalCount(count ?? 0);
     }
 
-    setUnreadTotal(unreadCount ?? 0);
+    const nextUnreadCount = unreadCount ?? 0;
+    setUnreadTotal(nextUnreadCount);
+    emitNotificationBadgeSync(nextUnreadCount);
 
     setLoading(false);
   }, [page, pageSize, query, showUnreadOnly, sortOrder, statusFilter, typeFilter]);
@@ -153,12 +163,10 @@ export default function NotificationsList() {
         "postgres_changes",
         { event: "*", schema: "public", table: "notifications" },
         (payload) => {
-          const newRecord = payload.new as { user_id?: string } | null;
-          if (
-            newRecord &&
-            newRecord.user_id &&
-            newRecord.user_id === userIdRef.current
-          ) {
+          const newRecord = payload.new as NotificationRealtimeRow | null;
+          const oldRecord = payload.old as NotificationRealtimeRow | null;
+          const affectedUserId = newRecord?.user_id ?? oldRecord?.user_id;
+          if (affectedUserId && affectedUserId === userIdRef.current) {
             void loadRef.current();
           }
         }
@@ -192,10 +200,13 @@ export default function NotificationsList() {
     if (updating) return;
     setUpdating(true);
     setMessage(null);
+    const existingNotification = notifications.find((item) => item.id === id);
+    const shouldDecreaseUnread = Boolean(existingNotification && !existingNotification.read_at);
+    const readAt = new Date().toISOString();
 
     const { error } = await supabase
       .from("notifications")
-      .update({ read_at: new Date().toISOString() })
+      .update({ read_at: readAt })
       .eq("id", id);
 
     if (error) {
@@ -206,9 +217,16 @@ export default function NotificationsList() {
 
     setNotifications((prev) =>
       prev.map((item) =>
-        item.id === id ? { ...item, read_at: new Date().toISOString() } : item
+        item.id === id ? { ...item, read_at: readAt } : item
       )
     );
+    if (shouldDecreaseUnread) {
+      setUnreadTotal((prev) => {
+        const next = Math.max(0, prev - 1);
+        emitNotificationBadgeSync(next);
+        return next;
+      });
+    }
     setUpdating(false);
   };
 
@@ -217,6 +235,7 @@ export default function NotificationsList() {
     setMessage(null);
 
     const unreadIds = notifications.filter((n) => !n.read_at).map((n) => n.id);
+    const readAt = new Date().toISOString();
     if (unreadIds.length === 0) {
       setUpdating(false);
       return;
@@ -224,7 +243,7 @@ export default function NotificationsList() {
 
     const { error } = await supabase
       .from("notifications")
-      .update({ read_at: new Date().toISOString() })
+      .update({ read_at: readAt })
       .in("id", unreadIds);
 
     if (error) {
@@ -236,10 +255,15 @@ export default function NotificationsList() {
     setNotifications((prev) =>
       prev.map((item) =>
         unreadIds.includes(item.id)
-          ? { ...item, read_at: new Date().toISOString() }
+          ? { ...item, read_at: readAt }
           : item
       )
     );
+    setUnreadTotal((prev) => {
+      const next = Math.max(0, prev - unreadIds.length);
+      emitNotificationBadgeSync(next);
+      return next;
+    });
     setUpdating(false);
   };
 
@@ -501,25 +525,15 @@ export default function NotificationsList() {
             </div>
           </div>
           <p className="text-xs text-neutral-500 flex items-center gap-2">
-            <span>상태:</span>
+            <span>{getItemStatusLabel(item).label}:</span>
             <span
-              className={`rounded-full px-2 py-0.5 text-[10px] ${getStatusBadge(
-                item.status
-              )}`}
+              className={`rounded-full px-2 py-0.5 text-[10px] ${getItemStatusLabel(item).badgeClass}`}
             >
-              {statusLabel[item.status]}
+              {getItemStatusLabel(item).value}
             </span>
             <span>· {formatDateTime(item.created_at)}</span>
           </p>
               {!compactView && renderNotificationDetail(item)}
-              {!compactView && item.payload && (
-                <details className="mt-2 rounded bg-neutral-50 p-2 text-xs text-neutral-600">
-                  <summary className="cursor-pointer">상세 보기</summary>
-                  <pre className="mt-2 whitespace-pre-wrap">
-                    {JSON.stringify(item.payload, null, 2)}
-                  </pre>
-                </details>
-              )}
           <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
             {(item.payload?.resource_id as string | undefined) && (
               <Link
@@ -755,7 +769,7 @@ const renderTitle = (item: NotificationRow) => {
   const title = typeLabel[item.type] ?? "알림";
 
   if (resourceName && status) {
-    return `${title}: ${resourceName} (${statusLabel[status as NotificationRow["status"]] ?? status})`;
+    return `${title}: ${resourceName} (${reservationStatusLabel[status] ?? status})`;
   }
 
   if (resourceName) {
@@ -865,17 +879,17 @@ const getTypeIcon = (type: string) => {
   return "?";
 };
 
-const statusLabel: Record<NotificationRow["status"], string> = {
+const notificationStatusLabel: Record<NotificationRow["status"], string> = {
   pending: "대기",
   sent: "발송 완료",
   failed: "실패",
 };
 
 const reservationStatusLabel: Record<string, string> = {
-  pending: "승인 대기",
-  approved: "승인됨",
+  pending: "대기",
+  approved: "승인",
   returned: "반납 완료",
-  rejected: "반려됨",
+  rejected: "반려",
 };
 
 const getStatusBadge = (status: NotificationRow["status"]) => {
@@ -883,4 +897,30 @@ const getStatusBadge = (status: NotificationRow["status"]) => {
   if (status === "sent") return "bg-emerald-100 text-emerald-700";
   if (status === "failed") return "bg-rose-100 text-rose-700";
   return "bg-neutral-100 text-neutral-700";
+};
+
+const getReservationStatusBadge = (status: string) => {
+  if (status === "pending") return "bg-amber-100 text-amber-700";
+  if (status === "approved") return "bg-emerald-100 text-emerald-700";
+  if (status === "returned") return "bg-neutral-100 text-neutral-700";
+  if (status === "rejected") return "bg-rose-100 text-rose-700";
+  return "bg-neutral-100 text-neutral-700";
+};
+
+const getItemStatusLabel = (item: NotificationRow) => {
+  const reservationStatus = (item.payload?.status as string | undefined) ?? null;
+
+  if (reservationStatus && reservationStatusLabel[reservationStatus]) {
+    return {
+      label: "예약 상태",
+      value: reservationStatusLabel[reservationStatus],
+      badgeClass: getReservationStatusBadge(reservationStatus),
+    };
+  }
+
+  return {
+    label: "알림 상태",
+    value: notificationStatusLabel[item.status],
+    badgeClass: getStatusBadge(item.status),
+  };
 };

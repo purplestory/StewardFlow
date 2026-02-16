@@ -240,12 +240,16 @@ function JoinPageContent() {
         console.warn("Session refresh warning:", refreshError);
       }
 
+      const { data: sessionData } = await supabase.auth.getSession();
+      const accessToken = sessionData.session?.access_token ?? null;
+
       // 서버 액션 호출
       const result = await acceptInviteByToken(actualToken, {
         email: finalEmail,
         name: name.trim() || null,
         department: department.trim() || null,
         phone: phone.trim() || null,
+        accessToken,
       });
 
       if (!result.success) {

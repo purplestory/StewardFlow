@@ -320,6 +320,7 @@ export async function acceptInviteByToken(
     name: string | null;
     department: string | null;
     phone: string | null;
+    accessToken?: string | null;
   }
 ): Promise<{ success: boolean; error?: string }> {
   try {
@@ -329,11 +330,23 @@ export async function acceptInviteByToken(
     }
 
     const supabaseServer = await createSupabaseServerClient();
-    
-    // [중요 변경] getSession 대신 getUser 사용하여 최신 인증 상태 확인
-    const { data: { user }, error: userError } = await supabaseServer.auth.getUser();
+    const supabaseAdmin = ensureAdminClient();
 
-    if (userError || !user) {
+    // 1차: 서버 쿠키 기반 인증
+    const { data: { user }, error: userError } = await supabaseServer.auth.getUser();
+    let authenticatedUser = user;
+
+    // 2차: 쿠키 세션이 없으면 access token으로 보조 인증 (인앱 브라우저 대응)
+    if ((!authenticatedUser || userError) && profileData.accessToken && supabaseAdmin) {
+      const { data: tokenUserData, error: tokenUserError } = await supabaseAdmin.auth.getUser(
+        profileData.accessToken
+      );
+      if (!tokenUserError && tokenUserData.user) {
+        authenticatedUser = tokenUserData.user;
+      }
+    }
+
+    if (!authenticatedUser) {
       console.error("Auth Error (acceptInvite):", userError);
       return { success: false, error: "로그인이 필요합니다. (인증 세션 확인 실패)" };
     }
@@ -345,12 +358,11 @@ export async function acceptInviteByToken(
     }
 
     const invite = inviteResult.invite;
-    const finalEmail = profileData.email || user.email || invite.email;
+    const finalEmail = profileData.email || authenticatedUser.email || invite.email;
     if (!finalEmail) {
       return { success: false, error: "이메일이 필요합니다." };
     }
 
-    const supabaseAdmin = ensureAdminClient();
     if (!supabaseAdmin) {
       return {
         success: false,
@@ -362,7 +374,7 @@ export async function acceptInviteByToken(
     const { data: existingProfile } = await supabaseAdmin
       .from("profiles")
       .select("id,role,organization_id")
-      .eq("id", user.id)
+      .eq("id", authenticatedUser.id)
       .maybeSingle();
 
     // 기존에 조직이 있다면 기존 role 유지, 없다면 초대의 role 사용
@@ -374,7 +386,7 @@ export async function acceptInviteByToken(
     const { error: upsertError } = await supabaseAdmin
       .from("profiles")
       .upsert({
-        id: user.id, 
+        id: authenticatedUser.id,
         email: finalEmail,
         organization_id: invite.organization_id,
         role: finalRole,
@@ -401,7 +413,7 @@ export async function acceptInviteByToken(
     // 5. 감사 로그
     await supabaseAdmin.from("audit_logs").insert({
       organization_id: invite.organization_id,
-      actor_id: user.id,
+      actor_id: authenticatedUser.id,
       action: "invite_accepted",
       target_type: "organization_invite",
       target_id: invite.id,

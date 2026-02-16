@@ -20,6 +20,7 @@ type AssetFormProps = {
     id: string;
     short_id: string | null;
     name: string;
+    status: "available" | "rented" | "repair" | "lost" | "retired";
     model_name: string | null;
     image_url: string | null;
     image_urls: string[] | null;
@@ -60,6 +61,8 @@ export default function AssetForm({ asset }: AssetFormProps = {}) {
   const [organizationId, setOrganizationId] = useState<string | null>(null);
   const [isLoadingOrg, setIsLoadingOrg] = useState(true);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [currentUserRole, setCurrentUserRole] = useState<"admin" | "manager" | "user">("user");
+  const [currentUserDepartment, setCurrentUserDepartment] = useState<string | null>(null);
   const [ownerScope, setOwnerScope] = useState<"department" | "organization">(
     "department"
   );
@@ -79,6 +82,13 @@ export default function AssetForm({ asset }: AssetFormProps = {}) {
 
   const previews = useMemo(() => previewUrls, [previewUrls]);
   const isEditMode = Boolean(asset);
+  const canChangeStatus = useMemo(() => {
+    if (!isEditMode || !asset) return false;
+    if (currentUserRole === "admin") return true;
+    if (currentUserRole !== "manager") return false;
+    if (asset.owner_scope === "organization") return true;
+    return asset.owner_department === currentUserDepartment;
+  }, [isEditMode, asset, currentUserRole, currentUserDepartment]);
 
   // Load existing asset data in edit mode
   useEffect(() => {
@@ -161,6 +171,8 @@ export default function AssetForm({ asset }: AssetFormProps = {}) {
 
       setCurrentUserId(user.id);
       const role = (data?.role as "admin" | "manager" | "user") ?? "user";
+      setCurrentUserRole(role);
+      setCurrentUserDepartment(data?.department ?? null);
       
       // 관리자만 전체 기관 물품 등록 가능
       const isAdmin = role === "admin";
@@ -372,6 +384,10 @@ export default function AssetForm({ asset }: AssetFormProps = {}) {
       : null; // 기관 공용일 때만 관리 부서 설정
     const mobilityInput =
       (formData.get("mobility")?.toString() as "fixed" | "movable") ?? "movable";
+    const statusInput =
+      (formData.get("status")?.toString() as "available" | "rented" | "repair" | "lost" | "retired") ??
+      asset?.status ??
+      "available";
     const loanableInput = formData.get("loanable")?.toString() ?? "true";
     const loanableValue = loanableInput === "true";
     const usableUntilValue = usableUntil || formData.get("usable_until")?.toString() || null;
@@ -473,6 +489,7 @@ export default function AssetForm({ asset }: AssetFormProps = {}) {
             ? null
             : usefulLifeYearsValue,
           mobility: mobilityInput,
+          status: canChangeStatus ? statusInput : asset.status,
           loanable: loanableValue,
           usable_until: usableUntilValue || null,
           tags: tags.length > 0 ? tags : [],
@@ -519,6 +536,7 @@ export default function AssetForm({ asset }: AssetFormProps = {}) {
                 ? null
                 : usefulLifeYears,
               mobility: mobilityInput,
+              status: canChangeStatus ? statusInput : asset.status,
               loanable: loanableValue,
               usable_until: usableUntilValue || null,
               tags,
@@ -935,6 +953,28 @@ export default function AssetForm({ asset }: AssetFormProps = {}) {
             <option value="fixed">고정</option>
           </select>
         </label>
+        {isEditMode && (
+          <label className="form-grid-item">
+            <span className="form-label">상태</span>
+            <select
+              name="status"
+              className="form-select"
+              defaultValue={asset?.status || "available"}
+              disabled={!canChangeStatus}
+            >
+              <option value="available">대여 가능</option>
+              <option value="rented">대여 중</option>
+              <option value="repair">수리 중</option>
+              <option value="retired">불용품</option>
+              <option value="lost">분실</option>
+            </select>
+            {!canChangeStatus && (
+              <p className="text-xs text-neutral-500 mt-1">
+                상태 변경 권한이 없습니다.
+              </p>
+            )}
+          </label>
+        )}
         <label className="form-grid-item">
           <span className="form-label">대여 가능 여부</span>
             <select

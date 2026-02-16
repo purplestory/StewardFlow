@@ -3,6 +3,7 @@
 import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { isUUID } from "@/lib/short-id";
 import type { Reservation, VehicleReservationSummary } from "@/types/database";
+import { createClient } from "@supabase/supabase-js";
 import {
   sendReservationRequestToAdmin,
   sendReservationRequestToBorrower,
@@ -60,6 +61,7 @@ export async function createReservation(
   const assetId = formData.get("asset_id")?.toString();
   const spaceId = formData.get("space_id")?.toString();
   const vehicleId = formData.get("vehicle_id")?.toString();
+  const authAccessToken = formData.get("auth_access_token")?.toString()?.trim();
   const resourceType = formData.get("resource_type")?.toString() ?? "asset";
   const startDate = formData.get("start_date")?.toString();
   const endDate = formData.get("end_date")?.toString();
@@ -84,15 +86,50 @@ export async function createReservation(
   // TypeScript 타입 가드: actualResourceId가 string임을 보장
   const resourceId: string = actualResourceId;
 
-  const supabase = await createSupabaseServerClient();
-  
-  // 세션에서 사용자 ID 가져오기 (borrower_id는 hidden input에서 전달되지만, 세션에서도 확인)
-  const { data: sessionData } = await supabase.auth.getSession();
-  const borrowerId = formData.get("borrower_id")?.toString() || sessionData.session?.user?.id;
-  
-  if (!borrowerId) {
-    return { ok: false, message: "로그인이 필요합니다." };
+  const supabaseServer = await createSupabaseServerClient();
+  const {
+    data: { user: cookieUser },
+    error: cookieAuthError,
+  } = await supabaseServer.auth.getUser();
+
+  let authenticatedUser = cookieUser;
+  let supabase = supabaseServer;
+
+  // 인앱 브라우저에서 쿠키 세션이 유실되는 경우 access token으로 보조 인증
+  if (!authenticatedUser && authAccessToken) {
+    const {
+      data: { user: tokenUser },
+      error: tokenAuthError,
+    } = await supabaseServer.auth.getUser(authAccessToken);
+
+    if (!tokenAuthError && tokenUser) {
+      authenticatedUser = tokenUser;
+      supabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+        {
+          auth: {
+            autoRefreshToken: false,
+            persistSession: false,
+          },
+          global: {
+            headers: {
+              Authorization: `Bearer ${authAccessToken}`,
+            },
+          },
+        }
+      );
+    }
   }
+
+  if (!authenticatedUser) {
+    console.error("createReservation auth failed:", {
+      cookieAuthError: cookieAuthError?.message ?? null,
+      hasAccessToken: Boolean(authAccessToken),
+    });
+    return { ok: false, message: "로그인이 필요합니다. (인증 세션 확인 실패)" };
+  }
+  const borrowerId = authenticatedUser.id;
   
   // 자원의 organization_id를 사용 (자원이 속한 기관에 예약 생성)
   let organizationId: string | null = null;

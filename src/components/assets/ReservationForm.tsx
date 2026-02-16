@@ -25,7 +25,7 @@ export default function ReservationForm({
   disabledReason,
 }: ReservationFormProps) {
   const [state, formAction] = useActionState(createReservation, initialState);
-  const [borrowerId, setBorrowerId] = useState<string | null>(null);
+  const [authAccessToken, setAuthAccessToken] = useState<string | null>(null);
   
   // 시스템 날짜를 기본값으로 설정
   const getDefaultDate = () => {
@@ -50,7 +50,7 @@ export default function ReservationForm({
   useEffect(() => {
     const loadSession = async () => {
       const { data } = await supabase.auth.getSession();
-      setBorrowerId(data.session?.user?.id ?? null);
+      setAuthAccessToken(data.session?.access_token ?? null);
     };
 
     loadSession();
@@ -101,8 +101,8 @@ export default function ReservationForm({
     <form action={formAction} className="space-y-4">
       <input type="hidden" name="asset_id" value={assetId} />
       <input type="hidden" name="resource_type" value={resourceType} />
-      {borrowerId && (
-        <input type="hidden" name="borrower_id" value={borrowerId} />
+      {authAccessToken && (
+        <input type="hidden" name="auth_access_token" value={authAccessToken} />
       )}
       <fieldset disabled={isDisabled} className="space-y-4">
         <div className="space-y-3">

@@ -79,6 +79,11 @@ export default function ReservationsClient() {
     setActionMessage(null);
   };
 
+  const getAccessToken = async () => {
+    const { data: sessionData } = await supabase.auth.getSession();
+    return sessionData.session?.access_token ?? null;
+  };
+
   const handleSave = async () => {
     if (!selectedReservation) return;
     if (!draftStartDate || !draftEndDate) {
@@ -88,8 +93,7 @@ export default function ReservationsClient() {
 
     setUpdating(true);
     setActionMessage(null);
-    const { data: sessionData } = await supabase.auth.getSession();
-    const accessToken = sessionData.session?.access_token;
+    const accessToken = await getAccessToken();
 
     if (!accessToken) {
       setActionMessage("로그인이 필요합니다.");
@@ -120,13 +124,12 @@ export default function ReservationsClient() {
     setUpdating(false);
   };
 
-  const handleCancel = async () => {
-    if (!selectedReservation) return;
+  const cancelReservation = async (reservationId: string, closeModalAfterCancel = false) => {
+    if (!reservationId) return;
 
     setUpdating(true);
     setActionMessage(null);
-    const { data: sessionData } = await supabase.auth.getSession();
-    const accessToken = sessionData.session?.access_token;
+    const accessToken = await getAccessToken();
 
     if (!accessToken) {
       setActionMessage("로그인이 필요합니다.");
@@ -138,7 +141,7 @@ export default function ReservationsClient() {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        reservationId: selectedReservation.id,
+        reservationId,
         accessToken,
       }),
     });
@@ -150,8 +153,22 @@ export default function ReservationsClient() {
     }
 
     await queryClient.invalidateQueries({ queryKey: ["userReservations"] });
+    setActionMessage("예약 신청이 삭제되었습니다.");
     setUpdating(false);
-    closeDetail();
+    if (closeModalAfterCancel) {
+      closeDetail();
+    }
+  };
+
+  const handleCancel = async () => {
+    if (!selectedReservation) return;
+    await cancelReservation(selectedReservation.id, true);
+  };
+
+  const handleDeleteFromList = async (reservationId: string) => {
+    const confirmed = window.confirm("해당 대여 신청을 삭제하시겠습니까?");
+    if (!confirmed) return;
+    await cancelReservation(reservationId, false);
   };
 
   if (loading) {
@@ -188,6 +205,9 @@ export default function ReservationsClient() {
 
   return (
     <div className="space-y-3">
+      {actionMessage && !selectedReservation && (
+        <Notice>{actionMessage}</Notice>
+      )}
       {reservations.map((reservation) => (
         <div
           key={reservation.id}
@@ -205,7 +225,7 @@ export default function ReservationsClient() {
                 <p className="mt-1 text-xs text-neutral-500">메모: {reservation.note}</p>
               )}
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-col items-end gap-2">
               <span
                 className={`rounded-full px-2 py-1 text-xs font-medium ${
                   statusBadgeClass[reservation.status]
@@ -213,13 +233,34 @@ export default function ReservationsClient() {
               >
                 {statusLabel[reservation.status]}
               </span>
-              <button
-                type="button"
-                className="rounded-md border border-neutral-200 px-2 py-1 text-xs text-neutral-700 hover:bg-neutral-50"
-                onClick={() => openDetail(reservation.id)}
-              >
-                상세 보기
-              </button>
+              {reservation.status === "pending" ? (
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    className="rounded-md border border-neutral-200 px-2 py-1 text-xs text-neutral-700 hover:bg-neutral-50"
+                    onClick={() => openDetail(reservation.id)}
+                    disabled={updating}
+                  >
+                    수정
+                  </button>
+                  <button
+                    type="button"
+                    className="rounded-md border border-rose-200 px-2 py-1 text-xs text-rose-700 hover:bg-rose-50 disabled:opacity-60"
+                    onClick={() => handleDeleteFromList(reservation.id)}
+                    disabled={updating}
+                  >
+                    삭제
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  className="rounded-md border border-neutral-200 px-2 py-1 text-xs text-neutral-700 hover:bg-neutral-50"
+                  onClick={() => openDetail(reservation.id)}
+                >
+                  상세 보기
+                </button>
+              )}
             </div>
           </div>
         </div>

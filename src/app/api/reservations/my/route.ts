@@ -18,6 +18,11 @@ const parseReservationBody = async (request: Request) => {
   } | null>;
 };
 
+const getReservationIdFromRequest = (request: Request) => {
+  const url = new URL(request.url);
+  return url.searchParams.get("reservationId")?.trim() ?? null;
+};
+
 const getAuthedClient = async (accessToken: string) => {
   if (!supabaseUrl || !supabaseAnonKey) {
     return { client: null, error: "Supabase 환경 변수가 없습니다." };
@@ -89,7 +94,7 @@ const loadOwnedPendingReservation = async (
 
 export async function PATCH(request: Request) {
   const body = await parseReservationBody(request);
-  const reservationId = body?.reservationId?.trim();
+  const reservationId = body?.reservationId?.trim() ?? getReservationIdFromRequest(request);
   const accessToken = body?.accessToken?.trim();
   const startDate = body?.startDate?.trim();
   const endDate = body?.endDate?.trim();
@@ -191,7 +196,7 @@ export async function PATCH(request: Request) {
 
 export async function DELETE(request: Request) {
   const body = await parseReservationBody(request);
-  const reservationId = body?.reservationId?.trim();
+  const reservationId = body?.reservationId?.trim() ?? getReservationIdFromRequest(request);
   const accessToken = body?.accessToken?.trim();
 
   if (!reservationId || !accessToken) {
@@ -238,6 +243,26 @@ export async function DELETE(request: Request) {
     return NextResponse.json(
       { ok: false, message: "예약 삭제 권한이 없거나 이미 처리된 신청입니다." },
       { status: 403 }
+    );
+  }
+
+  const { data: remainingRow, error: verifyError } = await dbClient
+    .from("reservations")
+    .select("id")
+    .eq("id", reservationId)
+    .maybeSingle();
+
+  if (verifyError) {
+    return NextResponse.json(
+      { ok: false, message: verifyError.message },
+      { status: 400 }
+    );
+  }
+
+  if (remainingRow) {
+    return NextResponse.json(
+      { ok: false, message: "예약 삭제 확인에 실패했습니다. 다시 시도해 주세요." },
+      { status: 500 }
     );
   }
 

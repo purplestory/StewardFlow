@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import Notice from "@/components/common/Notice";
 import { supabase } from "@/lib/supabase";
-import { useUserReservations } from "@/hooks/useReservations";
+import { useUserReservations, type UserReservationItem } from "@/hooks/useReservations";
 import { useUserProfile } from "@/hooks/useAssets";
 
 const statusLabel: Record<"pending" | "approved" | "returned" | "rejected", string> = {
@@ -148,6 +148,28 @@ export default function ReservationsClient() {
     const result = await response.json();
     if (!response.ok || !result.ok) {
       setActionMessage(result.message ?? "예약 취소에 실패했습니다.");
+      setUpdating(false);
+      return;
+    }
+
+    queryClient.setQueryData<UserReservationItem[]>(["userReservations"], (previous) =>
+      (previous ?? []).filter((item) => item.id !== reservationId)
+    );
+
+    const { data: remainingRow, error: verifyError } = await supabase
+      .from("reservations")
+      .select("id")
+      .eq("id", reservationId)
+      .maybeSingle();
+
+    if (verifyError) {
+      setActionMessage(`삭제 확인 중 오류가 발생했습니다: ${verifyError.message}`);
+      setUpdating(false);
+      return;
+    }
+
+    if (remainingRow) {
+      setActionMessage("삭제 요청이 완료되지 않았습니다. 다시 시도해 주세요.");
       setUpdating(false);
       return;
     }

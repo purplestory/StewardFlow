@@ -432,8 +432,8 @@ export default function DepartmentManager({ organizationId }: DepartmentManagerP
                 onDragLeave={handleDragLeave}
                 onDrop={(e) => handleDrop(e, index)}
                 onTouchStart={(e) => handleTouchStart(e, index)}
-                onTouchMove={(e) => handleTouchMove(e, index)}
-                onTouchEnd={(e) => handleTouchEnd(e, index)}
+                onTouchMove={handleTouchMove}
+                onTouchEnd={handleTouchEnd}
                 className={`flex items-center gap-3 p-2 border border-neutral-200 rounded transition-all ${
                   draggedIndex === index
                     ? "opacity-50 cursor-grabbing"

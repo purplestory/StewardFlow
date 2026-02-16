@@ -978,6 +978,36 @@ export default function UserRoleManager() {
     }
   };
 
+  const shareGeneratedInviteLink = async () => {
+    if (!generatedInviteLink) return;
+
+    const shareText = "교회 자원관리 시스템 초대장입니다. 아래 링크에서 가입을 진행해주세요.";
+
+    try {
+      if (
+        typeof navigator !== "undefined" &&
+        typeof navigator.share === "function"
+      ) {
+        await navigator.share({
+          title: "StewardFlow 초대장",
+          text: shareText,
+          url: generatedInviteLink,
+        });
+        return;
+      }
+
+      await navigator.clipboard.writeText(generatedInviteLink);
+      setInviteLinkCopied(true);
+      setTimeout(() => setInviteLinkCopied(false), 2000);
+      setMessage("공유 기능이 지원되지 않아 링크를 클립보드에 복사했습니다.");
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") {
+        return;
+      }
+      setMessage("링크 공유에 실패했습니다.");
+    }
+  };
+
   const revokeInvite = async (invite: InviteRow) => {
     setMessage(null);
 
@@ -2040,7 +2070,7 @@ export default function UserRoleManager() {
             <div className="px-6 py-4 space-y-4">
               <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3">
                 <p className="text-sm text-emerald-700 mb-2">
-                  초대 링크가 생성되었습니다. 아래 링크를 복사하여 공유하세요.
+                  초대 링크가 생성되었습니다. 복사하거나 모바일 공유로 바로 전송하세요.
                 </p>
                 <div className="flex items-center gap-2 mt-3">
                   <input
@@ -2064,6 +2094,13 @@ export default function UserRoleManager() {
                     className="px-4 py-2 rounded-lg text-sm font-medium transition-all bg-emerald-600 text-white hover:bg-emerald-700 whitespace-nowrap"
                   >
                     {inviteLinkCopied ? "복사됨!" : "복사"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={shareGeneratedInviteLink}
+                    className="px-4 py-2 rounded-lg text-sm font-medium transition-all bg-neutral-800 text-white hover:bg-neutral-700 whitespace-nowrap"
+                  >
+                    공유
                   </button>
                 </div>
               </div>

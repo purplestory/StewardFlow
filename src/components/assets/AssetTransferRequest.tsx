@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import Notice from "@/components/common/Notice";
+import { dispatchNotificationChannelsClient } from "@/lib/notification-dispatch-client";
 
 type AssetTransferRequestProps = {
   assetId: string;
@@ -126,21 +127,30 @@ export default function AssetTransferRequest({
       });
     }
 
+    const notificationPayload = {
+      resource_id: assetId,
+      resource_name: assetName,
+      asset_id: assetId,
+      from_department: ownerDepartment,
+      to_department: currentDepartment,
+      note: note.trim() || null,
+    };
+
     await supabase.from("notifications").insert({
       organization_id: organizationId,
       user_id: userId,
       type: "asset_transfer_request_created",
       channel: "kakao",
       status: "pending",
-      payload: {
-        resource_id: assetId,
-        resource_name: assetName,
-        asset_id: assetId,
-        from_department: ownerDepartment,
-        to_department: currentDepartment,
-        note: note.trim() || null,
-      },
+      payload: notificationPayload,
     });
+    await dispatchNotificationChannelsClient([
+      {
+        userId,
+        type: "asset_transfer_request_created",
+        payload: notificationPayload,
+      },
+    ]);
 
     setHasPending(true);
     setMessage("이동 요청이 등록되었습니다.");
@@ -186,20 +196,29 @@ export default function AssetTransferRequest({
       });
     }
 
+    const notificationPayload = {
+      resource_id: assetId,
+      resource_name: assetName,
+      asset_id: assetId,
+      from_department: ownerDepartment,
+      to_department: currentDepartment,
+    };
+
     await supabase.from("notifications").insert({
       organization_id: organizationId,
       user_id: userId,
       type: "asset_transfer_request_cancelled",
       channel: "kakao",
       status: "pending",
-      payload: {
-        resource_id: assetId,
-        resource_name: assetName,
-        asset_id: assetId,
-        from_department: ownerDepartment,
-        to_department: currentDepartment,
-      },
+      payload: notificationPayload,
     });
+    await dispatchNotificationChannelsClient([
+      {
+        userId,
+        type: "asset_transfer_request_cancelled",
+        payload: notificationPayload,
+      },
+    ]);
 
     setHasPending(false);
     setMessage("이동 요청을 취소했습니다.");

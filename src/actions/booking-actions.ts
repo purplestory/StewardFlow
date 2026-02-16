@@ -7,6 +7,8 @@ import {
   sendReservationRequestToAdmin,
   sendReservationRequestToBorrower,
 } from "@/lib/kakao-message";
+import { dispatchNotificationChannels } from "@/lib/notification-channels";
+import { sendReservationRequestToTelegram } from "@/lib/telegram-message";
 
 type ReservationActionState = {
   ok: boolean;
@@ -20,14 +22,35 @@ const createNotification = async (params: {
   payload: Record<string, unknown>;
 }) => {
   const supabase = await createSupabaseServerClient();
-  await supabase.from("notifications").insert({
-    user_id: params.userId,
-    organization_id: params.organizationId,
-    type: params.type,
-    channel: "kakao",
-    status: "pending",
-    payload: params.payload,
-  });
+  const { data, error } = await supabase
+    .from("notifications")
+    .insert({
+      user_id: params.userId,
+      organization_id: params.organizationId,
+      type: params.type,
+      channel: "kakao",
+      status: "pending",
+      payload: params.payload,
+    })
+    .select("user_id,type,payload")
+    .maybeSingle();
+
+  if (error) {
+    console.error("알림 생성 실패:", error);
+    return;
+  }
+
+  if (data?.user_id) {
+    try {
+      await dispatchNotificationChannels({
+        userId: data.user_id,
+        type: data.type,
+        payload: (data.payload ?? {}) as Record<string, unknown>,
+      });
+    } catch (dispatchError) {
+      console.error("채널 디스패치 실패:", dispatchError);
+    }
+  }
 };
 
 export async function createReservation(
@@ -218,7 +241,6 @@ export async function createReservation(
         ? Number(formData.get("start_odometer_reading")!.toString()) 
         : null)
     : null;
-
   const { data: conflicts, error: conflictError } = await supabase
     .from(reservationTable)
     .select("id")
@@ -342,9 +364,11 @@ export async function createReservation(
       type:
         resourceType === "space"
           ? "space_reservation_created"
+          : resourceType === "vehicle"
+          ? "vehicle_reservation_created"
           : "reservation_created",
       payload: {
-        resource_id: assetId,
+        resource_id: resourceId,
         resource_name: resourceName,
         resource_image_url: resourceImageUrl,
         start_date: startDate,
@@ -405,7 +429,7 @@ export async function createReservation(
     },
   });
 
-  // 카카오톡 알림 발송 (비동기, 실패해도 예약은 완료)
+  // 외부 알림 발송 (실패해도 예약은 완료)
   try {
     // 신청자 정보 조회
     const { data: borrowerProfile } = await supabase
@@ -417,7 +441,7 @@ export async function createReservation(
     if (borrowerProfile?.phone && resourceName) {
       // resourceType을 타입 단언으로 변환
       const typedResourceType = resourceType as "asset" | "space" | "vehicle";
-      
+
       // 신청자에게 알림
       await sendReservationRequestToBorrower(
         borrowerProfile.phone,
@@ -434,10 +458,13 @@ export async function createReservation(
           .from("approval_policies")
           .select("required_role,department")
           .eq("organization_id", organizationId)
-          .eq("scope", resourceType === "asset" ? "asset" : resourceType === "space" ? "space" : "vehicle");
+          .eq(
+            "scope",
+            resourceType === "asset" ? "asset" : resourceType === "space" ? "space" : "vehicle"
+          );
 
         // 관리자 목록 조회 (admin 또는 manager)
-        const requiredRoles = policies?.map(p => p.required_role) || ["admin"];
+        const requiredRoles = policies?.map((p) => p.required_role) || ["admin"];
         const { data: admins } = await supabase
           .from("profiles")
           .select("phone,name")
@@ -462,9 +489,22 @@ export async function createReservation(
         }
       }
     }
-  } catch (kakaoError) {
-    // 카카오톡 발송 실패는 로그만 남기고 예약은 계속 진행
-    console.error("카카오톡 알림 발송 실패:", kakaoError);
+
+    // 텔레그램(선택): 운영자 채팅방으로 예약 신청 요약 전송
+    if (resourceName && borrowerProfile?.name) {
+      const typedResourceType = resourceType as "asset" | "space" | "vehicle";
+      await sendReservationRequestToTelegram({
+        resourceType: typedResourceType,
+        resourceName,
+        borrowerName: borrowerProfile.name,
+        borrowerDepartment: borrowerProfile.department,
+        startDate,
+        endDate,
+      });
+    }
+  } catch (channelError) {
+    // 외부 알림 발송 실패는 로그만 남기고 예약은 계속 진행
+    console.error("외부 알림 발송 실패:", channelError);
   }
 
   return { ok: true, message: "대여 신청이 접수되었습니다." };

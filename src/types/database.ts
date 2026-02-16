@@ -198,11 +198,23 @@ export type Notification = {
   id: string;
   organization_id: string | null;
   user_id: string | null;
-  channel: "kakao" | "email";
+  channel: "kakao" | "email" | "telegram" | "web_push";
   type: string;
   status: "pending" | "sent" | "failed";
   payload: Record<string, unknown> | null;
   read_at: string | null;
+  created_at: string;
+};
+
+export type PushSubscription = {
+  id: string;
+  organization_id: string | null;
+  user_id: string;
+  endpoint: string;
+  p256dh: string | null;
+  auth: string | null;
+  user_agent: string | null;
+  last_seen_at: string;
   created_at: string;
 };
 

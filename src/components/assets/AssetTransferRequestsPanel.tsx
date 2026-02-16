@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import Notice from "@/components/common/Notice";
+import { dispatchNotificationChannelsClient } from "@/lib/notification-dispatch-client";
 
 type TransferRequest = {
   id: string;
@@ -176,6 +177,14 @@ export default function AssetTransferRequestsPanel({
       },
     });
 
+    const notificationPayload = {
+      resource_id: assetId,
+      resource_name: assetName,
+      asset_id: assetId,
+      from_department: request.from_department,
+      to_department: request.to_department,
+    };
+
     await supabase.from("notifications").insert({
       organization_id: organizationId,
       user_id: request.requester_id,
@@ -185,14 +194,20 @@ export default function AssetTransferRequestsPanel({
           : "asset_transfer_request_rejected",
       channel: "kakao",
       status: "pending",
-      payload: {
-        resource_id: assetId,
-        resource_name: assetName,
-        asset_id: assetId,
-        from_department: request.from_department,
-        to_department: request.to_department,
-      },
+      payload: notificationPayload,
     });
+    if (request.requester_id) {
+      await dispatchNotificationChannelsClient([
+        {
+          userId: request.requester_id,
+          type:
+            nextStatus === "approved"
+              ? "asset_transfer_request_approved"
+              : "asset_transfer_request_rejected",
+          payload: notificationPayload,
+        },
+      ]);
+    }
 
     setRequests((prev) =>
       prev.map((item) =>

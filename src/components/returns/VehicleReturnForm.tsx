@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Image from "next/image";
 import { supabase } from "@/lib/supabase";
 import Notice from "@/components/common/Notice";
+import { dispatchNotificationChannelsClient } from "@/lib/notification-dispatch-client";
 
 type VehicleReturnFormProps = {
   reservationId: string;
@@ -255,6 +256,83 @@ export default function VehicleReturnForm({
       }
 
       setMessage("반납이 완료되었습니다.");
+
+      // 알림 생성 + 채널 발송 (웹푸시/텔레그램)
+      try {
+        const { data: reservationInfo } = await supabase
+          .from("vehicle_reservations")
+          .select("borrower_id,vehicle_id,vehicles(name)")
+          .eq("id", reservationId)
+          .maybeSingle();
+
+        if (reservationInfo) {
+          const vehicleJoin = Array.isArray(reservationInfo.vehicles)
+            ? reservationInfo.vehicles[0]
+            : reservationInfo.vehicles;
+
+          const { data: adminProfiles } = await supabase
+            .from("profiles")
+            .select("id")
+            .eq("organization_id", organizationId)
+            .in("role", ["admin", "manager"]);
+
+          const payload = {
+            resource_type: "vehicle",
+            resource_name: vehicleJoin?.name ?? null,
+            resource_id: reservationInfo.vehicle_id,
+            status: "returned",
+            return_date: new Date().toISOString(),
+          };
+
+          const targets: Array<{
+            userId: string;
+            type: string;
+            payload: Record<string, unknown>;
+          }> = [];
+
+          if (reservationInfo.borrower_id) {
+            await supabase.from("notifications").insert({
+              organization_id: organizationId,
+              user_id: reservationInfo.borrower_id,
+              type: "return_submitted",
+              channel: "web_push",
+              status: "pending",
+              payload,
+            });
+            targets.push({
+              userId: reservationInfo.borrower_id,
+              type: "return_submitted",
+              payload,
+            });
+          }
+
+          if (adminProfiles && adminProfiles.length > 0) {
+            for (const admin of adminProfiles) {
+              if (!admin.id) continue;
+              await supabase.from("notifications").insert({
+                organization_id: organizationId,
+                user_id: admin.id,
+                type: "return_submitted",
+                channel: "web_push",
+                status: "pending",
+                payload,
+              });
+              targets.push({
+                userId: admin.id,
+                type: "return_submitted",
+                payload,
+              });
+            }
+          }
+
+          if (targets.length > 0) {
+            await dispatchNotificationChannelsClient(targets);
+          }
+        }
+      } catch (notificationError) {
+        console.error("차량 반납 알림 발송 실패:", notificationError);
+      }
+
       if (odometerPreview) URL.revokeObjectURL(odometerPreview);
       if (exteriorPreview) URL.revokeObjectURL(exteriorPreview);
       setOdometerImage(null);

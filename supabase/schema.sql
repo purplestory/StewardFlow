@@ -226,6 +226,21 @@ create table public.notifications (
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
+create table public.push_subscriptions (
+  id uuid default gen_random_uuid() primary key,
+  organization_id uuid references public.organizations(id),
+  user_id uuid references public.profiles(id) on delete cascade not null,
+  endpoint text not null unique,
+  p256dh text,
+  auth text,
+  user_agent text,
+  last_seen_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+create index idx_push_subscriptions_user_id on public.push_subscriptions(user_id);
+create index idx_push_subscriptions_org_id on public.push_subscriptions(organization_id);
+
 create table public.organization_invites (
   id uuid default gen_random_uuid() primary key,
   organization_id uuid references public.organizations(id),

@@ -72,6 +72,7 @@ SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
 - [서비스 맵](./docs/service_map.md)
 - [운영 가이드](./docs/operations_guide.md)
 - [카카오 OAuth 설정](./docs/kakao_oauth_setup.md)
+- [웹푸시 + 텔레그램 설정](./docs/web_push_and_telegram_setup.md)
 - [Storage 정책 설정](./docs/storage_policy_setup_manual.md)
 
 ## 프로젝트 구조

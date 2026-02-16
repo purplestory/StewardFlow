@@ -3,6 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 import {
   sendReservationApprovalToBorrower,
 } from "@/lib/kakao-message";
+import { dispatchNotificationChannels } from "@/lib/notification-channels";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -96,20 +97,21 @@ export async function PATCH(request: Request) {
     const space = Array.isArray(reservation.spaces) 
       ? reservation.spaces[0] 
       : reservation.spaces;
+    const notificationPayload = {
+      reservation_id: reservationId,
+      status,
+      resource_id: reservation.space_id,
+      resource_name: space?.name ?? null,
+      resource_image_url: space?.image_url ?? null,
+      resource_type: "space",
+    };
     const { error: notifyError } = await supabase.from("notifications").insert({
       user_id: reservation.borrower_id,
       organization_id: reservation.organization_id ?? null,
       type: "space_reservation_status_changed",
       channel: "kakao",
       status: "pending",
-      payload: {
-        reservation_id: reservationId,
-        status,
-        resource_id: reservation.space_id,
-        resource_name: space?.name ?? null,
-        resource_image_url: space?.image_url ?? null,
-        resource_type: "space",
-      },
+      payload: notificationPayload,
     });
 
     if (notifyError) {
@@ -117,6 +119,15 @@ export async function PATCH(request: Request) {
         { ok: false, message: notifyError.message },
         { status: 400 }
       );
+    }
+    try {
+      await dispatchNotificationChannels({
+        userId: reservation.borrower_id,
+        type: "space_reservation_status_changed",
+        payload: notificationPayload as Record<string, unknown>,
+      });
+    } catch (dispatchError) {
+      console.error("채널 디스패치 실패:", dispatchError);
     }
 
     // 승인 시 카카오톡 알림 발송 (반납 기한 포함)

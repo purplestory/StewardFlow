@@ -3,6 +3,8 @@ import { Geist, Geist_Mono } from "next/font/google";
 import Header from "@/components/layout/Header";
 import QueryProvider from "@/components/providers/QueryProvider";
 import AbortErrorGuard from "@/components/common/AbortErrorGuard";
+import BrowserNotificationBridge from "@/components/notifications/BrowserNotificationBridge";
+import WebPushRegistrar from "@/components/notifications/WebPushRegistrar";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -73,6 +75,8 @@ export default function RootLayout({
       >
         <QueryProvider>
           <AbortErrorGuard />
+          <BrowserNotificationBridge />
+          <WebPushRegistrar />
           <div className="min-h-screen bg-neutral-50 text-neutral-900">
             <Header />
             <main className="mx-auto w-full max-w-5xl px-4 py-8">

@@ -3,10 +3,7 @@
 import { useState } from "react";
 import { supabase } from "@/lib/supabase";
 import ImageSlider from "@/components/common/ImageSlider";
-import {
-  sendReturnApprovalToAdmin,
-  sendReturnApprovalToBorrower,
-} from "@/lib/kakao-message";
+import { dispatchNotificationChannelsClient } from "@/lib/notification-dispatch-client";
 
 type ReturnVerificationFormProps = {
   reservationId: string;
@@ -30,6 +27,9 @@ type VerificationUpdateData = {
 
 type ReservationInfoRow = {
   borrower_id: string;
+  asset_id?: string | null;
+  space_id?: string | null;
+  vehicle_id?: string | null;
   assets?: { name?: string | null } | Array<{ name?: string | null }> | null;
   spaces?: { name?: string | null } | Array<{ name?: string | null }> | null;
   vehicles?: { name?: string | null } | Array<{ name?: string | null }> | null;
@@ -154,7 +154,7 @@ export default function ReturnVerificationForm({
           : "반납이 반려되었습니다."
       );
 
-      // 카카오톡 알림 발송 (비동기, 실패해도 승인은 완료)
+      // 알림 생성 + 채널 발송 (웹푸시/텔레그램)
       try {
         // 예약 정보 조회
         const { data: reservationInfo } = await supabase
@@ -184,7 +184,7 @@ export default function ReturnVerificationForm({
           // 신청자 정보 조회
           const { data: borrowerProfile } = await supabase
             .from("profiles")
-            .select("phone,name,organization_id")
+            .select("id,phone,name,organization_id")
             .eq("id", info.borrower_id)
             .maybeSingle();
 
@@ -192,40 +192,71 @@ export default function ReturnVerificationForm({
           if (borrowerProfile?.organization_id) {
             const { data: adminProfiles } = await supabase
               .from("profiles")
-              .select("phone")
+              .select("id,phone")
               .eq("organization_id", borrowerProfile.organization_id)
               .in("role", ["admin", "manager"]);
 
             const verificationStatus = isApproved ? "verified" : "rejected";
+            const notificationPayload = {
+              resource_type: resourceType,
+              resource_name: resourceName ?? null,
+              resource_id:
+                resourceType === "asset"
+                  ? (info.asset_id ?? null)
+                  : resourceType === "space"
+                  ? (info.space_id ?? null)
+                  : (info.vehicle_id ?? null),
+              verification_status: verificationStatus,
+              status: verificationStatus,
+            };
+            const channelTargets: Array<{
+              userId: string;
+              type: string;
+              payload: Record<string, unknown>;
+            }> = [];
 
-            // 신청자에게 알림
-            if (borrowerProfile.phone && resourceName) {
-              await sendReturnApprovalToBorrower(
-                borrowerProfile.phone,
-                resourceName,
-                verificationStatus,
-                resourceType
-              );
+            if (borrowerProfile.id) {
+              await supabase.from("notifications").insert({
+                organization_id: borrowerProfile.organization_id,
+                user_id: borrowerProfile.id,
+                type: "return_verified",
+                channel: "web_push",
+                status: "pending",
+                payload: notificationPayload,
+              });
+              channelTargets.push({
+                userId: borrowerProfile.id,
+                type: "return_verified",
+                payload: notificationPayload,
+              });
             }
 
-            // 관리자들에게 알림
-            if (adminProfiles && resourceName && borrowerProfile.name) {
+            if (adminProfiles && adminProfiles.length > 0) {
               for (const admin of adminProfiles) {
-                if (admin.phone) {
-                  await sendReturnApprovalToAdmin(
-                    admin.phone,
-                    resourceName,
-                    borrowerProfile.name,
-                    verificationStatus,
-                    resourceType
-                  );
-                }
+                if (!admin.id) continue;
+                await supabase.from("notifications").insert({
+                  organization_id: borrowerProfile.organization_id,
+                  user_id: admin.id,
+                  type: "return_verified",
+                  channel: "web_push",
+                  status: "pending",
+                  payload: notificationPayload,
+                });
+                channelTargets.push({
+                  userId: admin.id,
+                  type: "return_verified",
+                  payload: notificationPayload,
+                });
               }
+            }
+
+            if (channelTargets.length > 0) {
+              await dispatchNotificationChannelsClient(channelTargets);
             }
           }
         }
-      } catch (kakaoError) {
-        console.error("카카오톡 반납 승인 알림 발송 실패:", kakaoError);
+      } catch (notificationError) {
+        console.error("반납 승인 알림 발송 실패:", notificationError);
         // 알림 실패해도 승인은 계속 진행
       }
 

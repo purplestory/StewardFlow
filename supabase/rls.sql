@@ -12,6 +12,7 @@ alter table public.space_reservations enable row level security;
 alter table public.vehicle_reservations enable row level security;
 alter table public.approval_policies enable row level security;
 alter table public.notifications enable row level security;
+alter table public.push_subscriptions enable row level security;
 alter table public.audit_logs enable row level security;
 alter table public.organization_invites enable row level security;
 alter table public.asset_transfer_requests enable row level security;
@@ -395,6 +396,47 @@ with check (
   organization_id = (
     select organization_id from public.profiles where id = auth.uid()
   )
+);
+
+create policy "push_subscriptions_select_own"
+on public.push_subscriptions
+for select
+to authenticated
+using (
+  user_id = auth.uid()
+);
+
+create policy "push_subscriptions_insert_own"
+on public.push_subscriptions
+for insert
+to authenticated
+with check (
+  user_id = auth.uid()
+  and organization_id = (
+    select organization_id from public.profiles where id = auth.uid()
+  )
+);
+
+create policy "push_subscriptions_update_own"
+on public.push_subscriptions
+for update
+to authenticated
+using (
+  user_id = auth.uid()
+)
+with check (
+  user_id = auth.uid()
+  and organization_id = (
+    select organization_id from public.profiles where id = auth.uid()
+  )
+);
+
+create policy "push_subscriptions_delete_own"
+on public.push_subscriptions
+for delete
+to authenticated
+using (
+  user_id = auth.uid()
 );
 
 create policy "audit_logs_select_same_org"

@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import Notice from "@/components/common/Notice";
+import { dispatchNotificationChannelsClient } from "@/lib/notification-dispatch-client";
 
 type TransferRequestRow = {
   id: string;
@@ -458,6 +459,14 @@ export default function AssetTransferRequestsBoard() {
       },
     });
 
+    const resolveNotificationPayload = {
+      resource_id: request.asset_id,
+      resource_name: request.assets?.name ?? null,
+      asset_id: request.asset_id,
+      from_department: request.from_department,
+      to_department: request.to_department,
+    };
+
     await supabase.from("notifications").insert({
       organization_id: organizationId,
       user_id: request.requester_id,
@@ -467,14 +476,20 @@ export default function AssetTransferRequestsBoard() {
           : "asset_transfer_request_rejected",
       channel: "kakao",
       status: "pending",
-      payload: {
-        resource_id: request.asset_id,
-        resource_name: request.assets?.name ?? null,
-        asset_id: request.asset_id,
-        from_department: request.from_department,
-        to_department: request.to_department,
-      },
+      payload: resolveNotificationPayload,
     });
+    if (request.requester_id) {
+      await dispatchNotificationChannelsClient([
+        {
+          userId: request.requester_id,
+          type:
+            nextStatus === "approved"
+              ? "asset_transfer_request_approved"
+              : "asset_transfer_request_rejected",
+          payload: resolveNotificationPayload,
+        },
+      ]);
+    }
 
     setRequests((prev) =>
       prev.map((item) =>
@@ -523,20 +538,29 @@ export default function AssetTransferRequestsBoard() {
       },
     });
 
+    const cancelNotificationPayload = {
+      resource_id: request.asset_id,
+      resource_name: request.assets?.name ?? null,
+      asset_id: request.asset_id,
+      from_department: request.from_department,
+      to_department: request.to_department,
+    };
+
     await supabase.from("notifications").insert({
       organization_id: organizationId,
       user_id: userId,
       type: "asset_transfer_request_cancelled",
       channel: "kakao",
       status: "pending",
-      payload: {
-        resource_id: request.asset_id,
-        resource_name: request.assets?.name ?? null,
-        asset_id: request.asset_id,
-        from_department: request.from_department,
-        to_department: request.to_department,
-      },
+      payload: cancelNotificationPayload,
     });
+    await dispatchNotificationChannelsClient([
+      {
+        userId,
+        type: "asset_transfer_request_cancelled",
+        payload: cancelNotificationPayload,
+      },
+    ]);
 
     setRequests((prev) =>
       prev.map((item) =>

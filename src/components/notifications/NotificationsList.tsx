@@ -20,6 +20,10 @@ const typeLabel: Record<string, string> = {
   reservation_status_changed: "물품 예약 상태 변경",
   space_reservation_created: "공간 예약 신청",
   space_reservation_status_changed: "공간 예약 상태 변경",
+  vehicle_reservation_created: "차량 예약 신청",
+  vehicle_reservation_status_changed: "차량 예약 상태 변경",
+  return_submitted: "반납 등록",
+  return_verified: "반납 확인",
   asset_transfer_request_created: "불용품 양도 요청",
   asset_transfer_request_approved: "불용품 양도 요청 승인",
   asset_transfer_request_rejected: "불용품 양도 요청 거절",
@@ -776,6 +780,10 @@ const getTypeColor = (type: string) => {
   if (type === "reservation_status_changed") return "bg-indigo-500";
   if (type === "space_reservation_created") return "bg-emerald-500";
   if (type === "space_reservation_status_changed") return "bg-amber-500";
+  if (type === "vehicle_reservation_created") return "bg-cyan-500";
+  if (type === "vehicle_reservation_status_changed") return "bg-sky-500";
+  if (type === "return_submitted") return "bg-orange-500";
+  if (type === "return_verified") return "bg-teal-500";
   if (type.startsWith("asset_transfer_request")) return "bg-fuchsia-500";
   return "bg-neutral-400";
 };
@@ -821,6 +829,7 @@ const renderPageNumbers = (totalPages: number, current: number) => {
 const getResourcePath = (item: NotificationRow) => {
   const payload = item.payload ?? {};
   const resourceId = payload.resource_id as string | undefined;
+  const resourceType = payload.resource_type as string | undefined;
 
   if (item.type.startsWith("asset_transfer_request")) {
     return "/assets/transfers";
@@ -834,11 +843,23 @@ const getResourcePath = (item: NotificationRow) => {
     return `/spaces/${resourceId}`;
   }
 
+  if (item.type.startsWith("vehicle")) {
+    return `/vehicles/${resourceId}`;
+  }
+
+  if (item.type.startsWith("return")) {
+    if (resourceType === "space") return `/spaces/${resourceId}`;
+    if (resourceType === "vehicle") return `/vehicles/${resourceId}`;
+    return `/assets/${resourceId}`;
+  }
+
   return `/assets/${resourceId}`;
 };
 
 const getTypeIcon = (type: string) => {
   if (type.startsWith("space")) return "S";
+  if (type.startsWith("vehicle")) return "V";
+  if (type.startsWith("return")) return "R";
   if (type.startsWith("reservation")) return "A";
   if (type.startsWith("asset_transfer_request")) return "T";
   return "?";

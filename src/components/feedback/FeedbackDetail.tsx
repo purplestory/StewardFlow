@@ -151,7 +151,12 @@ export default function FeedbackDetail({ feedbackId }: { feedbackId: string }) {
     setSubmitting(true);
     setMessage(null);
 
-    const updateData: any = {
+    const updateData: {
+      status: Feedback["status"];
+      admin_response?: string;
+      admin_response_at?: string;
+      responded_by?: string;
+    } = {
       status,
     };
 

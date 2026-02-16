@@ -58,31 +58,35 @@ export default function ReservationForm({
 
   // 달력에서 날짜 범위 선택 시 폼의 날짜/시간 자동 업데이트
   useEffect(() => {
-    if (presetStartDate) {
-      const date = new Date(presetStartDate);
-      const year = date.getFullYear();
-      const month = String(date.getMonth() + 1).padStart(2, "0");
-      const day = String(date.getDate()).padStart(2, "0");
-      const hours = String(date.getHours()).padStart(2, "0");
-      const minutes = String(date.getMinutes()).padStart(2, "0");
-      
-      setStartDate(`${year}-${month}-${day}`);
-      setStartTime(`${hours}:${minutes}`);
-      // 시작일의 요일을 기본 선택
-      setSelectedDaysOfWeek([date.getDay()]);
-      setDayOfMonth(date.getDate());
-    }
-    if (presetEndDate) {
-      const date = new Date(presetEndDate);
-      const year = date.getFullYear();
-      const month = String(date.getMonth() + 1).padStart(2, "0");
-      const day = String(date.getDate()).padStart(2, "0");
-      const hours = String(date.getHours()).padStart(2, "0");
-      const minutes = String(date.getMinutes()).padStart(2, "0");
-      
-      setEndDate(`${year}-${month}-${day}`);
-      setEndTime(`${hours}:${minutes}`);
-    }
+    const timer = setTimeout(() => {
+      if (presetStartDate) {
+        const date = new Date(presetStartDate);
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, "0");
+        const day = String(date.getDate()).padStart(2, "0");
+        const hours = String(date.getHours()).padStart(2, "0");
+        const minutes = String(date.getMinutes()).padStart(2, "0");
+        
+        setStartDate(`${year}-${month}-${day}`);
+        setStartTime(`${hours}:${minutes}`);
+        // 시작일의 요일을 기본 선택
+        setSelectedDaysOfWeek([date.getDay()]);
+        setDayOfMonth(date.getDate());
+      }
+      if (presetEndDate) {
+        const date = new Date(presetEndDate);
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, "0");
+        const day = String(date.getDate()).padStart(2, "0");
+        const hours = String(date.getHours()).padStart(2, "0");
+        const minutes = String(date.getMinutes()).padStart(2, "0");
+        
+        setEndDate(`${year}-${month}-${day}`);
+        setEndTime(`${hours}:${minutes}`);
+      }
+    }, 0);
+
+    return () => clearTimeout(timer);
   }, [presetStartDate, presetEndDate]);
 
   const handleDayOfWeekToggle = (day: number) => {

@@ -4,7 +4,6 @@ import { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import AuthCard from "@/components/auth/AuthCard";
-import Link from "next/link";
 
 function LoginPageContent() {
   const router = useRouter();
@@ -47,7 +46,7 @@ function LoginPageContent() {
     return () => {
       subscription?.subscription?.unsubscribe();
     };
-  }, [router]);
+  }, [searchParams]);
 
   const extractTokenFromUrl = (input: string): string | null => {
     const trimmed = input.trim();
@@ -64,7 +63,7 @@ function LoginPageContent() {
         // URL 경로에서 토큰 추출 시도 (예: /join/AbC123XyZ9)
         const pathMatch = url.pathname.match(/\/join\/([^/?]+)/);
         if (pathMatch) return pathMatch[1];
-      } catch (e) {
+      } catch {
         // URL 파싱 실패 시 원본 반환
       }
     }

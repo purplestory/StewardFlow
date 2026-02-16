@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import type { Asset } from "@/types/database";
 
 type AssetCardProps = {
@@ -27,7 +28,7 @@ const categoryLabel: Record<NonNullable<Asset["category"]>, string> = {
   etc: "기타",
 };
 
-export default function AssetCard({ asset, requiredRoleLabel }: AssetCardProps) {
+export default function AssetCard({ asset }: AssetCardProps) {
   const tags = asset.tags ?? [];
 
   const detailUrl = `/assets/${asset.short_id ?? asset.id}`;
@@ -41,12 +42,15 @@ export default function AssetCard({ asset, requiredRoleLabel }: AssetCardProps) 
   return (
     <div className="rounded-xl border border-neutral-200 bg-white p-4">
       <Link href={detailUrl} className="block">
-        <div className="aspect-[4/3] w-full overflow-hidden rounded-lg bg-neutral-100 transition-opacity hover:opacity-90 cursor-pointer">
+        <div className="relative aspect-[4/3] w-full overflow-hidden rounded-lg bg-neutral-100 transition-opacity hover:opacity-90 cursor-pointer">
           {firstImage ? (
-            <img
+            <Image
               src={firstImage}
               alt={asset.name}
+              fill
+              sizes="(max-width: 768px) 100vw, 33vw"
               className="h-full w-full object-cover"
+              unoptimized
             />
           ) : (
             <div className="flex h-full items-center justify-center text-xs text-neutral-400">

@@ -42,17 +42,17 @@ export default function PolicySettings({ organizationId }: PolicySettingsProps) 
     require_photo: true,
     require_verification: true,
   });
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(Boolean(organizationId));
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
   useEffect(() => {
     if (!organizationId) {
-      setLoading(false);
       return;
     }
 
     const loadSettings = async () => {
+      setLoading(true);
       const { data, error } = await supabase
         .from("organizations")
         .select("features,ownership_policies,return_verification_policy")
@@ -91,7 +91,11 @@ export default function PolicySettings({ organizationId }: PolicySettingsProps) 
       setLoading(false);
     };
 
-    loadSettings();
+    const timer = setTimeout(() => {
+      void loadSettings();
+    }, 0);
+
+    return () => clearTimeout(timer);
   }, [organizationId]);
 
   const handleSave = async () => {
@@ -120,7 +124,9 @@ export default function PolicySettings({ organizationId }: PolicySettingsProps) 
     setSaving(false);
   };
 
-  if (loading) {
+  const isLoading = organizationId ? loading : false;
+
+  if (isLoading) {
     return <p className="text-sm text-neutral-500">로딩 중...</p>;
   }
 

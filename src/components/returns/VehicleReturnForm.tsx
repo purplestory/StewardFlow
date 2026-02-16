@@ -1,12 +1,25 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Image from "next/image";
 import { supabase } from "@/lib/supabase";
 import Notice from "@/components/common/Notice";
 
 type VehicleReturnFormProps = {
   reservationId: string;
   onReturnComplete?: () => void;
+};
+
+type VehicleReturnUpdateData = {
+  vehicle_odometer_image: string | null;
+  vehicle_exterior_image: string | null;
+  odometer_reading: number;
+  distance_traveled: number | null;
+  return_status: "returned" | "verified";
+  return_note: string | null;
+  status?: "returned";
+  return_verified_by?: string;
+  return_verified_at?: string;
 };
 
 export default function VehicleReturnForm({
@@ -196,7 +209,7 @@ export default function VehicleReturnForm({
         : null;
 
       // Update reservation with return information
-      const updateData: any = {
+      const updateData: VehicleReturnUpdateData = {
         vehicle_odometer_image: odometerImageUrl,
         vehicle_exterior_image: exteriorImageUrl,
         odometer_reading: finalOdometerReading,
@@ -281,10 +294,13 @@ export default function VehicleReturnForm({
           <div className="image-upload-area">
             {odometerPreview ? (
               <div className="relative group">
-                <img
+                <Image
                   src={odometerPreview}
                   alt="계기판 사진"
+                  width={400}
+                  height={300}
                   className="w-full aspect-[4/3] object-cover rounded-lg border border-neutral-200"
+                  unoptimized
                 />
                 <button
                   type="button"
@@ -321,10 +337,13 @@ export default function VehicleReturnForm({
           <div className="image-upload-area">
             {exteriorPreview ? (
               <div className="relative group">
-                <img
+                <Image
                   src={exteriorPreview}
                   alt="외관 사진"
+                  width={400}
+                  height={300}
                   className="w-full aspect-[4/3] object-cover rounded-lg border border-neutral-200"
+                  unoptimized
                 />
                 <button
                   type="button"

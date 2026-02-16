@@ -101,7 +101,11 @@ export default function OrganizationManager() {
   };
 
   useEffect(() => {
-    load();
+    const timer = setTimeout(() => {
+      void load();
+    }, 0);
+
+    return () => clearTimeout(timer);
   }, []);
 
   if (isAuthenticated === false) {
@@ -196,94 +200,6 @@ export default function OrganizationManager() {
         console.warn("Error loading organization data:", loadError);
       }
     }, 2000);
-  };
-
-  // This function is no longer used - approval policies can be created manually
-  // Keeping it for potential future use, but it's not called anymore
-  const ensureDefaultApprovalPoliciesClient = async (orgId: string) => {
-    // This function is deprecated - approval policies should be created manually
-    // through the settings page after organization creation
-    console.warn("ensureDefaultApprovalPoliciesClient is deprecated - policies should be created manually");
-    return;
-
-    // Check existing policies (may fail if RLS hasn't updated yet)
-    const { data, error: selectError } = await supabase
-      .from("approval_policies")
-      .select("id,scope,department")
-      .eq("organization_id", orgId);
-
-    // If select fails due to RLS, try again after a short delay
-    if (selectError) {
-      console.warn("Approval policy select error (will retry):", selectError);
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      
-      const { data: retryData, error: retryError } = await supabase
-        .from("approval_policies")
-        .select("id,scope,department")
-        .eq("organization_id", orgId);
-
-      if (retryError) {
-        throw new Error(`Failed to check existing policies: ${retryError?.message || "Unknown error"}`);
-      }
-
-      const existingScopes = new Set(
-        (retryData ?? [])
-          .filter((row) => row.department === null)
-          .map((row) => row.scope)
-      );
-
-      const rows = [
-        { scope: "asset", required_role: "admin" },
-        { scope: "space", required_role: "admin" },
-      ]
-        .filter((row) => !existingScopes.has(row.scope))
-        .map((row) => ({
-          organization_id: orgId,
-          scope: row.scope,
-          department: null,
-          required_role: row.required_role,
-        }));
-
-      if (rows.length > 0) {
-        const { error: insertError } = await supabase
-          .from("approval_policies")
-          .insert(rows);
-
-        if (insertError) {
-          throw new Error(`Failed to create default policies: ${insertError?.message || "Unknown error"}`);
-        }
-      }
-      return;
-    }
-
-    // Normal flow if select succeeded
-    const existingScopes = new Set(
-      (data ?? [])
-        .filter((row) => row.department === null)
-        .map((row) => row.scope)
-    );
-
-    const rows = [
-      { scope: "asset", required_role: "admin" },
-      { scope: "space", required_role: "admin" },
-    ]
-      .filter((row) => !existingScopes.has(row.scope))
-      .map((row) => ({
-        organization_id: orgId,
-        scope: row.scope,
-        department: null,
-        required_role: row.required_role,
-      }));
-
-    if (rows.length > 0) {
-      const { error: insertError } = await supabase
-        .from("approval_policies")
-        .insert(rows);
-
-      if (insertError) {
-        throw new Error(`Failed to create default policies: ${insertError?.message || "Unknown error"}`);
-      }
-    }
   };
 
   const handleUpdateName = async () => {
@@ -488,7 +404,7 @@ export default function OrganizationManager() {
             <div className="px-6 py-4 space-y-4">
               <div className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3">
                 <p className="text-sm text-rose-900 mb-2">
-                  정말 "{organization?.name}" 기관을 삭제하시겠습니까?
+                  정말 &quot;{organization?.name}&quot; 기관을 삭제하시겠습니까?
                 </p>
                 <p className="text-xs text-rose-700">
                   기관을 삭제하면 모든 데이터(부서, 물품, 공간, 예약 등)가 영구적으로 삭제됩니다. 이 작업은 되돌릴 수 없습니다.

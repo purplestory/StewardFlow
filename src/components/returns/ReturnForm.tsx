@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { supabase } from "@/lib/supabase";
-import Notice from "@/components/common/Notice";
 import {
   sendReturnSubmittedToAdmin,
   sendReturnSubmittedToBorrower,
@@ -12,6 +12,21 @@ type ReturnFormProps = {
   reservationId: string;
   resourceType: "asset" | "space";
   onReturnComplete?: () => void;
+};
+
+type ReturnUpdateData = {
+  return_images: string[];
+  return_status: "returned" | "verified";
+  return_note: string | null;
+  status?: "returned";
+  return_verified_by?: string;
+  return_verified_at?: string;
+};
+
+type ReservationInfoRow = {
+  borrower_id: string;
+  assets?: { name?: string | null } | Array<{ name?: string | null }> | null;
+  spaces?: { name?: string | null } | Array<{ name?: string | null }> | null;
 };
 
 export default function ReturnForm({
@@ -128,7 +143,7 @@ export default function ReturnForm({
         resourceType === "asset" ? "reservations" : "space_reservations";
 
       // Update reservation with return information
-      const updateData: any = {
+      const updateData: ReturnUpdateData = {
         return_images: uploadedUrls,
         return_status: policy?.require_verification ? "returned" : "verified",
         return_note: returnNote || null,
@@ -194,16 +209,16 @@ export default function ReturnForm({
           .maybeSingle();
 
         if (reservationInfo) {
-          const resourceName =
-            resourceType === "asset"
-              ? (reservationInfo as any).assets?.name
-              : (reservationInfo as any).spaces?.name;
+          const info = reservationInfo as ReservationInfoRow;
+          const assetJoin = Array.isArray(info.assets) ? info.assets[0] : info.assets;
+          const spaceJoin = Array.isArray(info.spaces) ? info.spaces[0] : info.spaces;
+          const resourceName = resourceType === "asset" ? assetJoin?.name : spaceJoin?.name;
 
           // 신청자 정보 조회
           const { data: borrowerProfile } = await supabase
             .from("profiles")
             .select("phone,name")
-            .eq("id", (reservationInfo as any).borrower_id)
+            .eq("id", info.borrower_id)
             .maybeSingle();
 
           // 관리자 정보 조회
@@ -273,10 +288,13 @@ export default function ReturnForm({
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
                 {previewUrls.map((preview, index) => (
                   <div key={index} className="relative group">
-                    <img
+                    <Image
                       src={preview}
                       alt={`반납 사진 ${index + 1}`}
+                      width={400}
+                      height={300}
                       className="w-full aspect-[4/3] object-cover rounded-lg border border-neutral-200"
+                      unoptimized
                     />
                     <button
                       type="button"

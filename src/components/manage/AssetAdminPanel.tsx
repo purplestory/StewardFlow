@@ -7,15 +7,6 @@ import Notice from "@/components/common/Notice";
 import type { Asset } from "@/types/database";
 import { isUUID } from "@/lib/short-id";
 
-const statusOptions: Array<{ value: Asset["status"] | "all"; label: string }> =
-  [
-    { value: "all", label: "전체 상태" },
-    { value: "available", label: "대여 가능" },
-    { value: "rented", label: "대여 중" },
-    { value: "repair", label: "수리 중" },
-    { value: "retired", label: "불용품" },
-  ];
-
 const statusLabel: Record<Asset["status"], string> = {
   available: "대여 가능",
   rented: "대여 중",
@@ -43,7 +34,7 @@ export default function AssetAdminPanel() {
     setLoading(true);
     setMessage(null);
 
-    let query = supabase
+    const query = supabase
       .from("assets")
       .select("id,short_id,name,status,owner_department,owner_scope")
       .is("deleted_at", null)

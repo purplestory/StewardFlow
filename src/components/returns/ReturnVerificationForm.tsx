@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { supabase } from "@/lib/supabase";
 import ImageSlider from "@/components/common/ImageSlider";
 import {
@@ -17,6 +17,22 @@ type ReturnVerificationFormProps = {
   odometerReading?: number | null;
   returnNote?: string | null;
   onVerificationComplete?: () => void;
+};
+
+type VerificationUpdateData = {
+  return_status: "verified" | "rejected";
+  return_condition: string;
+  return_verified_by: string;
+  return_verified_at: string;
+  return_note?: string;
+  status?: "returned";
+};
+
+type ReservationInfoRow = {
+  borrower_id: string;
+  assets?: { name?: string | null } | Array<{ name?: string | null }> | null;
+  spaces?: { name?: string | null } | Array<{ name?: string | null }> | null;
+  vehicles?: { name?: string | null } | Array<{ name?: string | null }> | null;
 };
 
 const conditionOptions = [
@@ -64,7 +80,7 @@ export default function ReturnVerificationForm({
           ? "space_reservations"
           : "vehicle_reservations";
 
-      const updateData: any = {
+      const updateData: VerificationUpdateData = {
         return_status: isApproved ? "verified" : "rejected",
         return_condition: condition,
         return_verified_by: user.id,
@@ -154,18 +170,22 @@ export default function ReturnVerificationForm({
           .maybeSingle();
 
         if (reservationInfo) {
+          const info = reservationInfo as ReservationInfoRow;
+          const assetJoin = Array.isArray(info.assets) ? info.assets[0] : info.assets;
+          const spaceJoin = Array.isArray(info.spaces) ? info.spaces[0] : info.spaces;
+          const vehicleJoin = Array.isArray(info.vehicles) ? info.vehicles[0] : info.vehicles;
           const resourceName =
             resourceType === "asset"
-              ? (reservationInfo as any).assets?.name
+              ? assetJoin?.name
               : resourceType === "space"
-              ? (reservationInfo as any).spaces?.name
-              : (reservationInfo as any).vehicles?.name;
+              ? spaceJoin?.name
+              : vehicleJoin?.name;
 
           // 신청자 정보 조회
           const { data: borrowerProfile } = await supabase
             .from("profiles")
             .select("phone,name,organization_id")
-            .eq("id", (reservationInfo as any).borrower_id)
+            .eq("id", info.borrower_id)
             .maybeSingle();
 
           // 관리자 정보 조회

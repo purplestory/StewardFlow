@@ -3,20 +3,12 @@
 import { useMemo } from "react";
 import { useParams, notFound } from "next/navigation";
 import Link from "next/link";
-import type { Asset } from "@/types/database";
 import ImageSlider from "@/components/common/ImageSlider";
-import type { AssetReservationSummary } from "@/actions/booking-actions";
 import AssetReservationSection from "@/components/assets/AssetReservationSection";
 import AssetAdminActions from "@/components/assets/AssetAdminActions";
 import AssetTransferRequest from "@/components/assets/AssetTransferRequest";
 import { useAsset, useAssetReservations, useUserRole, useApprovalPolicies } from "@/hooks/useAssets";
 
-const statusLabel: Record<AssetReservationSummary["status"], string> = {
-  pending: "승인 대기",
-  approved: "승인됨",
-  returned: "반납 완료",
-  rejected: "반려",
-};
 const assetStatusLabel: Record<
   "available" | "rented" | "repair" | "lost" | "retired",
   string
@@ -121,7 +113,6 @@ export default function AssetDetailClient() {
   const usableUntilLabel = asset.usable_until
     ? formatDate(asset.usable_until)
     : "미등록";
-  const loanableLabel = asset.loanable === false ? "대여 불가" : "대여 가능";
   const purchaseDateLabel = asset.purchase_date
     ? formatDate(asset.purchase_date)
     : "미등록";
@@ -375,18 +366,3 @@ export default function AssetDetailClient() {
     </section>
   );
 }
-
-const resolveRequiredRole = (
-  policies: Array<{ department: string | null; required_role: string }>,
-  ownerScope: "organization" | "department",
-  department: string
-) => {
-  const targetDepartment = ownerScope === "organization" ? null : department;
-  const exactPolicy = policies.find(
-    (policy) => policy.department === targetDepartment
-  );
-  const fallbackPolicy = policies.find((policy) => policy.department === null);
-  return (exactPolicy?.required_role ??
-    fallbackPolicy?.required_role ??
-    "manager") as "admin" | "manager" | "user";
-};

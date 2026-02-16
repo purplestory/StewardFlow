@@ -199,7 +199,7 @@ function AuthCallbackPageContent() {
           // replace를 사용하여 히스토리에 남기지 않음
           window.location.replace("/login?error=인증 정보를 찾을 수 없습니다");
         }
-      } catch (err) {
+      } catch {
         setError("오류가 발생했습니다.");
         // 팝업 창 또는 iframe인지 확인
         const isPopupError = window.opener !== null && !window.opener.closed;

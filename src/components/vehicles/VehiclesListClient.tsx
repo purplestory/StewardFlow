@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import Notice from "@/components/common/Notice";
 import type { Vehicle } from "@/types/database";
@@ -18,8 +17,6 @@ const statusOptions: Array<{ value: Vehicle["status"] | ""; label: string }> = [
 ];
 
 export default function VehiclesListClient() {
-  const queryClient = useQueryClient();
-
   const [showRegisterForm, setShowRegisterForm] = useState(false);
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState<Vehicle["status"] | "">("");

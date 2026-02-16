@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabase";
 import { listUnusedAssets } from "@/actions/asset-actions";
 import type { Asset } from "@/types/database";
 import Notice from "@/components/common/Notice";

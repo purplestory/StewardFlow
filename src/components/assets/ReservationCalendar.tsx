@@ -3,7 +3,7 @@
 import { useMemo, useState, useEffect } from "react";
 import Calendar from "react-calendar";
 import "react-calendar/dist/Calendar.css";
-import { getCurrentYearHolidays, isHoliday, type Holiday } from "@/lib/korean-holidays";
+import { getCurrentYearHolidays, type Holiday } from "@/lib/korean-holidays";
 
 type ReservationItem = {
   start_date: string;
@@ -40,7 +40,6 @@ export default function ReservationCalendar({
   disabledStatuses = ["pending", "approved"],
 }: ReservationCalendarProps) {
   const [holidays, setHolidays] = useState<Holiday[]>([]);
-  const [holidaysLoading, setHolidaysLoading] = useState(true);
 
   // 공휴일 데이터 로드
   useEffect(() => {
@@ -50,8 +49,6 @@ export default function ReservationCalendar({
         setHolidays(holidayData);
       } catch (error) {
         console.error("공휴일 로드 오류:", error);
-      } finally {
-        setHolidaysLoading(false);
       }
     };
 
@@ -90,11 +87,6 @@ export default function ReservationCalendar({
       "7월", "8월", "9월", "10월", "11월", "12월"
     ];
     return `${year}년 ${monthNames[month - 1]}`;
-  };
-
-  // 한국 공휴일 확인 함수 (API 사용)
-  const checkHoliday = async (date: Date): Promise<boolean> => {
-    return isHoliday(date, holidays);
   };
 
   return (

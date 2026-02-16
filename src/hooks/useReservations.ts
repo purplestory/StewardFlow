@@ -10,6 +10,15 @@ type ReservationRow = {
   assets: { name: string } | null;
 };
 
+type ReservationQueryRow = {
+  id: string;
+  status: string;
+  start_date: string;
+  end_date: string;
+  note: string | null;
+  assets: { name: string } | Array<{ name: string }> | null;
+};
+
 export function useUserReservations() {
   return useQuery({
     queryKey: ["userReservations"],
@@ -27,7 +36,7 @@ export function useUserReservations() {
 
       if (error) throw error;
 
-      const normalizedData = (data ?? []).map((row: any) => {
+      const normalizedData = ((data ?? []) as ReservationQueryRow[]).map((row) => {
         const asset = Array.isArray(row.assets) ? row.assets[0] : row.assets;
         return {
           ...row,

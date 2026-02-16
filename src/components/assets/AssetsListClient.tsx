@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import Notice from "@/components/common/Notice";
 import type { Asset } from "@/types/database";
@@ -28,7 +27,6 @@ const statusOptions: Array<{ value: Asset["status"] | ""; label: string }> = [
 ];
 
 export default function AssetsListClient() {
-  const queryClient = useQueryClient();
   const [showRegisterForm, setShowRegisterForm] = useState(false);
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("");

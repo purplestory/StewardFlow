@@ -20,6 +20,13 @@ type ReservationRow = {
   } | null;
 };
 
+type ReservationQueryRow = Omit<ReservationRow, "assets"> & {
+  assets:
+    | { name: string; owner_department: string; owner_scope: "organization" | "department"; image_url: string | null }
+    | Array<{ name: string; owner_department: string; owner_scope: "organization" | "department"; image_url: string | null }>
+    | null;
+};
+
 type ProfileRole = "admin" | "manager" | "user";
 
 type ApprovalPolicy = {
@@ -123,7 +130,7 @@ export default function ReservationManager() {
       setMessage(error.message);
       setReservations([]);
     } else {
-      const normalizedData = (data ?? []).map((row: any) => {
+      const normalizedData = ((data ?? []) as ReservationQueryRow[]).map((row) => {
         const asset = Array.isArray(row.assets) ? row.assets[0] : row.assets;
         return {
           ...row,
@@ -137,7 +144,11 @@ export default function ReservationManager() {
   };
 
   useEffect(() => {
-    load();
+    const timer = setTimeout(() => {
+      void load();
+    }, 0);
+
+    return () => clearTimeout(timer);
   }, []);
 
   const handleStatusChange = async (
@@ -186,6 +197,35 @@ export default function ReservationManager() {
     setUpdatingId(null);
   };
 
+  const filteredReservations = useMemo(() => {
+    const normalized = query.trim().toLowerCase();
+    return reservations.filter((reservation) => {
+      if (statusFilter !== "all" && reservation.status !== statusFilter) {
+        return false;
+      }
+      if (!normalized) {
+        return true;
+      }
+      const name = reservation.assets?.name?.toLowerCase() ?? "";
+      const borrower = reservation.borrower_id.toLowerCase();
+      return (
+        name.includes(normalized) || borrower.includes(normalized)
+      );
+    });
+  }, [reservations, query, statusFilter]);
+
+  // 달력 뷰용 예약 데이터 변환
+  const calendarReservations = useMemo(() => {
+    return filteredReservations.map((reservation) => ({
+      id: reservation.id,
+      start_date: reservation.start_date,
+      end_date: reservation.end_date,
+      status: reservation.status,
+      resource_name: reservation.assets?.name ?? "자산",
+      borrower_id: reservation.borrower_id,
+    }));
+  }, [filteredReservations]);
+
   if (loading) {
     return (
       <Notice>예약 목록을 불러오는 중입니다.</Notice>
@@ -223,35 +263,6 @@ export default function ReservationManager() {
       <Notice>대여 신청 내역이 없습니다.</Notice>
     );
   }
-
-  const filteredReservations = useMemo(() => {
-    const normalized = query.trim().toLowerCase();
-    return reservations.filter((reservation) => {
-      if (statusFilter !== "all" && reservation.status !== statusFilter) {
-        return false;
-      }
-      if (!normalized) {
-        return true;
-      }
-      const name = reservation.assets?.name?.toLowerCase() ?? "";
-      const borrower = reservation.borrower_id.toLowerCase();
-      return (
-        name.includes(normalized) || borrower.includes(normalized)
-      );
-    });
-  }, [reservations, query, statusFilter]);
-
-  // 달력 뷰용 예약 데이터 변환
-  const calendarReservations = useMemo(() => {
-    return filteredReservations.map((reservation) => ({
-      id: reservation.id,
-      start_date: reservation.start_date,
-      end_date: reservation.end_date,
-      status: reservation.status,
-      resource_name: reservation.assets?.name ?? "자산",
-      borrower_id: reservation.borrower_id,
-    }));
-  }, [filteredReservations]);
 
   return (
     <div className="space-y-3">

@@ -20,12 +20,30 @@ type OrganizationMenuLabels = {
   vehicles?: string;
 };
 
+type MenuOrderItem = {
+  key: string;
+  enabled: boolean;
+};
+
 export default function Header() {
   const [userId, setUserId] = useState<string | null>(null);
-  const [hasLocalStorageSession, setHasLocalStorageSession] = useState<boolean | null>(null);
+  const [hasLocalStorageSession] = useState<boolean | null>(() => {
+    if (typeof window === "undefined") {
+      return null;
+    }
+    try {
+      const keys = Object.keys(localStorage);
+      return keys.some(
+        (key) =>
+          key.includes("supabase.auth.token") ||
+          (key.includes("sb-") && key.includes("-auth-token"))
+      );
+    } catch {
+      return false;
+    }
+  });
   const [role, setRole] = useState<Role>("user");
   const [hasOrganization, setHasOrganization] = useState(false);
-  const [organizationId, setOrganizationId] = useState<string | null>(null);
   const [features, setFeatures] = useState<OrganizationFeatures | null>(null);
   const [menuLabels, setMenuLabels] = useState<OrganizationMenuLabels | null>(null);
   const [menuOrder, setMenuOrder] = useState<
@@ -36,22 +54,6 @@ export default function Header() {
   const [loading, setLoading] = useState(true);
   const [dropdownOpen, setDropdownOpen] = useState<string | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-
-  // Check localStorage for session on client side only (after mount)
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    
-    try {
-      const keys = Object.keys(localStorage);
-      const hasSupabaseSession = keys.some(key => 
-        key.includes('supabase.auth.token') || 
-        (key.includes('sb-') && key.includes('-auth-token'))
-      );
-      setHasLocalStorageSession(hasSupabaseSession);
-    } catch {
-      setHasLocalStorageSession(false);
-    }
-  }, []);
 
   useEffect(() => {
     let isMounted = true;
@@ -79,7 +81,6 @@ export default function Header() {
         if (!user) {
           setRole("user");
           setHasOrganization(false);
-          setOrganizationId(null);
           setFeatures(null);
           setMenuLabels(null);
           setMenuOrder([]);
@@ -122,7 +123,6 @@ export default function Header() {
         setRole((profileData?.role as Role) ?? "user");
         const orgId = profileData?.organization_id ?? null;
         setHasOrganization(Boolean(orgId));
-        setOrganizationId(orgId);
         setUserName(profileData?.name ?? null);
         setUserDepartment(profileData?.department ?? null);
 
@@ -178,7 +178,9 @@ export default function Header() {
           }
           if (orgData.menu_order && Array.isArray(orgData.menu_order)) {
             // 메인 화면과 동일한 순서로 정렬: 물품, 공간, 차량
-            const orderMap = new Map(orgData.menu_order.map((item: any) => [item.key, item]));
+            const orderMap = new Map(
+              (orgData.menu_order as MenuOrderItem[]).map((item) => [item.key, item])
+            );
             const defaultOrder = ["equipment", "spaces", "vehicles"];
             
             // 순서대로 정렬된 배열 생성
@@ -342,33 +344,6 @@ export default function Header() {
 
     return items;
   }, [features, menuLabels, menuOrder, hasOrganization]);
-
-  // Management menu items (for managers/admins)
-  const managementItems = useMemo(() => {
-    if (!isManager || !features || !menuLabels) return [];
-
-    const items: Array<{ href: string; label: string }> = [];
-
-    // 자원 관리 메뉴 (등록 기능 포함)
-    const hasAnyFeature = 
-      features.equipment !== false || 
-      features.spaces !== false || 
-      features.vehicles === true;
-    
-    if (hasAnyFeature) {
-      items.push({ href: "/manage", label: "자원 관리" });
-    }
-
-    items.push({ href: "/settings/users", label: "사용자 관리" });
-    items.push({ href: "/settings/menu", label: "메뉴 설정" });
-    items.push({ href: "/settings/audit", label: "감사 로그" });
-    
-    if (hasOrganization || isManager) {
-      items.push({ href: "/settings/org", label: "시스템 설정" });
-    }
-
-    return items;
-  }, [isManager, features, menuLabels, hasOrganization]);
 
   // User menu items
   const userItems = useMemo(() => {

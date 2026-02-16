@@ -2,7 +2,6 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { isUUID } from "@/lib/short-id";
 import type { Vehicle } from "@/types/database";
-import { useUserProfile } from "@/hooks/useAssets";
 
 export function useVehicles() {
   return useQuery({

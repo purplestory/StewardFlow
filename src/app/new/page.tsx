@@ -24,12 +24,10 @@ function NewItemPageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const categoryParam = searchParams.get("category");
-  
-  const [category, setCategory] = useState<"equipment" | "spaces" | "vehicles" | null>(
+  const category =
     categoryParam === "equipment" || categoryParam === "spaces" || categoryParam === "vehicles"
       ? categoryParam
-      : null
-  );
+      : null;
   const [features, setFeatures] = useState<OrganizationFeatures>({
     equipment: true,
     spaces: true,
@@ -42,7 +40,6 @@ function NewItemPageContent() {
   });
   const [loading, setLoading] = useState(true);
   const [organizationId, setOrganizationId] = useState<string | null>(null);
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
   useEffect(() => {
     const loadSettings = async () => {
@@ -53,8 +50,6 @@ function NewItemPageContent() {
         setLoading(false);
         return;
       }
-
-      setCurrentUserId(user.id);
 
       const { data: profileData } = await supabase
         .from("profiles")
@@ -96,16 +91,7 @@ function NewItemPageContent() {
     loadSettings();
   }, []);
 
-  // URL 파라미터가 변경되면 카테고리 업데이트
-  useEffect(() => {
-    const cat = searchParams.get("category");
-    if (cat === "equipment" || cat === "spaces" || cat === "vehicles") {
-      setCategory(cat);
-    }
-  }, [searchParams]);
-
   const handleCategorySelect = (selectedCategory: "equipment" | "spaces" | "vehicles") => {
-    setCategory(selectedCategory);
     router.push(`/new?category=${selectedCategory}`);
   };
 

@@ -21,7 +21,33 @@ type TransferRequestRow = {
   } | null;
 };
 
+type StoredFilters = {
+  filter?: "mine" | "incoming" | "all";
+  statusFilter?: TransferRequestRow["status"] | "all";
+  departmentFilter?: string;
+  search?: string;
+  requesterQuery?: string;
+  sortOrder?: "latest" | "status";
+};
+
+const getStoredFilters = (): StoredFilters => {
+  if (typeof window === "undefined") {
+    return {};
+  }
+  const stored = localStorage.getItem("assetTransferBoardFilters");
+  if (!stored) {
+    return {};
+  }
+  try {
+    return JSON.parse(stored) as StoredFilters;
+  } catch {
+    localStorage.removeItem("assetTransferBoardFilters");
+    return {};
+  }
+};
+
 export default function AssetTransferRequestsBoard() {
+  const initialFilters = getStoredFilters();
   const [loading, setLoading] = useState(true);
   const [requests, setRequests] = useState<TransferRequestRow[]>([]);
   const [message, setMessage] = useState<string | null>(null);
@@ -29,59 +55,35 @@ export default function AssetTransferRequestsBoard() {
   const [userId, setUserId] = useState<string | null>(null);
   const [role, setRole] = useState<"admin" | "manager" | "user" | null>(null);
   const [department, setDepartment] = useState<string | null>(null);
-  const [filter, setFilter] = useState<"mine" | "incoming" | "all">("mine");
-  const [statusFilter, setStatusFilter] = useState<TransferRequestRow["status"] | "all">("all");
-  const [departmentFilter, setDepartmentFilter] = useState("all");
+  const [filter, setFilter] = useState<"mine" | "incoming" | "all">(initialFilters.filter ?? "mine");
+  const [statusFilter, setStatusFilter] = useState<TransferRequestRow["status"] | "all">(
+    initialFilters.statusFilter ?? "all"
+  );
+  const [departmentFilter, setDepartmentFilter] = useState(initialFilters.departmentFilter ?? "all");
   const [availableDepartments, setAvailableDepartments] = useState<string[]>([]);
-  const [search, setSearch] = useState("");
-  const [requesterQuery, setRequesterQuery] = useState("");
+  const [search, setSearch] = useState(initialFilters.search ?? "");
+  const [requesterQuery, setRequesterQuery] = useState(initialFilters.requesterQuery ?? "");
   const [requesterMap, setRequesterMap] = useState<Record<string, string>>({});
-  const [sortOrder, setSortOrder] = useState<"latest" | "status">("latest");
+  const [sortOrder, setSortOrder] = useState<"latest" | "status">(initialFilters.sortOrder ?? "latest");
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [lastLoadedAt, setLastLoadedAt] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
 
   useEffect(() => {
-    const stored = localStorage.getItem("assetTransferBoardFilters");
-    if (!stored) return;
-    try {
-      const parsed = JSON.parse(stored) as {
-        filter?: "mine" | "incoming" | "all";
-        statusFilter?: TransferRequestRow["status"] | "all";
-        departmentFilter?: string;
-        search?: string;
-        requesterQuery?: string;
-        sortOrder?: "latest" | "status";
-      };
-      if (parsed.filter) setFilter(parsed.filter);
-      if (parsed.statusFilter) setStatusFilter(parsed.statusFilter);
-      if (parsed.departmentFilter) setDepartmentFilter(parsed.departmentFilter);
-      if (parsed.search) setSearch(parsed.search);
-      if (parsed.requesterQuery) setRequesterQuery(parsed.requesterQuery);
-      if (parsed.sortOrder) setSortOrder(parsed.sortOrder);
-    } catch {
-      localStorage.removeItem("assetTransferBoardFilters");
-    }
-  }, []);
-
-  useEffect(() => {
+    const safeDepartmentFilter =
+      departmentFilter === "all" || availableDepartments.includes(departmentFilter)
+        ? departmentFilter
+        : "all";
     const payload = JSON.stringify({
       filter,
       statusFilter,
-      departmentFilter,
+      departmentFilter: safeDepartmentFilter,
       search,
       requesterQuery,
       sortOrder,
     });
     localStorage.setItem("assetTransferBoardFilters", payload);
-  }, [filter, statusFilter, departmentFilter, search, requesterQuery, sortOrder]);
-
-  useEffect(() => {
-    if (departmentFilter === "all") return;
-    if (!availableDepartments.includes(departmentFilter)) {
-      setDepartmentFilter("all");
-    }
-  }, [availableDepartments, departmentFilter]);
+  }, [filter, statusFilter, departmentFilter, search, requesterQuery, sortOrder, availableDepartments]);
 
   useEffect(() => {
     let isMounted = true;
@@ -125,7 +127,7 @@ export default function AssetTransferRequestsBoard() {
           .map((r) => r.asset_id)
           .filter((id): id is string => Boolean(id));
         
-        let assetsMap: Record<string, { name: string; owner_department: string; owner_scope: string }> = {};
+        const assetsMap: Record<string, { name: string; owner_department: string; owner_scope: string }> = {};
         
         if (assetIds.length > 0) {
           const { data: assetsData } = await supabase
@@ -190,9 +192,12 @@ export default function AssetTransferRequestsBoard() {
       setLastLoadedAt(new Date().toISOString());
     };
 
-    load();
+    const timer = setTimeout(() => {
+      void load();
+    }, 0);
 
     return () => {
+      clearTimeout(timer);
       isMounted = false;
     };
   }, []);
@@ -202,6 +207,11 @@ export default function AssetTransferRequestsBoard() {
     const timer = setTimeout(() => setToast(null), 2500);
     return () => clearTimeout(timer);
   }, [toast]);
+
+  const effectiveDepartmentFilter =
+    departmentFilter === "all" || availableDepartments.includes(departmentFilter)
+      ? departmentFilter
+      : "all";
 
   const filteredRequests = useMemo(() => {
     const normalized = search.trim().toLowerCase();
@@ -221,9 +231,9 @@ export default function AssetTransferRequestsBoard() {
         return false;
       }
       if (
-        departmentFilter !== "all" &&
-        request.from_department !== departmentFilter &&
-        request.to_department !== departmentFilter
+        effectiveDepartmentFilter !== "all" &&
+        request.from_department !== effectiveDepartmentFilter &&
+        request.to_department !== effectiveDepartmentFilter
       ) {
         return false;
       }
@@ -252,7 +262,18 @@ export default function AssetTransferRequestsBoard() {
       );
     }
     return filtered;
-  }, [requests, filter, userId, department, statusFilter, departmentFilter, search, requesterQuery, sortOrder, requesterMap]);
+  }, [
+    requests,
+    filter,
+    userId,
+    department,
+    statusFilter,
+    effectiveDepartmentFilter,
+    search,
+    requesterQuery,
+    sortOrder,
+    requesterMap,
+  ]);
 
   const statusCounts = useMemo(() => {
     return filteredRequests.reduce(
@@ -316,7 +337,7 @@ export default function AssetTransferRequestsBoard() {
         .map((r) => r.asset_id)
         .filter((id): id is string => Boolean(id));
       
-      let assetsMap: Record<string, { name: string; owner_department: string; owner_scope: string }> = {};
+      const assetsMap: Record<string, { name: string; owner_department: string; owner_scope: string }> = {};
       
       if (assetIds.length > 0) {
         const { data: assetsData } = await supabase
@@ -700,7 +721,7 @@ export default function AssetTransferRequestsBoard() {
           </select>
           <select
             className="form-select"
-            value={departmentFilter}
+            value={effectiveDepartmentFilter}
             onChange={(event) => setDepartmentFilter(event.target.value)}
           >
             <option value="all">전체 부서</option>

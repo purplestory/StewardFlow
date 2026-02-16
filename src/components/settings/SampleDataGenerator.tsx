@@ -414,7 +414,7 @@ export default function SampleDataGenerator({
           }
         }
 
-        const { error: assetInsertError } = await supabase.from("assets").insert({
+        await supabase.from("assets").insert({
           organization_id: organizationId,
           short_id: generateShortId(8),
           name: asset.name,
@@ -727,7 +727,7 @@ export default function SampleDataGenerator({
 
         // 삽입할 데이터 준비
         // current_odometer 컬럼이 없을 수 있으므로 조건부로 포함
-        const vehicleData: any = {
+        const vehicleData: Record<string, unknown> = {
           organization_id: organizationId,
           short_id: generateShortId(8),
           name: vehicle.name,
@@ -768,8 +768,17 @@ export default function SampleDataGenerator({
           userIdMatch: sessionData.session?.user?.id === userId,
         });
         
-        let vehicleInsertError: any = null;
-        let vehicleInsertData: any = null;
+        type ErrorLike = {
+          message?: string;
+          details?: string;
+          hint?: string;
+          code?: string;
+          name?: string;
+          status?: number;
+          statusCode?: number;
+        };
+        let vehicleInsertError: unknown = null;
+        let vehicleInsertData: unknown = null;
         
         try {
           const result = await supabase
@@ -801,11 +810,11 @@ export default function SampleDataGenerator({
         }
         
         // 에러 객체의 모든 속성 확인
-        let errorDetails: any = null;
+        let errorDetails: Record<string, unknown> | null = null;
         if (vehicleInsertError) {
           try {
             // Supabase PostgrestError의 모든 속성 확인
-            const error = vehicleInsertError as any;
+            const error = vehicleInsertError as ErrorLike & Record<string, unknown>;
             errorDetails = {
               message: error.message,
               details: error.details,
@@ -819,10 +828,10 @@ export default function SampleDataGenerator({
               stringified: JSON.stringify(error, Object.getOwnPropertyNames(error)),
               toString: String(error),
             };
-          } catch (e) {
+          } catch (error) {
             errorDetails = {
               raw: String(vehicleInsertError),
-              stringError: String(e),
+              stringError: String(error),
               errorType: typeof vehicleInsertError,
             };
           }
@@ -832,18 +841,20 @@ export default function SampleDataGenerator({
 
         if (vehicleInsertError) {
           // 에러 객체의 모든 속성을 확인
-          const errorInfo: any = {
+          const errorInfo: Record<string, unknown> = {
             error: vehicleInsertError,
-            message: vehicleInsertError?.message || "메시지 없음",
-            details: vehicleInsertError?.details || "상세 없음",
-            hint: vehicleInsertError?.hint || "힌트 없음",
-            code: vehicleInsertError?.code || "코드 없음",
+            message:
+              (vehicleInsertError as ErrorLike | null)?.message || "메시지 없음",
+            details:
+              (vehicleInsertError as ErrorLike | null)?.details || "상세 없음",
+            hint: (vehicleInsertError as ErrorLike | null)?.hint || "힌트 없음",
+            code: (vehicleInsertError as ErrorLike | null)?.code || "코드 없음",
           };
           
           // 에러 객체의 모든 속성을 문자열로 변환
           try {
             errorInfo.fullError = JSON.stringify(vehicleInsertError, Object.getOwnPropertyNames(vehicleInsertError));
-          } catch (e) {
+          } catch {
             errorInfo.fullError = String(vehicleInsertError);
           }
           
@@ -919,7 +930,7 @@ export default function SampleDataGenerator({
     setMessage(null);
 
     try {
-      let deletedCount = {
+      const deletedCount = {
         departments: 0,
         assets: 0,
         spaces: 0,

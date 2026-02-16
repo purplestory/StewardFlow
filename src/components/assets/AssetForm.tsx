@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useState, useRef } from "react";
-import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
+import Image from "next/image";
 import { supabase } from "@/lib/supabase";
 import { generateShortId } from "@/lib/short-id";
 import { isUUID } from "@/lib/short-id";
@@ -60,7 +60,6 @@ export default function AssetForm({ asset }: AssetFormProps = {}) {
   const [organizationId, setOrganizationId] = useState<string | null>(null);
   const [isLoadingOrg, setIsLoadingOrg] = useState(true);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
-  const [userRole, setUserRole] = useState<"admin" | "manager" | "user">("user");
   const [ownerScope, setOwnerScope] = useState<"department" | "organization">(
     "department"
   );
@@ -77,7 +76,6 @@ export default function AssetForm({ asset }: AssetFormProps = {}) {
   const [isDeleting, setIsDeleting] = useState(false);
   const [deletionReason, setDeletionReason] = useState("");
   const [deletionReasonOther, setDeletionReasonOther] = useState("");
-  const router = useRouter();
 
   const previews = useMemo(() => previewUrls, [previewUrls]);
   const isEditMode = Boolean(asset);
@@ -163,7 +161,6 @@ export default function AssetForm({ asset }: AssetFormProps = {}) {
 
       setCurrentUserId(user.id);
       const role = (data?.role as "admin" | "manager" | "user") ?? "user";
-      setUserRole(role);
       
       // 관리자만 전체 기관 물품 등록 가능
       const isAdmin = role === "admin";
@@ -457,7 +454,7 @@ export default function AssetForm({ asset }: AssetFormProps = {}) {
 
       if (isEditMode && asset) {
         // 수정 모드: UPDATE
-        const updateData: Record<string, any> = {
+        const updateData: Record<string, unknown> = {
           name,
           image_url: imageUrl,
           category: formData.get("category")?.toString() || null,
@@ -542,7 +539,7 @@ export default function AssetForm({ asset }: AssetFormProps = {}) {
         // 등록 모드: INSERT
         const shortId = generateShortId(8);
 
-        const insertData: Record<string, any> = {
+        const insertData: Record<string, unknown> = {
           organization_id: organizationId,
           short_id: shortId,
           name,
@@ -704,10 +701,13 @@ export default function AssetForm({ asset }: AssetFormProps = {}) {
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
                 {previews.map((preview, index) => (
                   <div key={index} className="relative group">
-                    <img
+                    <Image
                       src={preview}
                       alt={`미리보기 ${index + 1}`}
+                      width={400}
+                      height={300}
                       className="w-full aspect-[4/3] object-cover rounded-lg border border-neutral-200"
+                      unoptimized
                     />
                     <button
                       type="button"

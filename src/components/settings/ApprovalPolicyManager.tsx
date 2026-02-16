@@ -114,7 +114,11 @@ export default function ApprovalPolicyManager() {
   };
 
   useEffect(() => {
-    load();
+    const timer = setTimeout(() => {
+      void load();
+    }, 0);
+
+    return () => clearTimeout(timer);
   }, []);
 
   const handleRoleUpdate = async (
@@ -453,4 +457,3 @@ export default function ApprovalPolicyManager() {
     </div>
   );
 }
-

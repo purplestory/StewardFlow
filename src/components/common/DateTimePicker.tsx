@@ -22,25 +22,12 @@ export default function DateTimePicker({
   max,
 }: DateTimePickerProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [selectedDate, setSelectedDate] = useState<Date | null>(
-    value ? new Date(value) : null
-  );
-  const [selectedTime, setSelectedTime] = useState({
-    hour: value ? new Date(value).getHours() : 9,
-    minute: value ? new Date(value).getMinutes() : 0,
-  });
+  const selectedDate = value ? new Date(value) : null;
+  const selectedTime = {
+    hour: selectedDate ? selectedDate.getHours() : 9,
+    minute: selectedDate ? selectedDate.getMinutes() : 0,
+  };
   const containerRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (value) {
-      const date = new Date(value);
-      setSelectedDate(date);
-      setSelectedTime({
-        hour: date.getHours(),
-        minute: date.getMinutes(),
-      });
-    }
-  }, [value]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -62,7 +49,6 @@ export default function DateTimePicker({
   }, [isOpen]);
 
   const handleDateChange = (date: Date) => {
-    setSelectedDate(date);
     if (date) {
       const newDateTime = new Date(date);
       newDateTime.setHours(selectedTime.hour);
@@ -73,7 +59,6 @@ export default function DateTimePicker({
 
   const handleTimeChange = (type: "hour" | "minute", val: number) => {
     const newTime = { ...selectedTime, [type]: val };
-    setSelectedTime(newTime);
     if (selectedDate) {
       const newDateTime = new Date(selectedDate);
       newDateTime.setHours(newTime.hour);
@@ -88,7 +73,6 @@ export default function DateTimePicker({
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, "0");
     const day = String(date.getDate()).padStart(2, "0");
-    const hour = String(date.getHours()).padStart(2, "0");
     const minute = String(date.getMinutes()).padStart(2, "0");
     const period = date.getHours() < 12 ? "오전" : "오후";
     const displayHour = date.getHours() % 12 || 12;

@@ -35,16 +35,6 @@ export default function ManageTabs() {
     },
   ];
 
-  // 현재 경로가 어떤 탭에 해당하는지 확인
-  const currentTab = tabs.find((tab) => {
-    if (tab.key === "resources") {
-      return pathname.startsWith("/assets/manage") || 
-             pathname.startsWith("/spaces/manage") || 
-             pathname.startsWith("/vehicles/manage");
-    }
-    return pathname.startsWith(tab.href);
-  });
-
   return (
     <div className="mb-6 border-b border-neutral-200">
       <nav className="-mb-px flex space-x-1" aria-label="관리 탭">

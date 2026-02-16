@@ -393,7 +393,7 @@ function JoinPageContent() {
           {isAuthenticated ? (
             <div className="space-y-4">
               <p className="text-sm text-neutral-600 font-medium">
-                아래 정보를 확인하고 '초대 수락'을 눌러주세요.
+                아래 정보를 확인하고 &apos;초대 수락&apos;을 눌러주세요.
               </p>
               
               <form onSubmit={handleAcceptInvite} className="space-y-4">

@@ -29,6 +29,54 @@ export default function AuthCard() {
   const [message, setMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
+  async function acceptInvitation(userId: string, email: string) {
+    if (!email) return;
+
+    const { data: invite } = await supabase
+      .from("organization_invites")
+      .select("id,organization_id,role,accepted_at,created_at")
+      .eq("email", email)
+      .is("accepted_at", null)
+      .is("revoked_at", null)
+      .order("created_at", { ascending: false })
+      .maybeSingle();
+
+    if (!invite?.organization_id) {
+      return;
+    }
+
+    if (isInviteExpired(invite.created_at)) {
+      await supabase
+        .from("organization_invites")
+        .update({ revoked_at: new Date().toISOString() })
+        .eq("id", invite.id);
+      setMessage("초대가 만료되었습니다.");
+      return;
+    }
+
+    await supabase
+      .from("profiles")
+      .update({
+        organization_id: invite.organization_id,
+        role: invite.role ?? "user",
+      })
+      .eq("id", userId);
+
+    await supabase
+      .from("organization_invites")
+      .update({ accepted_at: new Date().toISOString() })
+      .eq("id", invite.id);
+
+    await supabase.from("audit_logs").insert({
+      organization_id: invite.organization_id,
+      actor_id: userId,
+      action: "invite_accepted",
+      target_type: "organization_invite",
+      target_id: invite.id,
+      metadata: { email, role: invite.role },
+    });
+  }
+
   useEffect(() => {
     let isMounted = true;
 
@@ -232,13 +280,7 @@ export default function AuthCard() {
       isMounted = false;
       subscription?.subscription?.unsubscribe();
     };
-  }, []);
-
-  const handleSignOut = async () => {
-    setLoading(true);
-    await supabase.auth.signOut();
-    setLoading(false);
-  };
+  }, [router]);
 
   const handleKakaoSignIn = async () => {
     setMessage(null);
@@ -287,54 +329,6 @@ export default function AuthCard() {
       setMessage(error instanceof Error ? error.message : "로그인 중 오류가 발생했습니다.");
       setLoading(false);
     }
-  };
-
-  const acceptInvitation = async (userId: string, email: string) => {
-    if (!email) return;
-
-    const { data: invite } = await supabase
-      .from("organization_invites")
-      .select("id,organization_id,role,accepted_at,created_at")
-      .eq("email", email)
-      .is("accepted_at", null)
-      .is("revoked_at", null)
-      .order("created_at", { ascending: false })
-      .maybeSingle();
-
-    if (!invite?.organization_id) {
-      return;
-    }
-
-    if (isInviteExpired(invite.created_at)) {
-      await supabase
-        .from("organization_invites")
-        .update({ revoked_at: new Date().toISOString() })
-        .eq("id", invite.id);
-      setMessage("초대가 만료되었습니다.");
-      return;
-    }
-
-    await supabase
-      .from("profiles")
-      .update({
-        organization_id: invite.organization_id,
-        role: invite.role ?? "user",
-      })
-      .eq("id", userId);
-
-    await supabase
-      .from("organization_invites")
-      .update({ accepted_at: new Date().toISOString() })
-      .eq("id", invite.id);
-
-    await supabase.from("audit_logs").insert({
-      organization_id: invite.organization_id,
-      actor_id: userId,
-      action: "invite_accepted",
-      target_type: "organization_invite",
-      target_id: invite.id,
-      metadata: { email, role: invite.role },
-    });
   };
 
   const handleProfileUpdate = async (

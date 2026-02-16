@@ -102,7 +102,9 @@ export default function FeedbackList() {
         return;
       }
 
-      const feedbacksWithAuthor = (data || []).map((fb: any) => {
+      type FeedbackAuthor = { name?: string | null; email?: string | null };
+      type FeedbackRow = Feedback & { author?: FeedbackAuthor | FeedbackAuthor[] | null };
+      const feedbacksWithAuthor = ((data || []) as FeedbackRow[]).map((fb) => {
         // author는 배열일 수 있으므로 첫 번째 요소를 가져옴
         const author = Array.isArray(fb.author) ? fb.author[0] : fb.author;
         return {

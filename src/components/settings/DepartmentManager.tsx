@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import Notice from "@/components/common/Notice";
 
@@ -27,14 +27,10 @@ export default function DepartmentManager({ organizationId }: DepartmentManagerP
   const [editDescription, setEditDescription] = useState("");
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
-  const [isReordering, setIsReordering] = useState(false);
+  const [, setIsReordering] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
 
-  useEffect(() => {
-    loadDepartments();
-  }, [organizationId]);
-
-  const loadDepartments = async () => {
+  const loadDepartments = useCallback(async () => {
     setLoading(true);
     setMessage(null);
 
@@ -81,7 +77,15 @@ export default function DepartmentManager({ organizationId }: DepartmentManagerP
 
     setDepartments(sortedDepartments);
     setLoading(false);
-  };
+  }, [organizationId]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      void loadDepartments();
+    }, 0);
+
+    return () => clearTimeout(timer);
+  }, [loadDepartments]);
 
   const handleCreate = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -314,7 +318,7 @@ export default function DepartmentManager({ organizationId }: DepartmentManagerP
     setIsReordering(true);
   };
 
-  const handleTouchMove = (e: React.TouchEvent, index: number) => {
+  const handleTouchMove = (e: React.TouchEvent) => {
     if (touchStartY === null || touchCurrentIndex === null) return;
     e.preventDefault();
     
@@ -330,7 +334,7 @@ export default function DepartmentManager({ organizationId }: DepartmentManagerP
     }
   };
 
-  const handleTouchEnd = async (e: React.TouchEvent, index: number) => {
+  const handleTouchEnd = async (e: React.TouchEvent) => {
     if (touchStartY === null || touchCurrentIndex === null) return;
     
     const touch = e.changedTouches[0];
@@ -540,7 +544,7 @@ export default function DepartmentManager({ organizationId }: DepartmentManagerP
             <div className="px-6 py-4 space-y-4">
               <div className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3">
                 <p className="text-sm text-rose-700">
-                  정말 "{departments.find((d) => d.id === showDeleteConfirm)?.name}" 부서를 삭제하시겠습니까?
+                  정말 &quot;{departments.find((d) => d.id === showDeleteConfirm)?.name}&quot; 부서를 삭제하시겠습니까?
                 </p>
                 <p className="text-xs text-rose-600 mt-2">
                   이 부서에 속한 회원들의 부서 정보가 초기화될 수 있습니다.

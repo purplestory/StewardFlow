@@ -15,7 +15,7 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  let supabaseResponse = NextResponse.next({
+  const supabaseResponse = NextResponse.next({
     request: {
       headers: request.headers,
     },

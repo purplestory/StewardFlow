@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { supabase } from "@/lib/supabase";
 import Notice from "@/components/common/Notice";
 
@@ -39,7 +40,12 @@ export default function NotificationsList() {
   const [sortOrder, setSortOrder] = useState<
     "latest" | "unread" | "status"
   >("latest");
-  const [compactView, setCompactView] = useState(false);
+  const [compactView, setCompactView] = useState(() => {
+    if (typeof window === "undefined") {
+      return false;
+    }
+    return localStorage.getItem("notifications_compact_view") === "true";
+  });
   const [totalCount, setTotalCount] = useState(0);
   const [unreadTotal, setUnreadTotal] = useState(0);
   const userIdRef = useRef<string | null>(null);
@@ -53,7 +59,7 @@ export default function NotificationsList() {
     setPage(1);
   };
 
-  const load = async () => {
+  const load = useCallback(async () => {
     setLoading(true);
     setMessage(null);
 
@@ -124,14 +130,18 @@ export default function NotificationsList() {
     setUnreadTotal(unreadCount ?? 0);
 
     setLoading(false);
-  };
+  }, [page, pageSize, query, showUnreadOnly, sortOrder, statusFilter, typeFilter]);
+
+  const loadRef = useRef(load);
 
   useEffect(() => {
-    let isMounted = true;
+    loadRef.current = load;
+  }, [load]);
 
-    load().finally(() => {
-      if (!isMounted) return;
-    });
+  useEffect(() => {
+    const initialLoadTimer = setTimeout(() => {
+      void loadRef.current();
+    }, 0);
 
     const channel = supabase
       .channel("notifications-list")
@@ -145,28 +155,21 @@ export default function NotificationsList() {
             newRecord.user_id &&
             newRecord.user_id === userIdRef.current
           ) {
-            load();
+            void loadRef.current();
           }
         }
       )
       .subscribe();
 
     const { data: authSubscription } = supabase.auth.onAuthStateChange(() => {
-      load();
+      void loadRef.current();
     });
 
     return () => {
-      isMounted = false;
+      clearTimeout(initialLoadTimer);
       supabase.removeChannel(channel);
       authSubscription?.subscription?.unsubscribe();
     };
-  }, []);
-
-  useEffect(() => {
-    const saved = localStorage.getItem("notifications_compact_view");
-    if (saved === "true") {
-      setCompactView(true);
-    }
   }, []);
 
   useEffect(() => {
@@ -174,12 +177,12 @@ export default function NotificationsList() {
   }, [compactView]);
 
   useEffect(() => {
-    setPage(1);
-  }, [pageSize, typeFilter, statusFilter, showUnreadOnly, query, sortOrder]);
+    const timer = setTimeout(() => {
+      void load();
+    }, 0);
 
-  useEffect(() => {
-    load();
-  }, [page, pageSize, typeFilter, statusFilter, showUnreadOnly]);
+    return () => clearTimeout(timer);
+  }, [load]);
 
   const markAsRead = async (id: string) => {
     if (updating) return;
@@ -307,7 +310,10 @@ export default function NotificationsList() {
               <input
                 type="checkbox"
                 checked={showUnreadOnly}
-                onChange={(event) => setShowUnreadOnly(event.target.checked)}
+                onChange={(event) => {
+                  setShowUnreadOnly(event.target.checked);
+                  setPage(1);
+                }}
               />
               미읽음만 보기
             </label>
@@ -325,35 +331,44 @@ export default function NotificationsList() {
           <select
             className="rounded-md border border-neutral-200 px-2 py-1 text-xs"
             value={sortOrder}
-            onChange={(event) =>
-              setSortOrder(
-                event.target.value as "latest" | "unread" | "status"
-              )
-            }
+              onChange={(event) =>
+                {
+                  setSortOrder(
+                    event.target.value as "latest" | "unread" | "status"
+                  );
+                  setPage(1);
+                }
+              }
           >
             <option value="latest">최신순</option>
             <option value="unread">미읽음 우선</option>
             <option value="status">상태 우선</option>
           </select>
           <label className="flex items-center gap-2 text-xs text-neutral-600">
-            <input
-              type="checkbox"
-              checked={compactView}
-              onChange={(event) => setCompactView(event.target.checked)}
-            />
+              <input
+                type="checkbox"
+                checked={compactView}
+                onChange={(event) => setCompactView(event.target.checked)}
+              />
             컴팩트 보기
           </label>
-          <input
-            className="rounded-md border border-neutral-200 px-2 py-1 text-xs"
-            placeholder="검색어 입력"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-          />
-          <select
-            className="rounded-md border border-neutral-200 px-2 py-1 text-xs"
-            value={typeFilter}
-            onChange={(event) => setTypeFilter(event.target.value)}
-          >
+              <input
+                className="rounded-md border border-neutral-200 px-2 py-1 text-xs"
+                placeholder="검색어 입력"
+                value={query}
+                onChange={(event) => {
+                  setQuery(event.target.value);
+                  setPage(1);
+                }}
+              />
+              <select
+                className="rounded-md border border-neutral-200 px-2 py-1 text-xs"
+                value={typeFilter}
+                onChange={(event) => {
+                  setTypeFilter(event.target.value);
+                  setPage(1);
+                }}
+              >
             <option value="all">전체 유형</option>
             <option value="reservation_created">물품 예약 신청</option>
             <option value="reservation_status_changed">물품 예약 상태 변경</option>
@@ -366,21 +381,27 @@ export default function NotificationsList() {
             <option value="asset_transfer_request_rejected">불용품 양도 요청 거절</option>
             <option value="asset_transfer_request_cancelled">불용품 양도 요청 취소</option>
           </select>
-          <select
-            className="rounded-md border border-neutral-200 px-2 py-1 text-xs"
-            value={statusFilter}
-            onChange={(event) => setStatusFilter(event.target.value)}
-          >
+              <select
+                className="rounded-md border border-neutral-200 px-2 py-1 text-xs"
+                value={statusFilter}
+                onChange={(event) => {
+                  setStatusFilter(event.target.value);
+                  setPage(1);
+                }}
+              >
             <option value="all">전체 상태</option>
             <option value="pending">대기</option>
             <option value="sent">발송 완료</option>
             <option value="failed">실패</option>
           </select>
-          <select
-            className="rounded-md border border-neutral-200 px-2 py-1 text-xs"
-            value={pageSize}
-            onChange={(event) => setPageSize(Number(event.target.value))}
-          >
+              <select
+                className="rounded-md border border-neutral-200 px-2 py-1 text-xs"
+                value={pageSize}
+                onChange={(event) => {
+                  setPageSize(Number(event.target.value));
+                  setPage(1);
+                }}
+              >
             <option value={5}>5개씩</option>
             <option value={10}>10개씩</option>
             <option value={20}>20개씩</option>
@@ -447,10 +468,13 @@ export default function NotificationsList() {
           <div className="flex items-start gap-3">
             {getThumbnail(item) ? (
               <Link href={getResourcePath(item)}>
-                <img
+                <Image
                   src={getThumbnail(item) ?? ""}
                   alt=""
+                  width={48}
+                  height={48}
                   className="h-12 w-12 rounded-lg object-cover"
+                  unoptimized
                 />
               </Link>
             ) : (

@@ -47,7 +47,7 @@ export function generateRecurringDates(
   if (config.type === "weekly") {
     // 매주 반복
     const daysOfWeek = config.daysOfWeek || [baseStart.getDay()];
-    let currentDate = new Date(baseStart);
+    const currentDate = new Date(baseStart);
 
     while (currentDate <= endDate) {
       // 현재 주의 모든 지정된 요일에 대해 인스턴스 생성
@@ -74,7 +74,7 @@ export function generateRecurringDates(
     }
   } else if (config.type === "monthly") {
     // 매월 반복
-    let currentDate = new Date(baseStart);
+    const currentDate = new Date(baseStart);
     const dayOfMonth = config.dayOfMonth || baseStart.getDate();
 
     while (currentDate <= endDate) {

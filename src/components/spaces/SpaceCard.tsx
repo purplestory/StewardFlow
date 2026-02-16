@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import type { Space } from "@/types/database";
 
 type SpaceCardProps = {
@@ -13,7 +14,7 @@ const statusLabel: Record<Space["status"], string> = {
   lost: "사용 불가",
 };
 
-export default function SpaceCard({ space, requiredRoleLabel }: SpaceCardProps) {
+export default function SpaceCard({ space }: SpaceCardProps) {
   const detailUrl = `/spaces/${space.short_id ?? space.id}`;
   
   // 첫 번째 이미지 가져오기 (image_urls 우선, 없으면 image_url)
@@ -25,12 +26,15 @@ export default function SpaceCard({ space, requiredRoleLabel }: SpaceCardProps) 
   return (
     <div className="rounded-xl border border-neutral-200 bg-white p-4">
       <Link href={detailUrl} className="block">
-        <div className="aspect-[4/3] w-full overflow-hidden rounded-lg bg-neutral-100 transition-opacity hover:opacity-90 cursor-pointer">
+        <div className="relative aspect-[4/3] w-full overflow-hidden rounded-lg bg-neutral-100 transition-opacity hover:opacity-90 cursor-pointer">
           {firstImage ? (
-            <img
+            <Image
               src={firstImage}
               alt={space.name}
+              fill
+              sizes="(max-width: 768px) 100vw, 33vw"
               className="h-full w-full object-cover"
+              unoptimized
             />
           ) : (
             <div className="flex h-full items-center justify-center text-xs text-neutral-400">

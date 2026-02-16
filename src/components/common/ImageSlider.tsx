@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 
 type ImageSliderProps = {
   images: string[];
@@ -33,10 +34,13 @@ export default function ImageSlider({ images, alt }: ImageSliderProps) {
   return (
     <div className="relative aspect-[4/3] w-full overflow-hidden rounded-xl bg-neutral-100">
       {/* 메인 이미지 */}
-      <img
+      <Image
         src={images[currentIndex]}
         alt={`${alt} - ${currentIndex + 1}/${images.length}`}
+        fill
+        sizes="(max-width: 768px) 100vw, 50vw"
         className="h-full w-full object-cover"
+        unoptimized
       />
 
       {/* 여러 이미지가 있을 때만 네비게이션 표시 */}

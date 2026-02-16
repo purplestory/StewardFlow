@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState, useRef } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { supabase } from "@/lib/supabase";
 
 const ownerScopes = [
@@ -28,7 +28,6 @@ type SpaceFormProps = {
 };
 
 export default function SpaceForm({ space }: SpaceFormProps = {}) {
-  const router = useRouter();
   const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [previewUrls, setPreviewUrls] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null); // 파일 입력 ref
@@ -239,7 +238,9 @@ export default function SpaceForm({ space }: SpaceFormProps = {}) {
     if (!form) return;
 
     const formData = new FormData(form);
-    const name = formData.get("name")?.toString().trim();
+    const submittedName = formData.get("name")?.toString().trim() ?? "";
+    const name =
+      submittedName || (isEditMode && space ? space.name.trim() : "");
     
     // 기관 정책에 따라 소유 범위 결정
     const ownerScopeInput = spacesOwnershipPolicy === "organization_only"
@@ -466,10 +467,13 @@ export default function SpaceForm({ space }: SpaceFormProps = {}) {
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
                 {previews.map((preview, index) => (
                   <div key={index} className="relative group">
-                    <img
+                    <Image
                       src={preview}
                       alt={`미리보기 ${index + 1}`}
+                      width={400}
+                      height={300}
                       className="w-full aspect-[4/3] object-cover rounded-lg border border-neutral-200"
+                      unoptimized
                     />
                     <button
                       type="button"
@@ -515,6 +519,7 @@ export default function SpaceForm({ space }: SpaceFormProps = {}) {
           <span className="form-label">공간명</span>
           <input
             name="name"
+            defaultValue={space?.name || ""}
             className="form-input"
             placeholder="예: 본당, 비전홀"
             required

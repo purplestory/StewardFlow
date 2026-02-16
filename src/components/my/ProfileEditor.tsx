@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import type { DepartmentChangeRequest } from "@/types/database";
 
@@ -38,7 +38,7 @@ export default function ProfileEditor() {
   const [editingDepartment, setEditingDepartment] = useState(false);
   const [phoneValue, setPhoneValue] = useState("");
   const [savingPhone, setSavingPhone] = useState(false);
-  const [pendingDeletionRequest, setPendingDeletionRequest] = useState<any | null>(null);
+  const [pendingDeletionRequest, setPendingDeletionRequest] = useState<{ id: string } | null>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -278,7 +278,7 @@ export default function ProfileEditor() {
     setRequesting(false);
   };
 
-  const loadSameDepartmentUsers = async () => {
+  const loadSameDepartmentUsers = useCallback(async () => {
     if (!profile || !profile.department || !profile.organization_id) {
       setSameDepartmentUsers([]);
       return;
@@ -297,14 +297,14 @@ export default function ProfileEditor() {
       console.error("Error loading same department users:", error);
       setSameDepartmentUsers([]);
     } else {
-      setSameDepartmentUsers((data || []).map(u => ({
+      setSameDepartmentUsers((data || []).map((u) => ({
         id: u.id,
         name: u.name,
         email: u.email,
       })));
     }
     setLoadingUsers(false);
-  };
+  }, [profile]);
 
   const handleDeleteAccount = async () => {
     if (!profile) return;
@@ -399,9 +399,9 @@ export default function ProfileEditor() {
         setDeleting(false);
         return;
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Account deletion error:", error);
-      const errorMessage = error?.message || "알 수 없는 오류";
+      const errorMessage = error instanceof Error ? error.message : "알 수 없는 오류";
       setMessage(`계정 탈퇴 중 오류가 발생했습니다: ${errorMessage}`);
       setDeleting(false);
       return;
@@ -474,7 +474,7 @@ export default function ProfileEditor() {
     if (showDeleteConfirm && profile?.role === "manager") {
       loadSameDepartmentUsers();
     }
-  }, [showDeleteConfirm, profile?.role]);
+  }, [showDeleteConfirm, profile?.role, loadSameDepartmentUsers]);
 
   if (loading) {
     return <p className="text-sm text-neutral-500">프로필 정보를 불러오는 중...</p>;

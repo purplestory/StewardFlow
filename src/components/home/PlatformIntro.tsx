@@ -17,7 +17,6 @@ function PlatformIntroContent() {
   const searchParams = useSearchParams();
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [features, setFeatures] = useState<OrganizationFeatures | null>(null);
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -42,7 +41,6 @@ function PlatformIntroContent() {
             userId: user.id,
           });
           // 프로필 조회 실패 시에도 리다이렉트하지 않음 (에러 표시)
-          setLoading(false);
           return;
         }
 
@@ -85,7 +83,6 @@ function PlatformIntroContent() {
         }
       }
 
-      setLoading(false);
     };
 
     checkAuth();

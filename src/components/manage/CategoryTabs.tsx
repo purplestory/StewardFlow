@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 
@@ -101,8 +101,6 @@ export default function CategoryTabs() {
   if (tabs.length <= 1) {
     return null;
   }
-
-  const currentTab = tabs.find((tab) => pathname.startsWith(tab.href));
 
   return (
     <div className="mb-6 border-b border-neutral-300">

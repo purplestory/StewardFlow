@@ -493,6 +493,31 @@ export type ReservationSummary = {
   asset: { name: string } | null;
 };
 
+type ReservationAssetRow = {
+  id: string;
+  status: Reservation["status"];
+  start_date: string;
+  end_date: string;
+  note: string | null;
+  assets: { name: string } | Array<{ name: string }> | null;
+};
+
+type BorrowerProfile = {
+  id: string;
+  name: string | null;
+  department: string | null;
+};
+
+type ReservationWithBorrowerRow = {
+  id: string;
+  status: Reservation["status"];
+  start_date: string;
+  end_date: string;
+  borrower_id: string;
+  note: string | null;
+  profiles: BorrowerProfile | BorrowerProfile[] | null;
+};
+
 export async function listReservationsByBorrower(
   borrowerId: string
 ): Promise<ReservationSummary[]> {
@@ -507,7 +532,7 @@ export async function listReservationsByBorrower(
     throw new Error(error.message);
   }
 
-  return (data ?? []).map((row: any) => ({
+  return ((data ?? []) as ReservationAssetRow[]).map((row) => ({
     id: row.id,
     status: row.status,
     start_date: row.start_date,
@@ -545,7 +570,7 @@ export async function listReservationsByAsset(
     throw new Error(error.message);
   }
 
-  return (data ?? []).map((row: any) => {
+  return ((data ?? []) as ReservationWithBorrowerRow[]).map((row) => {
     const profile = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles;
     return {
       id: row.id,
@@ -591,7 +616,7 @@ export async function listReservationsBySpace(
     throw new Error(error.message);
   }
 
-  return (data ?? []).map((row: any) => {
+  return ((data ?? []) as ReservationWithBorrowerRow[]).map((row) => {
     const profile = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles;
     return {
       id: row.id,
@@ -623,7 +648,7 @@ export async function listReservationsByVehicle(
     throw new Error(error.message);
   }
 
-  return (data ?? []).map((row: any) => {
+  return ((data ?? []) as ReservationWithBorrowerRow[]).map((row) => {
     const profile = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles;
     return {
       id: row.id,

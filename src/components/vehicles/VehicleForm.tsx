@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState, useRef } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { supabase } from "@/lib/supabase";
 import { generateShortId } from "@/lib/short-id";
 
@@ -51,7 +51,6 @@ type VehicleFormProps = {
 };
 
 export default function VehicleForm({ vehicle }: VehicleFormProps = {}) {
-  const router = useRouter();
   const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [previewUrls, setPreviewUrls] = useState<string[]>([]);
   const [existingImageUrls, setExistingImageUrls] = useState<string[]>([]); // 기존에 업로드된 이미지 URL들
@@ -556,10 +555,13 @@ export default function VehicleForm({ vehicle }: VehicleFormProps = {}) {
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
                 {previews.map((preview, index) => (
                   <div key={index} className="relative group">
-                    <img
+                    <Image
                       src={preview}
                       alt={`미리보기 ${index + 1}`}
+                      width={400}
+                      height={300}
                       className="w-full aspect-[4/3] object-cover rounded-lg border border-neutral-200"
+                      unoptimized
                     />
                     <button
                       type="button"

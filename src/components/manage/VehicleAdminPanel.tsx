@@ -6,15 +6,6 @@ import { supabase } from "@/lib/supabase";
 import Notice from "@/components/common/Notice";
 import type { Vehicle } from "@/types/database";
 
-const statusOptions: Array<{ value: Vehicle["status"] | "all"; label: string }> =
-  [
-    { value: "all", label: "전체 상태" },
-    { value: "available", label: "사용 가능" },
-    { value: "rented", label: "예약 중" },
-    { value: "repair", label: "수리 중" },
-    { value: "lost", label: "분실" },
-  ];
-
 const statusLabel: Record<Vehicle["status"], string> = {
   available: "사용 가능",
   rented: "예약 중",
@@ -76,7 +67,11 @@ export default function VehicleAdminPanel() {
   };
 
   useEffect(() => {
-    load();
+    const timer = setTimeout(() => {
+      void load();
+    }, 0);
+
+    return () => clearTimeout(timer);
   }, []);
 
   const filteredVehicles = useMemo(() => {

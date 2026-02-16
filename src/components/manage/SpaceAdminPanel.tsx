@@ -6,15 +6,6 @@ import { supabase } from "@/lib/supabase";
 import Notice from "@/components/common/Notice";
 import type { Space } from "@/types/database";
 
-const statusOptions: Array<{ value: Space["status"] | "all"; label: string }> =
-  [
-    { value: "all", label: "전체 상태" },
-    { value: "available", label: "사용 가능" },
-    { value: "rented", label: "예약 중" },
-    { value: "repair", label: "사용 불가" },
-    { value: "lost", label: "사용 불가" },
-  ];
-
 export default function SpaceAdminPanel() {
   const [spaces, setSpaces] = useState<Space[]>([]);
   const [loading, setLoading] = useState(true);
@@ -46,7 +37,11 @@ export default function SpaceAdminPanel() {
   };
 
   useEffect(() => {
-    load();
+    const timer = setTimeout(() => {
+      void load();
+    }, 0);
+
+    return () => clearTimeout(timer);
   }, []);
 
   const filteredSpaces = useMemo(() => {

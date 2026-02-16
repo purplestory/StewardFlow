@@ -1,18 +1,8 @@
 "use client";
 
-import Link from "next/link";
 import Notice from "@/components/common/Notice";
 import { useUserReservations } from "@/hooks/useReservations";
 import { useUserProfile } from "@/hooks/useAssets";
-
-type ReservationRow = {
-  id: string;
-  status: string;
-  start_date: string;
-  end_date: string;
-  note: string | null;
-  assets: { name: string } | null;
-};
 
 export default function ReservationsClient() {
   // React Query를 사용한 데이터 페칭

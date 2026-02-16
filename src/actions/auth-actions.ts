@@ -64,11 +64,13 @@ export async function deleteUserAccount(userId: string) {
       success: true,
       error: null,
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Unexpected error in deleteUserAccount:", error);
     return {
       success: false,
-      error: `예상치 못한 오류: ${error.message || "알 수 없는 오류"}`,
+      error: `예상치 못한 오류: ${
+        error instanceof Error ? error.message : "알 수 없는 오류"
+      }`,
     };
   }
 }

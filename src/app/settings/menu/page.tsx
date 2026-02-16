@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import FeatureSettings from "@/components/settings/FeatureSettings";
 import AssetCategoryManager from "@/components/settings/AssetCategoryManager";
 import OrganizationGate from "@/components/settings/OrganizationGate";
@@ -10,7 +9,6 @@ import Notice from "@/components/common/Notice";
 import { supabase } from "@/lib/supabase";
 
 export default function MenuSettingsPage() {
-  const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [hasPermission, setHasPermission] = useState(false);
   const [organizationId, setOrganizationId] = useState<string | null>(null);

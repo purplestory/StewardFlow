@@ -31,16 +31,16 @@ export default function OwnershipPolicySettings({ organizationId }: OwnershipPol
     spaces: "organization_only",
     vehicles: "organization_only",
   });
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(Boolean(organizationId));
   const [message, setMessage] = useState<string | null>(null);
 
   useEffect(() => {
     if (!organizationId) {
-      setLoading(false);
       return;
     }
 
     const loadSettings = async () => {
+      setLoading(true);
       const { data, error } = await supabase
         .from("organizations")
         .select("features,ownership_policies")
@@ -72,7 +72,11 @@ export default function OwnershipPolicySettings({ organizationId }: OwnershipPol
       setLoading(false);
     };
 
-    loadSettings();
+    const timer = setTimeout(() => {
+      void loadSettings();
+    }, 0);
+
+    return () => clearTimeout(timer);
   }, [organizationId]);
 
   const handleSave = async (newPolicies: OwnershipPolicies) => {
@@ -99,7 +103,9 @@ export default function OwnershipPolicySettings({ organizationId }: OwnershipPol
     }
   };
 
-  if (loading) {
+  const isLoading = organizationId ? loading : false;
+
+  if (isLoading) {
     return <p className="text-sm text-neutral-500">로딩 중...</p>;
   }
 

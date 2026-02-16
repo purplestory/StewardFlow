@@ -156,7 +156,6 @@ export default function ReservationCalendarView({
 
   // 특정 날짜의 예약 가져오기
   const getReservationsForDate = (date: Date) => {
-    const dateStr = date.toDateString();
     return filteredReservations.filter((reservation) => {
       const start = new Date(reservation.start_date);
       const end = new Date(reservation.end_date);
@@ -220,7 +219,7 @@ export default function ReservationCalendarView({
           ))}
         </div>
         <div className="grid grid-cols-7 gap-1">
-          {calendarDays.map((day, index) => {
+          {calendarDays.map((day) => {
             const isCurrentMonth = day.getMonth() === currentDate.getMonth();
             const isToday = day.toDateString() === new Date().toDateString();
             const dayReservations = getReservationsForDate(day);
@@ -322,7 +321,6 @@ export default function ReservationCalendarView({
   // 일간 뷰 렌더링
   const renderDayView = () => {
     const dayReservations = getReservationsForDate(currentDate);
-    const hours = Array.from({ length: 24 }, (_, i) => i);
 
     return (
       <div className="space-y-2">

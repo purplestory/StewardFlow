@@ -42,7 +42,7 @@ export default function FeatureSettings({ organizationId }: FeatureSettingsProps
     { key: "spaces", enabled: true },
     { key: "vehicles", enabled: false },
   ]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(Boolean(organizationId));
   const [message, setMessage] = useState<string | null>(null);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
@@ -55,11 +55,11 @@ export default function FeatureSettings({ organizationId }: FeatureSettingsProps
 
   useEffect(() => {
     if (!organizationId) {
-      setLoading(false);
       return;
     }
 
     const loadSettings = async () => {
+      setLoading(true);
       const { data, error } = await supabase
         .from("organizations")
         .select("features,menu_labels,menu_order")
@@ -95,7 +95,11 @@ export default function FeatureSettings({ organizationId }: FeatureSettingsProps
       setLoading(false);
     };
 
-    loadSettings();
+    const timer = setTimeout(() => {
+      void loadSettings();
+    }, 0);
+
+    return () => clearTimeout(timer);
   }, [organizationId]);
 
   const handleDragStart = (index: number) => {
@@ -151,7 +155,7 @@ export default function FeatureSettings({ organizationId }: FeatureSettingsProps
     setDraggedIndex(index);
   };
 
-  const handleTouchMove = (e: React.TouchEvent, index: number) => {
+  const handleTouchMove = (e: React.TouchEvent) => {
     if (touchStartY === null || touchCurrentIndex === null) return;
     e.preventDefault();
     
@@ -167,7 +171,7 @@ export default function FeatureSettings({ organizationId }: FeatureSettingsProps
     }
   };
 
-  const handleTouchEnd = (e: React.TouchEvent, index: number) => {
+  const handleTouchEnd = (e: React.TouchEvent) => {
     if (touchStartY === null || touchCurrentIndex === null) return;
     
     const touch = e.changedTouches[0];
@@ -229,7 +233,9 @@ export default function FeatureSettings({ organizationId }: FeatureSettingsProps
     );
   }
 
-  if (loading) {
+  const isLoading = organizationId ? loading : false;
+
+  if (isLoading) {
     return <Notice>설정을 불러오는 중입니다...</Notice>;
   }
 
@@ -255,9 +261,6 @@ export default function FeatureSettings({ organizationId }: FeatureSettingsProps
               (labelKey === "equipment" ? "물품" : 
                labelKey === "spaces" ? "공간" : "차량");
             const isEnabled = features[labelKey] !== false;
-            
-            const featureLabel = labelKey === "equipment" ? "물품관리" :
-                                labelKey === "spaces" ? "공간관리" : "차량관리";
 
             return (
               <div

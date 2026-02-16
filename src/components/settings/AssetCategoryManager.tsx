@@ -399,12 +399,11 @@ export default function AssetCategoryManager({
     setDraggedIndex(index);
   };
 
-  const handleTouchMove = (e: React.TouchEvent, index: number) => {
+  const handleTouchMove = (e: React.TouchEvent) => {
     if (touchStartY === null || touchCurrentIndex === null) return;
     e.preventDefault();
     
     const touch = e.touches[0];
-    const currentY = touch.clientY;
     const element = document.elementFromPoint(touch.clientX, touch.clientY);
     const dragItem = element?.closest('[data-drag-index]');
     
@@ -416,7 +415,7 @@ export default function AssetCategoryManager({
     }
   };
 
-  const handleTouchEnd = async (e: React.TouchEvent, index: number) => {
+  const handleTouchEnd = async (e: React.TouchEvent) => {
     if (touchStartY === null || touchCurrentIndex === null) return;
     
     const touch = e.changedTouches[0];
@@ -649,7 +648,7 @@ export default function AssetCategoryManager({
             <div className="px-6 py-4 space-y-4">
               <div className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3">
                 <p className="text-sm text-rose-700">
-                  정말 "{categories.find((c) => c.value === showDeleteConfirm)?.label}" 카테고리를 삭제하시겠습니까?
+                  정말 &quot;{categories.find((c) => c.value === showDeleteConfirm)?.label}&quot; 카테고리를 삭제하시겠습니까?
                 </p>
                 <p className="text-xs text-rose-600 mt-2">
                   이 카테고리를 사용하는 물품들은 카테고리 정보가 제거될 수 있습니다.

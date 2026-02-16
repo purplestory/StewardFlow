@@ -12,6 +12,12 @@ export type Holiday = {
   localName: string;
 };
 
+type NagerHoliday = {
+  date: string;
+  name: string;
+  localName?: string;
+};
+
 /**
  * Nager.Date API를 사용하여 한국 공휴일 목록을 가져옵니다.
  * 무료 API이며 API 키가 필요 없습니다.
@@ -33,8 +39,8 @@ export async function getKoreanHolidays(year: number): Promise<Holiday[]> {
       return [];
     }
 
-    const data = await response.json();
-    return data.map((holiday: any) => ({
+    const data = (await response.json()) as NagerHoliday[];
+    return data.map((holiday) => ({
       date: holiday.date,
       name: holiday.name,
       localName: holiday.localName || holiday.name,

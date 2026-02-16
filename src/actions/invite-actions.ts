@@ -54,8 +54,8 @@ export async function generateInviteToken(
   try {
     const supabase = await createSupabaseServerClient();
     
-    // getSession()을 사용하여 세션 확인
-    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+    // [변경됨] getSession -> getUser (더 안전한 인증 확인)
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
     
     // 디버깅: 쿠키 확인
     if (process.env.NODE_ENV === "development") {
@@ -65,20 +65,9 @@ export async function generateInviteToken(
       console.log("generateInviteToken: Auth cookies count:", authCookies.length);
     }
     
-    if (sessionError) {
-      console.error("generateInviteToken: Session error:", sessionError);
-      return { ok: false, message: `인증 오류: ${sessionError.message}` };
-    }
-    
-    if (!sessionData.session) {
-      console.error("generateInviteToken: No session found");
+    if (userError || !user) {
+      console.error("generateInviteToken: Auth error or no user", userError);
       return { ok: false, message: "로그인이 필요합니다. 페이지를 새로고침하고 다시 시도해주세요." };
-    }
-    
-    const user = sessionData.session.user;
-    if (!user) {
-      console.error("generateInviteToken: No user in session");
-      return { ok: false, message: "로그인이 필요합니다." };
     }
     
     console.log("generateInviteToken: User authenticated:", user.id);
@@ -109,7 +98,6 @@ export async function generateInviteToken(
     }
 
     // Generate short, URL-safe token (10 characters for good security and readability)
-    // nanoid generates URL-safe tokens that are easy to share via SMS/KakaoTalk
     const token = generateShortId(10);
 
     const { data: invite, error } = await supabase
@@ -194,7 +182,6 @@ export async function getInviteByToken(
 
     if (searchError) {
       console.error("getInviteByToken error:", searchError);
-      // RLS 정책 오류인 경우 더 명확한 메시지 제공
       if (searchError.code === "42501" || searchError.message?.includes("row-level security")) {
         return { 
           ok: false, 
@@ -235,38 +222,23 @@ export async function getInviteByToken(
       };
     }
 
-    // 기관 이름 조회 (Admin 클라이언트로 조회하여 RLS 문제 해결)
+    // 기관 이름 조회
     let organizationName: string | undefined;
     try {
-      console.log("Fetching organization name for ID:", allInvites.organization_id);
-      const { data: orgData, error: orgError } = await supabase
+      const { data: orgData } = await supabase
         .from("organizations")
         .select("name")
         .eq("id", allInvites.organization_id)
         .maybeSingle();
       
-      if (orgError) {
-        console.error("Failed to fetch organization name:", {
-          error: orgError,
-          code: orgError.code,
-          message: orgError.message,
-          details: orgError.details,
-          hint: orgError.hint,
-          organization_id: allInvites.organization_id,
-        });
-        // 기관 이름 조회 실패해도 초대 정보는 반환 (organization_id는 있음)
-      } else if (orgData) {
-        console.log("Organization name fetched:", orgData.name);
+      if (orgData) {
         organizationName = orgData.name;
-      } else {
-        console.warn("Organization not found for ID:", allInvites.organization_id);
       }
     } catch (orgError) {
-      // 기관 이름 조회 실패해도 초대 정보는 반환
       console.error("Exception while fetching organization name:", orgError);
     }
 
-    // 초대한 사람 정보 조회 (audit_logs에서 찾기)
+    // 초대한 사람 정보 조회
     let inviterInfo: {
       name: string | null;
       department: string | null;
@@ -274,7 +246,6 @@ export async function getInviteByToken(
     } | undefined;
     
     try {
-      // audit_logs에서 초대를 생성한 사람 찾기 (Admin 클라이언트로 조회)
       const { data: auditLog } = await supabase
         .from("audit_logs")
         .select("actor_id")
@@ -286,7 +257,6 @@ export async function getInviteByToken(
         .maybeSingle();
 
       if (auditLog?.actor_id) {
-        // 초대한 사람의 프로필 정보 가져오기
         const { data: inviterProfile } = await supabase
           .from("profiles")
           .select("name,department,organization_id")
@@ -294,7 +264,6 @@ export async function getInviteByToken(
           .maybeSingle();
 
         if (inviterProfile) {
-          // 초대한 사람의 기관 이름 가져오기
           let inviterOrgName: string | null = null;
           if (inviterProfile.organization_id) {
             const { data: inviterOrg } = await supabase
@@ -313,12 +282,18 @@ export async function getInviteByToken(
         }
       }
     } catch (inviterError) {
-      // 초대한 사람 정보 조회 실패해도 초대 정보는 반환
       console.warn("Failed to fetch inviter info:", inviterError);
     }
 
-    // 유효한 초대 반환
-    const { accepted_at, revoked_at, ...invite } = allInvites;
+    const invite = {
+      id: allInvites.id,
+      organization_id: allInvites.organization_id,
+      email: allInvites.email,
+      role: allInvites.role,
+      department: allInvites.department,
+      name: allInvites.name,
+      created_at: allInvites.created_at,
+    };
     return { 
       ok: true, 
       invite: { 
@@ -336,9 +311,7 @@ export async function getInviteByToken(
 }
 
 /**
- * 초대 수락 - Admin 클라이언트 사용하여 RLS 우회
- * organization_invites_update_accept 정책은 email 일치만 허용하므로,
- * 카카오 이메일·초대 시 지정 이메일 불일치·이메일 null 초대 시 실패함.
+ * 초대 수락
  */
 export async function acceptInviteByToken(
   token: string,
@@ -356,10 +329,13 @@ export async function acceptInviteByToken(
     }
 
     const supabaseServer = await createSupabaseServerClient();
-    const { data: sessionData } = await supabaseServer.auth.getSession();
-    const user = sessionData.session?.user;
-    if (!user) {
-      return { success: false, error: "로그인이 필요합니다." };
+    
+    // [중요 변경] getSession 대신 getUser 사용하여 최신 인증 상태 확인
+    const { data: { user }, error: userError } = await supabaseServer.auth.getUser();
+
+    if (userError || !user) {
+      console.error("Auth Error (acceptInvite):", userError);
+      return { success: false, error: "로그인이 필요합니다. (인증 세션 확인 실패)" };
     }
 
     // 1. 초대 정보 확인
@@ -383,7 +359,6 @@ export async function acceptInviteByToken(
     }
 
     // 2. 기존 프로필 조회 (권한 결정을 위해 필요)
-    // 기존에 조직이 있는 경우 역할을 유지할지, 초대의 역할을 따를지 결정
     const { data: existingProfile } = await supabaseAdmin
       .from("profiles")
       .select("id,role,organization_id")
@@ -395,26 +370,25 @@ export async function acceptInviteByToken(
       ? existingProfile.role
       : invite.role;
 
-    // 3. 프로필 Upsert (핵심 수정 부분)
-    // Insert와 Update를 분기하지 않고, ID가 같으면 덮어쓰도록 처리하여 에러 방지
+    // 3. 프로필 Upsert (중복 에러 방지용)
     const { error: upsertError } = await supabaseAdmin
       .from("profiles")
       .upsert({
-        id: user.id, // Primary Key (충돌 시 update로 전환됨)
+        id: user.id, 
         email: finalEmail,
         organization_id: invite.organization_id,
         role: finalRole,
         name: profileData.name || invite.name || null,
         department: profileData.department || invite.department || null,
         phone: profileData.phone || null,
-        updated_at: new Date().toISOString(), // 수정일 갱신
+        updated_at: new Date().toISOString(),
       });
 
     if (upsertError) {
       return { success: false, error: `프로필 업데이트 실패: ${upsertError.message}` };
     }
 
-    // 4. 초대 수락 처리 (완료)
+    // 4. 초대 수락 처리
     const { error: acceptError } = await supabaseAdmin
       .from("organization_invites")
       .update({ accepted_at: new Date().toISOString() })

@@ -290,7 +290,10 @@ export default function UserRoleManager() {
         .order("created_at", { ascending: false });
 
       if (!requestsError && requestsData) {
-        const requestsWithRequester = requestsData.map((req: any) => ({
+        type DepartmentRequestWithProfile = DepartmentChangeRequest & {
+          profiles?: { name?: string | null; email?: string | null } | null;
+        };
+        const requestsWithRequester = (requestsData as DepartmentRequestWithProfile[]).map((req) => ({
           ...req,
           requester_name: req.profiles?.name || null,
           requester_email: req.profiles?.email || "",
@@ -353,7 +356,7 @@ export default function UserRoleManager() {
 
     // Try to select token, but handle case where column doesn't exist yet
     let inviteData: InviteRow[] | null = null;
-    let inviteError: any = null;
+    let inviteError: unknown = null;
     
     try {
       const { data, error } = await supabase
@@ -366,9 +369,12 @@ export default function UserRoleManager() {
       
       inviteData = data as InviteRow[] | null;
       inviteError = error;
-    } catch (err: any) {
+    } catch (err: unknown) {
       // If token column doesn't exist, try without it
-      if (err?.message?.includes("token") || err?.code === "42703") {
+      if (
+        err instanceof Error &&
+        ((err.message && err.message.includes("token")) || (err as { code?: string }).code === "42703")
+      ) {
         const { data, error } = await supabase
           .from("organization_invites")
           .select("id,email,role,department,name,created_at,accepted_at,revoked_at")
@@ -377,7 +383,7 @@ export default function UserRoleManager() {
           .is("revoked_at", null)
           .order("created_at", { ascending: false });
         
-        inviteData = (data ?? []).map((inv: any) => ({ ...inv, token: null })) as InviteRow[];
+        inviteData = (data ?? []).map((inv) => ({ ...inv, token: null })) as InviteRow[];
         inviteError = error;
       } else {
         inviteError = err;
@@ -828,9 +834,6 @@ export default function UserRoleManager() {
       .eq("id", organizationId)
       .maybeSingle();
 
-    let emailSent = false;
-    let emailError: string | null = null;
-
     // Send email via API (이메일이 있는 경우에만)
     if (email) {
       try {
@@ -847,13 +850,11 @@ export default function UserRoleManager() {
 
         const emailResult = await emailResponse.json();
 
-        if (emailResult.ok) {
-          emailSent = true;
-        } else {
-          emailError = emailResult.message;
+        if (!emailResult.ok) {
+          console.warn("Invite email send failed:", emailResult.message);
         }
-      } catch (error) {
-        emailError = "이메일 발송 오류";
+      } catch {
+        console.warn("Invite email request failed");
       }
     }
 
@@ -941,7 +942,7 @@ export default function UserRoleManager() {
           );
         }
       }
-    } catch (error) {
+    } catch {
       // API call failed, provide link as backup
       try {
         await navigator.clipboard.writeText(inviteLink);
@@ -1363,9 +1364,9 @@ export default function UserRoleManager() {
         setProcessingRequestId(null);
         return;
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Account deletion error:", error);
-      const errorMessage = error?.message || "알 수 없는 오류";
+      const errorMessage = error instanceof Error ? error.message : "알 수 없는 오류";
       setMessage(`계정 삭제 중 오류가 발생했습니다: ${errorMessage}`);
       setProcessingRequestId(null);
       return;
@@ -2001,7 +2002,7 @@ export default function UserRoleManager() {
             <div className="px-6 py-4 space-y-4">
               <div className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3">
                 <p className="text-sm text-rose-900 font-medium mb-2">
-                  정말로 "{userToDelete.name}" 사용자를 삭제하시겠습니까?
+                  정말로 &quot;{userToDelete.name}&quot; 사용자를 삭제하시겠습니까?
                 </p>
                 <p className="text-xs text-rose-700">
                   이 작업은 되돌릴 수 없습니다. 사용자의 모든 데이터가 삭제됩니다.

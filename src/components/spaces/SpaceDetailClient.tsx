@@ -1,10 +1,9 @@
 "use client";
 
 import { useMemo } from "react";
-import { useParams, notFound, useRouter } from "next/navigation";
+import { useParams, notFound } from "next/navigation";
 import Link from "next/link";
 import type { Space } from "@/types/database";
-import type { SpaceReservationSummary } from "@/actions/booking-actions";
 import SpaceReservationSection from "@/components/spaces/SpaceReservationSection";
 import ImageSlider from "@/components/common/ImageSlider";
 import { useSpace, useSpaceReservations, useSpaceApprovalPolicies } from "@/hooks/useSpaces";
@@ -19,7 +18,6 @@ const statusLabel: Record<Space["status"], string> = {
 
 export default function SpaceDetailClient() {
   const params = useParams();
-  const router = useRouter();
   const id = params.id as string;
 
   // React Query를 사용한 데이터 페칭

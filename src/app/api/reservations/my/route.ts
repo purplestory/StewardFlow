@@ -6,6 +6,7 @@ type ReservationStatus = "pending" | "approved" | "returned" | "rejected";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 const parseReservationBody = async (request: Request) => {
   return request.json().catch(() => null) as Promise<{
@@ -36,6 +37,14 @@ const getAuthedClient = async (accessToken: string) => {
   }
 
   return { client, userId: userData.user.id as string };
+};
+
+const getServiceClient = () => {
+  if (!supabaseUrl || !supabaseServiceRoleKey) {
+    return null;
+  }
+
+  return createClient(supabaseUrl, supabaseServiceRoleKey);
 };
 
 const loadOwnedPendingReservation = async (
@@ -118,7 +127,10 @@ export async function PATCH(request: Request) {
     );
   }
 
-  let conflictQuery = auth.client
+  const serviceClient = getServiceClient();
+  const dbClient = serviceClient ?? auth.client;
+
+  let conflictQuery = dbClient
     .from("reservations")
     .select("id")
     .eq("asset_id", owned.reservation.asset_id)
@@ -148,7 +160,7 @@ export async function PATCH(request: Request) {
   const normalizedNote =
     typeof note === "string" ? (note.trim().length > 0 ? note.trim() : null) : null;
 
-  const { data: updated, error: updateError } = await auth.client
+  const { data: updated, error: updateError } = await dbClient
     .from("reservations")
     .update({
       start_date: startDate,
@@ -156,6 +168,8 @@ export async function PATCH(request: Request) {
       note: normalizedNote,
     })
     .eq("id", reservationId)
+    .eq("borrower_id", auth.userId)
+    .eq("status", "pending")
     .select("id,status,asset_id,start_date,end_date,note")
     .maybeSingle();
 
@@ -163,6 +177,12 @@ export async function PATCH(request: Request) {
     return NextResponse.json(
       { ok: false, message: updateError.message },
       { status: 400 }
+    );
+  }
+  if (!updated) {
+    return NextResponse.json(
+      { ok: false, message: "예약 수정 권한이 없거나 이미 처리된 신청입니다." },
+      { status: 403 }
     );
   }
 
@@ -197,15 +217,27 @@ export async function DELETE(request: Request) {
     );
   }
 
-  const { error: deleteError } = await auth.client
+  const serviceClient = getServiceClient();
+  const dbClient = serviceClient ?? auth.client;
+
+  const { data: deletedRows, error: deleteError } = await dbClient
     .from("reservations")
     .delete()
-    .eq("id", reservationId);
+    .eq("id", reservationId)
+    .eq("borrower_id", auth.userId)
+    .eq("status", "pending")
+    .select("id");
 
   if (deleteError) {
     return NextResponse.json(
       { ok: false, message: deleteError.message },
       { status: 400 }
+    );
+  }
+  if (!deletedRows || deletedRows.length === 0) {
+    return NextResponse.json(
+      { ok: false, message: "예약 삭제 권한이 없거나 이미 처리된 신청입니다." },
+      { status: 403 }
     );
   }
 

@@ -272,8 +272,8 @@ export default function FeatureSettings({ organizationId }: FeatureSettingsProps
                 onDragLeave={handleDragLeave}
                 onDrop={(e) => isEnabled && handleDrop(e, index)}
                 onTouchStart={(e) => isEnabled && handleTouchStart(e, index)}
-                onTouchMove={(e) => isEnabled && handleTouchMove(e, index)}
-                onTouchEnd={(e) => isEnabled && handleTouchEnd(e, index)}
+                onTouchMove={(e) => isEnabled && handleTouchMove(e)}
+                onTouchEnd={(e) => isEnabled && handleTouchEnd(e)}
                 className={`flex items-center gap-3 p-3 border border-neutral-200 rounded-lg transition-all ${
                   draggedIndex === index
                     ? "opacity-50 cursor-grabbing"

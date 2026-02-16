@@ -393,7 +393,6 @@ export async function acceptInviteByToken(
         name: profileData.name || invite.name || null,
         department: profileData.department || invite.department || null,
         phone: profileData.phone || null,
-        updated_at: new Date().toISOString(),
       });
 
     if (upsertError) {

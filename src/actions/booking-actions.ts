@@ -1,6 +1,7 @@
 "use server";
 
 import { createSupabaseServerClient } from "@/lib/supabase-server";
+import { createSupabaseAdmin } from "@/lib/supabase-admin";
 import { isUUID } from "@/lib/short-id";
 import type { Reservation, VehicleReservationSummary } from "@/types/database";
 import { createClient } from "@supabase/supabase-js";
@@ -23,18 +24,32 @@ const createNotification = async (params: {
   payload: Record<string, unknown>;
 }) => {
   const supabase = await createSupabaseServerClient();
-  const { data, error } = await supabase
+  const insertPayload = {
+    user_id: params.userId,
+    organization_id: params.organizationId,
+    type: params.type,
+    channel: "kakao",
+    status: "pending" as const,
+    payload: params.payload,
+  };
+
+  let { data, error } = await supabase
     .from("notifications")
-    .insert({
-      user_id: params.userId,
-      organization_id: params.organizationId,
-      type: params.type,
-      channel: "kakao",
-      status: "pending",
-      payload: params.payload,
-    })
+    .insert(insertPayload)
     .select("user_id,type,payload")
     .maybeSingle();
+
+  // 인앱 브라우저 세션 이슈 등으로 RLS에 막히는 경우 서비스 롤로 재시도
+  if (error && process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    const admin = createSupabaseAdmin();
+    const retry = await admin
+      .from("notifications")
+      .insert(insertPayload)
+      .select("user_id,type,payload")
+      .maybeSingle();
+    data = retry.data;
+    error = retry.error;
+  }
 
   if (error) {
     console.error("알림 생성 실패:", error);

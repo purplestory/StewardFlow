@@ -1,9 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 
-type ReservationRow = {
+export type ReservationStatus = "pending" | "approved" | "returned" | "rejected";
+
+export type UserReservationItem = {
   id: string;
-  status: string;
+  status: ReservationStatus;
+  asset_id: string;
   start_date: string;
   end_date: string;
   note: string | null;
@@ -12,7 +15,8 @@ type ReservationRow = {
 
 type ReservationQueryRow = {
   id: string;
-  status: string;
+  status: ReservationStatus;
+  asset_id: string;
   start_date: string;
   end_date: string;
   note: string | null;
@@ -30,7 +34,7 @@ export function useUserReservations() {
 
       const { data, error } = await supabase
         .from("reservations")
-        .select("id,status,start_date,end_date,note,assets(name)")
+        .select("id,status,asset_id,start_date,end_date,note,assets(name)")
         .eq("borrower_id", user.id)
         .order("created_at", { ascending: false });
 
@@ -44,7 +48,7 @@ export function useUserReservations() {
         };
       });
 
-      return normalizedData as ReservationRow[];
+      return normalizedData as UserReservationItem[];
     },
     staleTime: 1000 * 60 * 1, // 1분간 fresh 상태 유지
   });

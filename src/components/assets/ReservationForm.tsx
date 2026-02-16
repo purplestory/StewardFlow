@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useActionState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { createReservation } from "@/actions/booking-actions";
 import { supabase } from "@/lib/supabase";
 import { formatRecurrenceDescription } from "@/lib/recurrence";
@@ -24,8 +25,10 @@ export default function ReservationForm({
   isDisabled = false,
   disabledReason,
 }: ReservationFormProps) {
-  const [state, formAction] = useActionState(createReservation, initialState);
+  const queryClient = useQueryClient();
+  const [state, formAction, isPending] = useActionState(createReservation, initialState);
   const [authAccessToken, setAuthAccessToken] = useState<string | null>(null);
+  const [dismissedSuccessMessage, setDismissedSuccessMessage] = useState<string | null>(null);
   
   // 시스템 날짜를 기본값으로 설정
   const getDefaultDate = () => {
@@ -96,15 +99,36 @@ export default function ReservationForm({
   };
 
   const dayNames = ["일", "월", "화", "수", "목", "금", "토"];
+  const formDisabled = isDisabled || isPending;
+  const reservationQueryKey =
+    resourceType === "space"
+      ? "spaceReservations"
+      : resourceType === "vehicle"
+      ? "vehicleReservations"
+      : "assetReservations";
+  const showSuccessModal =
+    state.ok && Boolean(state.message) && dismissedSuccessMessage !== state.message;
+
+  useEffect(() => {
+    if (!state.ok) return;
+
+    void queryClient.invalidateQueries({
+      queryKey: [reservationQueryKey, assetId],
+    });
+  }, [state.ok, state.message, reservationQueryKey, assetId, queryClient]);
 
   return (
-    <form action={formAction} className="space-y-4">
+    <form
+      action={formAction}
+      className="space-y-4"
+      onSubmit={() => setDismissedSuccessMessage(null)}
+    >
       <input type="hidden" name="asset_id" value={assetId} />
       <input type="hidden" name="resource_type" value={resourceType} />
       {authAccessToken && (
         <input type="hidden" name="auth_access_token" value={authAccessToken} />
       )}
-      <fieldset disabled={isDisabled} className="space-y-4">
+      <fieldset disabled={formDisabled} className="space-y-4">
         <div className="space-y-3">
           {/* 시작일시, 종료일시, 반복유형을 한 줄에 배치 */}
           <div className="grid gap-3 grid-cols-1 md:grid-cols-3 w-full">
@@ -119,7 +143,7 @@ export default function ReservationForm({
                   className="form-input text-base md:text-sm h-[38px]"
                   style={{ flex: '1 1 0', minWidth: '110px' }}
                   required
-                  disabled={isDisabled}
+                  disabled={formDisabled}
                 />
                 <input
                   type="time"
@@ -128,7 +152,7 @@ export default function ReservationForm({
                   className="form-input text-base md:text-sm flex-shrink-0 h-[38px]"
                   style={{ width: '120px', minWidth: '120px', flexShrink: 0 }}
                   required
-                  disabled={isDisabled}
+                  disabled={formDisabled}
                 />
               </div>
             </div>
@@ -143,7 +167,7 @@ export default function ReservationForm({
                   className="form-input text-base md:text-sm h-[38px]"
                   style={{ flex: '1 1 0', minWidth: '110px' }}
                   required
-                  disabled={isDisabled}
+                  disabled={formDisabled}
                 />
                 <input
                   type="time"
@@ -152,7 +176,7 @@ export default function ReservationForm({
                   className="form-input text-base md:text-sm flex-shrink-0 h-[38px]"
                   style={{ width: '120px', minWidth: '120px', flexShrink: 0 }}
                   required
-                  disabled={isDisabled}
+                  disabled={formDisabled}
                 />
               </div>
             </div>
@@ -170,7 +194,7 @@ export default function ReservationForm({
                   }
                 }}
                 className="form-select w-full h-[38px]"
-                disabled={isDisabled}
+                disabled={formDisabled}
               >
                 <option value="none">반복 없음</option>
                 <option value="weekly">매주 반복</option>
@@ -206,7 +230,7 @@ export default function ReservationForm({
                         onChange={(e) => setRecurrenceInterval(parseInt(e.target.value) || 1)}
                         className="form-input"
                         placeholder="1"
-                        disabled={isDisabled}
+                        disabled={formDisabled}
                       />
                       <p className="text-xs text-neutral-500">
                         {recurrenceType === "weekly"
@@ -224,7 +248,7 @@ export default function ReservationForm({
                         className="form-input"
                         min={startDate}
                         required={true}
-                        disabled={isDisabled}
+                        disabled={formDisabled}
                       />
                     </label>
                   </div>
@@ -238,7 +262,7 @@ export default function ReservationForm({
                             key={index}
                             type="button"
                             onClick={() => handleDayOfWeekToggle(index)}
-                            disabled={isDisabled}
+                            disabled={formDisabled}
                             className={`day-button h-[38px] w-[38px] rounded-lg border text-sm transition-colors ${
                               selectedDaysOfWeek.includes(index)
                                 ? "border-black bg-black text-white"
@@ -268,7 +292,7 @@ export default function ReservationForm({
                         value={dayOfMonth}
                         onChange={(e) => setDayOfMonth(parseInt(e.target.value) || 1)}
                         className="form-input"
-                        disabled={isDisabled}
+                        disabled={formDisabled}
                       />
                       <p className="text-xs text-neutral-500">
                         매월 {dayOfMonth}일에 반복됩니다
@@ -306,7 +330,7 @@ export default function ReservationForm({
               min={0}
               className="form-input"
               placeholder="예: 50000"
-              disabled={isDisabled}
+              disabled={formDisabled}
             />
             <p className="text-xs text-neutral-500">
               차량 대여 시점의 계기판 주행거리를 입력하세요.
@@ -329,11 +353,9 @@ export default function ReservationForm({
         </p>
       )}
 
-      {state.message && (
+      {state.message && !state.ok && (
         <p
-          className={`text-sm ${
-            state.ok ? "text-emerald-600" : "text-rose-600"
-          }`}
+          className="text-sm text-rose-600"
           role="status"
         >
           {state.message}
@@ -341,11 +363,32 @@ export default function ReservationForm({
       )}
 
       <button
-        disabled={isDisabled}
+        disabled={formDisabled}
         className="btn-primary w-full"
       >
-        대여 신청
+        {isPending ? "신청 처리 중..." : "대여 신청"}
       </button>
+
+      {showSuccessModal && state.ok && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-md rounded-xl border border-neutral-200 bg-white p-6 shadow-xl">
+            <h3 className="text-lg font-semibold text-neutral-900">신청 완료</h3>
+            <p className="mt-3 text-sm text-neutral-700">
+              {state.message || "예약 신청이 완료되었습니다."}
+            </p>
+            <p className="mt-2 text-xs text-neutral-500">
+              예약 현황이 자동으로 갱신되었습니다.
+            </p>
+            <button
+              type="button"
+              className="btn-primary mt-5 w-full"
+              onClick={() => setDismissedSuccessMessage(state.message)}
+            >
+              확인
+            </button>
+          </div>
+        </div>
+      )}
     </form>
   );
 }

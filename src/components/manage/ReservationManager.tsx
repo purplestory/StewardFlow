@@ -10,8 +10,13 @@ type ReservationRow = {
   status: "pending" | "approved" | "returned" | "rejected";
   start_date: string;
   end_date: string;
+  note: string | null;
   borrower_id: string;
   asset_id: string;
+  borrower: {
+    name: string | null;
+    department: string | null;
+  } | null;
   assets: {
     name: string;
     owner_department: string;
@@ -21,6 +26,10 @@ type ReservationRow = {
 };
 
 type ReservationQueryRow = Omit<ReservationRow, "assets"> & {
+  profiles:
+    | { name: string | null; department: string | null }
+    | Array<{ name: string | null; department: string | null }>
+    | null;
   assets:
     | { name: string; owner_department: string; owner_scope: "organization" | "department"; image_url: string | null }
     | Array<{ name: string; owner_department: string; owner_scope: "organization" | "department"; image_url: string | null }>
@@ -48,6 +57,42 @@ const statusOptions: ReservationRow["status"][] = [
   "rejected",
 ];
 
+const statusLabel: Record<ReservationRow["status"], string> = {
+  pending: "대기",
+  approved: "승인",
+  returned: "반납 완료",
+  rejected: "반려",
+};
+
+const roleLabel: Record<ProfileRole, string> = {
+  admin: "관리자",
+  manager: "부서 관리자",
+  user: "일반 사용자",
+};
+
+const formatDateTimeRange = (start: string, end: string) => {
+  const startDate = new Date(start);
+  const endDate = new Date(end);
+  if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) {
+    return `${start} ~ ${end}`;
+  }
+  return `${startDate.toLocaleString("ko-KR", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
+  })} ~ ${endDate.toLocaleString("ko-KR", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
+  })}`;
+};
+
 export default function ReservationManager() {
   const [reservations, setReservations] = useState<ReservationRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -59,6 +104,7 @@ export default function ReservationManager() {
   const [statusFilter, setStatusFilter] = useState<
     ReservationRow["status"] | "all"
   >("all");
+  const [selectedReservation, setSelectedReservation] = useState<ReservationRow | null>(null);
   const [query, setQuery] = useState("");
   const [viewMode, setViewMode] = useState<"list" | "calendar">("list");
   const [calendarViewMode, setCalendarViewMode] = useState<"month" | "week" | "day">("month");
@@ -122,7 +168,7 @@ export default function ReservationManager() {
     const { data, error } = await supabase
       .from("reservations")
       .select(
-        "id,status,start_date,end_date,borrower_id,asset_id,assets(name,owner_department,owner_scope,image_url)"
+        "id,status,start_date,end_date,note,borrower_id,asset_id,profiles!borrower_id(name,department),assets(name,owner_department,owner_scope,image_url)"
       )
       .order("created_at", { ascending: false });
 
@@ -131,9 +177,12 @@ export default function ReservationManager() {
       setReservations([]);
     } else {
       const normalizedData = ((data ?? []) as ReservationQueryRow[]).map((row) => {
+        const { profiles, ...rest } = row;
         const asset = Array.isArray(row.assets) ? row.assets[0] : row.assets;
+        const borrower = Array.isArray(profiles) ? profiles[0] : profiles;
         return {
-          ...row,
+          ...rest,
+          borrower: borrower || null,
           assets: asset || null,
         };
       });
@@ -156,6 +205,11 @@ export default function ReservationManager() {
     nextStatus: ReservationRow["status"]
   ) => {
     setMessage(null);
+
+    if (nextStatus === "returned") {
+      setMessage("반납 완료 상태는 반납 처리 절차에서 자동으로 반영됩니다.");
+      return;
+    }
 
     if (role !== "admin" && role !== "manager") {
       setMessage("예약 상태를 변경할 권한이 없습니다.");
@@ -194,6 +248,9 @@ export default function ReservationManager() {
           : reservation
       )
     );
+    setSelectedReservation((prev) =>
+      prev && prev.id === reservationId ? { ...prev, status: nextStatus } : prev
+    );
     setUpdatingId(null);
   };
 
@@ -207,9 +264,14 @@ export default function ReservationManager() {
         return true;
       }
       const name = reservation.assets?.name?.toLowerCase() ?? "";
-      const borrower = reservation.borrower_id.toLowerCase();
+      const borrowerName = reservation.borrower?.name?.toLowerCase() ?? "";
+      const borrowerDepartment = reservation.borrower?.department?.toLowerCase() ?? "";
+      const borrowerId = reservation.borrower_id.toLowerCase();
       return (
-        name.includes(normalized) || borrower.includes(normalized)
+        name.includes(normalized) ||
+        borrowerName.includes(normalized) ||
+        borrowerDepartment.includes(normalized) ||
+        borrowerId.includes(normalized)
       );
     });
   }, [reservations, query, statusFilter]);
@@ -222,7 +284,10 @@ export default function ReservationManager() {
       end_date: reservation.end_date,
       status: reservation.status,
       resource_name: reservation.assets?.name ?? "자산",
-      borrower_id: reservation.borrower_id,
+      borrower_id:
+        reservation.borrower?.name
+          ? `${reservation.borrower.department ?? "부서 미지정"} / ${reservation.borrower.name}`
+          : reservation.borrower_id,
     }));
   }, [filteredReservations]);
 
@@ -318,8 +383,8 @@ export default function ReservationManager() {
                 }
               >
                 <option value="all">전체 상태</option>
-                <option value="pending">승인 대기</option>
-                <option value="approved">승인됨</option>
+                <option value="pending">대기</option>
+                <option value="approved">승인</option>
                 <option value="returned">반납 완료</option>
                 <option value="rejected">반려</option>
               </select>
@@ -336,11 +401,9 @@ export default function ReservationManager() {
           onDateChange={setCurrentDate}
           onViewModeChange={setCalendarViewMode}
           onReservationClick={(reservation) => {
-            // 예약 클릭 시 상세 정보 표시 (선택사항)
             const found = filteredReservations.find((r) => r.id === reservation.id);
             if (found) {
-              // 모달이나 상세 페이지로 이동할 수 있음
-              console.log("Selected reservation:", found);
+              setSelectedReservation(found);
             }
           }}
         />
@@ -364,7 +427,8 @@ export default function ReservationManager() {
         filteredReservations.map((reservation) => (
         <div
           key={reservation.id}
-          className="rounded-lg border border-neutral-200 px-4 py-3"
+          className="cursor-pointer rounded-lg border border-neutral-200 px-4 py-3 transition-colors hover:bg-neutral-50"
+          onClick={() => setSelectedReservation(reservation)}
         >
           <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
             <div>
@@ -372,13 +436,29 @@ export default function ReservationManager() {
                 {reservation.assets?.name ?? "자산"} 대여
               </p>
               <p className="text-xs text-neutral-500">
-                {reservation.start_date} ~ {reservation.end_date}
+                {formatDateTimeRange(reservation.start_date, reservation.end_date)}
               </p>
               <p className="text-xs text-neutral-500">
-                신청자: {reservation.borrower_id}
+                신청자:{" "}
+                {reservation.borrower?.name
+                  ? `${reservation.borrower.department ?? "부서 미지정"} / ${reservation.borrower.name}`
+                  : reservation.borrower_id}
               </p>
+              {reservation.note && (
+                <p className="text-xs text-neutral-400">사유: {reservation.note}</p>
+              )}
             </div>
             <div className="flex items-center gap-2">
+              <button
+                type="button"
+                className="rounded-md border border-neutral-200 px-2 py-1 text-xs text-neutral-700 hover:bg-white"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  setSelectedReservation(reservation);
+                }}
+              >
+                상세
+              </button>
               <span className="text-xs text-neutral-500">상태</span>
               <select
                 value={reservation.status}
@@ -388,8 +468,10 @@ export default function ReservationManager() {
                     event.target.value as ReservationRow["status"]
                   )
                 }
+                onClick={(event) => event.stopPropagation()}
                 className="rounded-md border border-neutral-200 px-2 py-1 text-xs"
                 disabled={
+                  reservation.status === "returned" ||
                   !context ||
                   !reservation.assets ||
                   updatingId === reservation.id ||
@@ -400,8 +482,8 @@ export default function ReservationManager() {
                 }
               >
                 {statusOptions.map((status) => (
-                  <option key={status} value={status}>
-                    {status}
+                  <option key={status} value={status} disabled={status === "returned"}>
+                    {statusLabel[status]}
                   </option>
                 ))}
               </select>
@@ -410,13 +492,89 @@ export default function ReservationManager() {
           {context && reservation.assets && (
             <p className="mt-2 text-xs text-neutral-400">
               승인 필요 권한:{" "}
-              {resolveRequiredRole(policies, reservation.assets)}
+              {roleLabel[resolveRequiredRole(policies, reservation.assets)]}
             </p>
           )}
         </div>
         ))
       )}
         </>
+      )}
+
+      {selectedReservation && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-xl rounded-xl border border-neutral-200 bg-white p-6 shadow-xl">
+            <h3 className="text-lg font-semibold text-neutral-900">예약 상세</h3>
+            <div className="mt-4 space-y-2 text-sm text-neutral-700">
+              <p>
+                <span className="font-medium text-neutral-900">자산:</span>{" "}
+                {selectedReservation.assets?.name ?? "자산"}
+              </p>
+              <p>
+                <span className="font-medium text-neutral-900">기간:</span>{" "}
+                {formatDateTimeRange(
+                  selectedReservation.start_date,
+                  selectedReservation.end_date
+                )}
+              </p>
+              <p>
+                <span className="font-medium text-neutral-900">신청자:</span>{" "}
+                {selectedReservation.borrower?.name
+                  ? `${selectedReservation.borrower.department ?? "부서 미지정"} / ${selectedReservation.borrower.name}`
+                  : selectedReservation.borrower_id}
+              </p>
+              {selectedReservation.note && (
+                <p>
+                  <span className="font-medium text-neutral-900">사유:</span>{" "}
+                  {selectedReservation.note}
+                </p>
+              )}
+              {selectedReservation.assets && (
+                <p>
+                  <span className="font-medium text-neutral-900">승인 필요 권한:</span>{" "}
+                  {roleLabel[resolveRequiredRole(policies, selectedReservation.assets)]}
+                </p>
+              )}
+            </div>
+
+            <div className="mt-5 flex flex-wrap items-center justify-end gap-2">
+              <span className="text-sm text-neutral-500">상태</span>
+              <select
+                value={selectedReservation.status}
+                onChange={(event) =>
+                  handleStatusChange(
+                    selectedReservation.id,
+                    event.target.value as ReservationRow["status"]
+                  )
+                }
+                className="rounded-md border border-neutral-200 px-2 py-1 text-sm"
+                disabled={
+                  selectedReservation.status === "returned" ||
+                  !context ||
+                  !selectedReservation.assets ||
+                  updatingId === selectedReservation.id ||
+                  roleRank[context.role] <
+                    roleRank[
+                      resolveRequiredRole(policies, selectedReservation.assets)
+                    ]
+                }
+              >
+                {statusOptions.map((status) => (
+                  <option key={status} value={status} disabled={status === "returned"}>
+                    {statusLabel[status]}
+                  </option>
+                ))}
+              </select>
+              <button
+                type="button"
+                className="btn-ghost"
+                onClick={() => setSelectedReservation(null)}
+              >
+                닫기
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

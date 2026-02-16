@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { isUUID } from "@/lib/short-id";
-import type { Space } from "@/types/database";
+import type { Reservation, Space } from "@/types/database";
 
 export function useSpaces() {
   return useQuery({
@@ -83,8 +83,49 @@ export function useSpaceReservations(spaceId: string | null) {
     queryFn: async () => {
       if (!spaceId) return [];
 
-      const { listReservationsBySpace } = await import("@/actions/booking-actions");
-      return await listReservationsBySpace(spaceId);
+      type BorrowerProfile = {
+        id: string;
+        name: string | null;
+        department: string | null;
+      };
+      type ReservationWithBorrowerRow = {
+        id: string;
+        status: Reservation["status"];
+        start_date: string;
+        end_date: string;
+        borrower_id: string;
+        note: string | null;
+        profiles: BorrowerProfile | BorrowerProfile[] | null;
+      };
+
+      const { data, error } = await supabase
+        .from("space_reservations")
+        .select("id,status,start_date,end_date,borrower_id,note,profiles!borrower_id(id,name,department)")
+        .eq("space_id", spaceId)
+        .order("start_date", { ascending: true });
+
+      if (error) {
+        throw error;
+      }
+
+      return ((data ?? []) as ReservationWithBorrowerRow[]).map((row) => {
+        const profile = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles;
+        return {
+          id: row.id,
+          status: row.status,
+          start_date: row.start_date,
+          end_date: row.end_date,
+          borrower_id: row.borrower_id,
+          note: row.note,
+          borrower: profile
+            ? {
+                id: profile.id,
+                name: profile.name,
+                department: profile.department,
+              }
+            : null,
+        };
+      });
     },
     enabled: !!spaceId,
     staleTime: 1000 * 60 * 1, // 1분간 fresh 상태 유지

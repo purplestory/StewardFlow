@@ -281,6 +281,7 @@ export async function createReservation(
   const { data: conflicts, error: conflictError } = await supabase
     .from(reservationTable)
     .select("id")
+    .eq("organization_id", organizationId)
     .eq(resourceColumn, finalResourceId)
     .in("status", ["pending", "approved"])
     .lte("start_date", endDate)
@@ -309,6 +310,7 @@ export async function createReservation(
       const { data: instanceConflicts, error: instanceConflictError } = await supabase
         .from(reservationTable)
         .select("id")
+        .eq("organization_id", organizationId)
         .eq(resourceColumn, finalResourceId)
         .in("status", ["pending", "approved"])
         .lte("start_date", instanceEnd)

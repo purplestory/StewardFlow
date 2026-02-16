@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import Header from "@/components/layout/Header";
 import QueryProvider from "@/components/providers/QueryProvider";
+import AbortErrorGuard from "@/components/common/AbortErrorGuard";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -71,6 +72,7 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <QueryProvider>
+          <AbortErrorGuard />
           <div className="min-h-screen bg-neutral-50 text-neutral-900">
             <Header />
             <main className="mx-auto w-full max-w-5xl px-4 py-8">

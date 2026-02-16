@@ -397,14 +397,16 @@ function JoinPageContent() {
               </div>
             </div>
             <h1 className="text-xl md:text-2xl font-semibold text-center mb-2">
-              교회 자원관리 시스템에 초대합니다.
+              교회 자원관리 시스템
             </h1>
             
             {/* 초대 정보 카드 */}
             <div className="mt-4 space-y-2 rounded-lg border border-neutral-200 bg-neutral-50 p-4 text-sm">
-              <div className="font-medium text-neutral-900 border-b pb-2 mb-2">초대장 내용</div>
               <p className="text-neutral-700 leading-relaxed">
-                {inviterName}님이 {inviteeName}님을 {organizationAndDepartment}의 {roleLabel}으로 초대합니다.
+                <span className="font-semibold text-neutral-900">{inviterName}</span>님께서{" "}
+                <span className="font-semibold text-neutral-900">{inviteeName}</span>님을{" "}
+                <span className="font-semibold text-neutral-900">{organizationAndDepartment}</span>의{" "}
+                <span className="font-semibold text-neutral-900">{roleLabel}</span>로 초대합니다.
               </p>
             </div>
           </div>

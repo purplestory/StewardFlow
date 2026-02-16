@@ -544,8 +544,8 @@ export default function AssetCategoryManager({
                   onDragLeave={handleDragLeave}
                   onDrop={(e) => handleDrop(e, index)}
                   onTouchStart={(e) => handleTouchStart(e, index)}
-                  onTouchMove={(e) => handleTouchMove(e, index)}
-                  onTouchEnd={(e) => handleTouchEnd(e, index)}
+                  onTouchMove={handleTouchMove}
+                  onTouchEnd={handleTouchEnd}
                   className={`flex items-center justify-between p-2 rounded border border-neutral-200 bg-neutral-50 transition-all ${
                     draggedIndex === index
                       ? "opacity-50 cursor-grabbing"

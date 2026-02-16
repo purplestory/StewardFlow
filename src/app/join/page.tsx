@@ -374,6 +374,18 @@ function JoinPageContent() {
 
   // 3. 초대 정보 로드 완료 -> 수락 화면
   if (inviteInfo) {
+    const roleLabel =
+      inviteInfo.role === "admin"
+        ? "관리자"
+        : inviteInfo.role === "manager"
+        ? "부서 관리자"
+        : "일반 사용자";
+    const inviterName = inviteInfo.inviter?.name?.trim() || "초대한 사람";
+    const inviteeName = inviteInfo.name?.trim() || "초대받는 사람";
+    const organizationAndDepartment = `${inviteInfo.organization_name}${
+      inviteInfo.department ? ` ${inviteInfo.department}` : ""
+    }`;
+
     return (
       <div className="flex min-h-screen items-center justify-center p-4 bg-neutral-50">
         <div className="w-full max-w-md space-y-6 rounded-xl border border-neutral-200 bg-white p-8 shadow-sm">
@@ -391,30 +403,9 @@ function JoinPageContent() {
             {/* 초대 정보 카드 */}
             <div className="mt-4 space-y-2 rounded-lg border border-neutral-200 bg-neutral-50 p-4 text-sm">
               <div className="font-medium text-neutral-900 border-b pb-2 mb-2">초대장 내용</div>
-              
-              {inviteInfo.inviter && (
-                <div className="text-neutral-600">
-                  <span className="font-medium mr-2">초대한 사람:</span>
-                  {inviteInfo.inviter.name}
-                  {inviteInfo.inviter.department && ` (${inviteInfo.inviter.department})`}
-                </div>
-              )}
-              
-              <div className="text-neutral-600">
-                <span className="font-medium mr-2">초대받는 기관:</span>
-                {inviteInfo.organization_name}
-              </div>
-              
-              {inviteInfo.department && (
-                <div className="text-neutral-600">
-                  <span className="font-medium mr-2">부서:</span> {inviteInfo.department}
-                </div>
-              )}
-              
-              <div className="text-neutral-600">
-                <span className="font-medium mr-2">권한:</span>
-                {inviteInfo.role === "admin" ? "관리자" : inviteInfo.role === "manager" ? "부서 관리자" : "일반 사용자"}
-              </div>
+              <p className="text-neutral-700 leading-relaxed">
+                {inviterName}님이 {inviteeName}님을 {organizationAndDepartment}의 {roleLabel}으로 초대합니다.
+              </p>
             </div>
           </div>
 

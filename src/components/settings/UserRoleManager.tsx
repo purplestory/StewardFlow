@@ -34,6 +34,12 @@ const roleLabel: Record<ProfileRow["role"], string> = {
   user: "일반 사용자",
 };
 
+const debugLog = (...args: unknown[]) => {
+  if (process.env.NODE_ENV !== "production") {
+    console.log(...args);
+  }
+};
+
 export default function UserRoleManager() {
   const [profiles, setProfiles] = useState<ProfileRow[]>([]);
   const [invites, setInvites] = useState<InviteRow[]>([]);
@@ -101,7 +107,7 @@ export default function UserRoleManager() {
     }
 
     // 프로필 조회 시 더 자세한 디버깅 정보 수집
-    console.log("Loading profile for user:", user.id);
+    debugLog("Loading profile for user:", user.id);
     
     const { data: profileData, error: profileError } = await supabase
       .from("profiles")
@@ -109,7 +115,7 @@ export default function UserRoleManager() {
       .eq("id", user.id)
       .maybeSingle();
 
-    console.log("Profile query result:", {
+    debugLog("Profile query result:", {
       data: profileData,
       error: profileError,
       hasData: !!profileData,
@@ -151,7 +157,7 @@ export default function UserRoleManager() {
       return;
     }
 
-    console.log("Profile loaded successfully:", {
+    debugLog("Profile loaded successfully:", {
       user_id: user.id,
       organization_id: profileData.organization_id,
       role: profileData.role,
@@ -204,15 +210,15 @@ export default function UserRoleManager() {
         const pendingUsersData = allUsersData.filter(user => 
           user.organization_id === null || user.organization_id === undefined
         );
-        console.log("전체 사용자 조회 성공:", allUsersData.length, "명");
-        console.log("전체 사용자 데이터:", allUsersData.map(u => ({
+        debugLog("전체 사용자 조회 성공:", allUsersData.length, "명");
+        debugLog("전체 사용자 데이터:", allUsersData.map(u => ({
           id: u.id,
           name: u.name,
           email: u.email,
           organization_id: u.organization_id
         })));
-        console.log("미승인 사용자:", pendingUsersData.length, "명");
-        console.log("미승인 사용자 데이터:", pendingUsersData.map(u => ({
+        debugLog("미승인 사용자:", pendingUsersData.length, "명");
+        debugLog("미승인 사용자 데이터:", pendingUsersData.map(u => ({
           id: u.id,
           name: u.name,
           email: u.email,
@@ -220,7 +226,7 @@ export default function UserRoleManager() {
         })));
         setPendingUsers(pendingUsersData as ProfileRow[]);
       } else {
-        console.log("전체 사용자 데이터가 null입니다");
+        debugLog("전체 사용자 데이터가 null입니다");
         setPendingUsers([]);
       }
 
@@ -350,8 +356,8 @@ export default function UserRoleManager() {
       console.error("Error loading profiles:", error);
       console.error("Organization ID:", profileData.organization_id);
     } else {
-      console.log("Profiles loaded:", data?.length || 0, "profiles");
-      console.log("Profile IDs:", data?.map((p: ProfileRow) => p.id));
+      debugLog("Profiles loaded:", data?.length || 0, "profiles");
+      debugLog("Profile IDs:", data?.map((p: ProfileRow) => p.id));
     }
 
     // Try to select token, but handle case where column doesn't exist yet
@@ -403,8 +409,8 @@ export default function UserRoleManager() {
       setProfiles([]);
     } else {
       const profilesList = (data ?? []) as ProfileRow[];
-      console.log(`Loaded ${profilesList.length} profiles for organization ${profileData.organization_id}`);
-      console.log("Profiles:", profilesList.map(p => ({ id: p.id, name: p.name, email: p.email, role: p.role })));
+      debugLog(`Loaded ${profilesList.length} profiles for organization ${profileData.organization_id}`);
+      debugLog("Profiles:", profilesList.map(p => ({ id: p.id, name: p.name, email: p.email, role: p.role })));
       setProfiles(profilesList);
       if (profilesList.length === 0) {
         console.warn("No profiles found for organization:", profileData.organization_id);
@@ -1086,7 +1092,7 @@ export default function UserRoleManager() {
     setMessage(null);
     setLoading(true);
 
-    console.log("사용자 승인 시도:", {
+    debugLog("사용자 승인 시도:", {
       userId: approvingUserId,
       organizationId: approvalOrganizationId,
       department: approvalDepartment,
@@ -1116,7 +1122,7 @@ export default function UserRoleManager() {
       return;
     }
 
-    console.log("프로필 업데이트 결과:", updateData);
+    debugLog("프로필 업데이트 결과:", updateData);
 
     // 업데이트 후 검증: 실제로 업데이트되었는지 확인
     const { data: verifyProfile, error: verifyError } = await supabase
@@ -1139,7 +1145,7 @@ export default function UserRoleManager() {
       return;
     }
 
-    console.log("프로필 검증 결과:", verifyProfile);
+    debugLog("프로필 검증 결과:", verifyProfile);
 
     if (verifyProfile.organization_id !== approvalOrganizationId) {
       console.error("프로필 검증 실패: organization_id가 일치하지 않습니다.", {
@@ -1151,7 +1157,7 @@ export default function UserRoleManager() {
       return;
     }
 
-    console.log("프로필 업데이트 성공 확인:", {
+    debugLog("프로필 업데이트 성공 확인:", {
       organization_id: verifyProfile.organization_id,
       department: verifyProfile.department,
       role: verifyProfile.role,

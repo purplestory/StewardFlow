@@ -34,10 +34,10 @@ const roleLabel: Record<Role, string> = {
 };
 
 const statusBadgeClass: Record<ReservationStatus, string> = {
-  pending: "bg-amber-100 text-amber-700",
-  approved: "bg-emerald-100 text-emerald-700",
-  returned: "bg-neutral-100 text-neutral-700",
-  rejected: "bg-rose-100 text-rose-700",
+  pending: "border border-amber-200 bg-amber-100 text-amber-700",
+  approved: "border border-emerald-200 bg-emerald-100 text-emerald-700",
+  returned: "border border-neutral-200 bg-neutral-100 text-neutral-700",
+  rejected: "border border-rose-200 bg-rose-100 text-rose-700",
 };
 
 const statusLabel: Record<ReservationStatus, string> = {
@@ -129,7 +129,7 @@ export function ReservationListCard({
           reservations.map((reservation) => (
             <div
               key={reservation.id}
-              className="rounded-lg border border-neutral-200 bg-neutral-50 p-3"
+              className="rounded-xl border border-neutral-200 bg-white p-3"
             >
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0 flex-1">
@@ -175,4 +175,3 @@ export function ReservationRequestCard({ children }: ReservationRequestCardProps
     </SectionCard>
   );
 }
-

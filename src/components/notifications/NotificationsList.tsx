@@ -325,7 +325,7 @@ export default function NotificationsList() {
         {[1, 2, 3].map((item) => (
           <div
             key={item}
-            className="surface-card p-4"
+            className="rounded-xl border border-neutral-200 bg-white p-4"
           >
             <div className="flex items-start gap-3">
               <div className="h-12 w-12 rounded-lg bg-neutral-100" />
@@ -405,7 +405,7 @@ export default function NotificationsList() {
             type="button"
             onClick={() => setPage((prev) => Math.max(1, prev - 1))}
             disabled={safePage === 1}
-            className="btn-ghost h-auto px-2 py-1 text-xs disabled:opacity-50"
+            className="btn-ghost h-8 px-2 text-xs disabled:opacity-50"
           >
             이전
           </button>
@@ -419,7 +419,7 @@ export default function NotificationsList() {
                 key={entry.key}
                 type="button"
                 onClick={() => setPage(entry.page)}
-                className={`rounded-lg border px-2 py-1 ${
+                className={`h-8 rounded-lg border px-2 text-xs ${
                   entry.page === safePage
                     ? "border-slate-900 bg-slate-900 text-white"
                     : "border-neutral-200 bg-white text-neutral-600 hover:bg-neutral-50"
@@ -433,7 +433,7 @@ export default function NotificationsList() {
             type="button"
             onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))}
             disabled={safePage === totalPages}
-            className="btn-ghost h-auto px-2 py-1 text-xs disabled:opacity-50"
+            className="btn-ghost h-8 px-2 text-xs disabled:opacity-50"
           >
             다음
           </button>

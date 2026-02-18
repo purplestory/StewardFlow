@@ -6,6 +6,12 @@ import Notice from "@/components/common/Notice";
 import { supabase } from "@/lib/supabase";
 import { useUserReservations, type UserReservationItem } from "@/hooks/useReservations";
 import { useUserProfile } from "@/hooks/useAssets";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 const statusLabel: Record<"pending" | "approved" | "returned" | "rejected", string> = {
   pending: "승인 대기",
@@ -249,12 +255,20 @@ export default function ReservationsClient() {
   return (
     <div className="space-y-4">
       {actionMessage && !selectedReservation && (
-        <Notice>{actionMessage}</Notice>
+        <Notice
+          variant={
+            actionMessage.includes("실패") || actionMessage.includes("오류")
+              ? "error"
+              : "success"
+          }
+        >
+          {actionMessage}
+        </Notice>
       )}
       {reservations.map((reservation) => (
         <div
           key={reservation.id}
-          className="surface-card px-4 py-4"
+          className="rounded-xl border border-neutral-200 bg-white px-4 py-4"
         >
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div className="min-w-0 flex-1">
@@ -283,7 +297,7 @@ export default function ReservationsClient() {
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
-                    className="rounded-lg border border-neutral-200 bg-white px-3 py-1.5 text-xs font-medium text-neutral-700 hover:bg-neutral-50"
+                    className="btn-ghost h-8 px-3 text-xs"
                     onClick={() => openDetail(reservation.id)}
                     disabled={updating}
                   >
@@ -291,7 +305,7 @@ export default function ReservationsClient() {
                   </button>
                   <button
                     type="button"
-                    className="rounded-lg border border-rose-200 bg-white px-3 py-1.5 text-xs font-medium text-rose-700 hover:bg-rose-50 disabled:opacity-60"
+                    className="h-8 rounded-lg border border-rose-200 bg-white px-3 text-xs font-medium text-rose-700 hover:bg-rose-50 disabled:opacity-60"
                     onClick={() => handleDeleteFromList(reservation.id)}
                     disabled={updating}
                   >
@@ -301,7 +315,7 @@ export default function ReservationsClient() {
               ) : (
                 <button
                   type="button"
-                  className="rounded-lg border border-neutral-200 bg-white px-3 py-1.5 text-xs font-medium text-neutral-700 hover:bg-neutral-50"
+                  className="btn-ghost h-8 px-3 text-xs"
                   onClick={() => openDetail(reservation.id)}
                 >
                   상세 보기
@@ -312,75 +326,91 @@ export default function ReservationsClient() {
         </div>
       ))}
 
-      {selectedReservation && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-xl rounded-2xl border border-neutral-200 bg-white p-6 shadow-[0_18px_36px_rgba(15,23,42,0.18)]">
-            <h3 className="text-xl font-semibold tracking-tight text-slate-900">대여 신청 상세</h3>
-            <p className="mt-2 text-sm text-neutral-600">
-              자산: {selectedReservation.assets?.name ?? "자산"}
-            </p>
-            <p className="mt-1 text-xs text-neutral-400">
-              신청번호: {shortReservationId(selectedReservation.id)}
-            </p>
-            <div className="mt-3 flex items-center gap-2">
-              <span className="text-sm text-neutral-500">상태</span>
-              <span
-                className={`rounded-full px-2 py-1 text-xs font-medium ${
-                  statusBadgeClass[selectedReservation.status]
-                }`}
-              >
-                {statusLabel[selectedReservation.status]}
-              </span>
+      <Dialog open={Boolean(selectedReservation)} onOpenChange={(open) => !open && closeDetail()}>
+        {selectedReservation && (
+          <DialogContent className="max-w-xl p-0">
+            <DialogHeader className="rounded-t-2xl border-b border-neutral-200 px-6 py-4">
+              <DialogTitle>대여 신청 상세</DialogTitle>
+            </DialogHeader>
+
+            <div className="space-y-4 px-6 py-4">
+              <div>
+                <p className="text-sm text-neutral-600">
+                  자산: {selectedReservation.assets?.name ?? "자산"}
+                </p>
+                <p className="mt-1 text-xs text-neutral-400">
+                  신청번호: {shortReservationId(selectedReservation.id)}
+                </p>
+                <div className="mt-3 flex items-center gap-2">
+                  <span className="text-sm text-neutral-500">상태</span>
+                  <span
+                    className={`rounded-full px-2 py-1 text-xs font-medium ${
+                      statusBadgeClass[selectedReservation.status]
+                    }`}
+                  >
+                    {statusLabel[selectedReservation.status]}
+                  </span>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <label className="flex flex-col gap-2">
+                  <span className="text-sm font-medium text-neutral-700">시작일시</span>
+                  <input
+                    type="datetime-local"
+                    className="form-input"
+                    value={draftStartDate}
+                    onChange={(event) => setDraftStartDate(event.target.value)}
+                    disabled={selectedReservation.status !== "pending" || updating}
+                  />
+                </label>
+                <label className="flex flex-col gap-2">
+                  <span className="text-sm font-medium text-neutral-700">종료일시</span>
+                  <input
+                    type="datetime-local"
+                    className="form-input"
+                    value={draftEndDate}
+                    onChange={(event) => setDraftEndDate(event.target.value)}
+                    disabled={selectedReservation.status !== "pending" || updating}
+                  />
+                </label>
+                <label className="flex flex-col gap-2">
+                  <span className="text-sm font-medium text-neutral-700">사용 목적 / 메모</span>
+                  <textarea
+                    className="form-textarea"
+                    value={draftNote}
+                    onChange={(event) => setDraftNote(event.target.value)}
+                    disabled={selectedReservation.status !== "pending" || updating}
+                  />
+                </label>
+              </div>
+
+              {selectedReservation.status !== "pending" && (
+                <p className="text-xs text-neutral-500">
+                  승인 대기 상태에서만 신청 내용을 수정/취소할 수 있습니다.
+                </p>
+              )}
+
+              {actionMessage && (
+                <Notice
+                  variant={
+                    actionMessage.includes("실패") || actionMessage.includes("오류")
+                      ? "error"
+                      : "success"
+                  }
+                  className="p-3 text-left text-sm"
+                >
+                  {actionMessage}
+                </Notice>
+              )}
             </div>
 
-            <div className="mt-4 space-y-3">
-              <label className="flex flex-col gap-2">
-                <span className="text-sm font-medium text-neutral-700">시작일시</span>
-                <input
-                  type="datetime-local"
-                  className="form-input"
-                  value={draftStartDate}
-                  onChange={(event) => setDraftStartDate(event.target.value)}
-                  disabled={selectedReservation.status !== "pending" || updating}
-                />
-              </label>
-              <label className="flex flex-col gap-2">
-                <span className="text-sm font-medium text-neutral-700">종료일시</span>
-                <input
-                  type="datetime-local"
-                  className="form-input"
-                  value={draftEndDate}
-                  onChange={(event) => setDraftEndDate(event.target.value)}
-                  disabled={selectedReservation.status !== "pending" || updating}
-                />
-              </label>
-              <label className="flex flex-col gap-2">
-                <span className="text-sm font-medium text-neutral-700">사용 목적 / 메모</span>
-                <textarea
-                  className="form-textarea"
-                  value={draftNote}
-                  onChange={(event) => setDraftNote(event.target.value)}
-                  disabled={selectedReservation.status !== "pending" || updating}
-                />
-              </label>
-            </div>
-
-            {selectedReservation.status !== "pending" && (
-              <p className="mt-3 text-xs text-neutral-500">
-                승인 대기 상태에서만 신청 내용을 수정/취소할 수 있습니다.
-              </p>
-            )}
-
-            {actionMessage && (
-              <p className="mt-3 text-sm text-neutral-700">{actionMessage}</p>
-            )}
-
-            <div className="mt-5 flex flex-wrap justify-end gap-2">
+            <div className="flex flex-wrap justify-end gap-2 rounded-b-2xl border-t border-neutral-200 bg-neutral-50 px-6 py-4">
               {selectedReservation.status === "pending" && (
                 <>
                   <button
                     type="button"
-                    className="rounded-lg border border-rose-200 px-3 py-2 text-sm font-medium text-rose-700 hover:bg-rose-50 disabled:opacity-60"
+                    className="h-10 rounded-xl border border-rose-200 px-3 text-sm font-medium text-rose-700 hover:bg-rose-50 disabled:opacity-60"
                     onClick={handleCancel}
                     disabled={updating}
                   >
@@ -405,9 +435,9 @@ export default function ReservationsClient() {
                 닫기
               </button>
             </div>
-          </div>
-        </div>
-      )}
+          </DialogContent>
+        )}
+      </Dialog>
     </div>
   );
 }

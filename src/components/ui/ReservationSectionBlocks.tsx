@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 import ReservationCalendar from "@/components/assets/ReservationCalendar";
 import SectionCard from "@/components/ui/SectionCard";
+import Notice from "@/components/common/Notice";
 
 type ReservationStatus = "pending" | "approved" | "returned" | "rejected";
 
@@ -92,7 +93,7 @@ export function ReservationCalendarCard({
       title="예약 캘린더"
       description="날짜를 선택하면 예약 신청 폼에 자동 반영됩니다."
     >
-      <p className="mt-2 text-xs text-neutral-500">
+      <p className="chip-muted mt-1">
         승인 필요 권한: {roleLabel[requiredRole]}
       </p>
       <div className="mt-4">
@@ -122,14 +123,12 @@ export function ReservationListCard({
     >
       <div className="mt-4 max-h-[500px] space-y-2 overflow-y-auto">
         {reservations.length === 0 ? (
-          <p className="py-8 text-center text-sm text-neutral-500">
-            예약 내역이 없습니다.
-          </p>
+          <Notice className="py-8">예약 내역이 없습니다.</Notice>
         ) : (
           reservations.map((reservation) => (
             <div
               key={reservation.id}
-              className="rounded-xl border border-neutral-200 bg-white p-3"
+              className="rounded-2xl border border-neutral-200 bg-neutral-50/70 p-3"
             >
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0 flex-1">
@@ -163,13 +162,19 @@ export function ReservationListCard({
 
 type ReservationRequestCardProps = {
   children: ReactNode;
+  title?: string;
+  description?: string;
 };
 
-export function ReservationRequestCard({ children }: ReservationRequestCardProps) {
+export function ReservationRequestCard({
+  children,
+  title = "예약 신청",
+  description = "날짜 선택 및 사유 입력 후 신청합니다.",
+}: ReservationRequestCardProps) {
   return (
     <SectionCard
-      title="예약 신청"
-      description="날짜 선택 및 사유 입력 후 신청합니다."
+      title={title}
+      description={description}
     >
       <div className="mt-4">{children}</div>
     </SectionCard>

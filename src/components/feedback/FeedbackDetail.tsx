@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import Link from "next/link";
+import Notice from "@/components/common/Notice";
 
 type Feedback = {
   id: string;
@@ -38,6 +39,14 @@ const statusLabels: Record<string, string> = {
   rejected: "거부됨",
 };
 
+const statusBadgeStyles: Record<string, string> = {
+  new: "border-blue-200 bg-blue-100 text-blue-700",
+  reviewing: "border-amber-200 bg-amber-100 text-amber-700",
+  in_progress: "border-violet-200 bg-violet-100 text-violet-700",
+  completed: "border-emerald-200 bg-emerald-100 text-emerald-700",
+  rejected: "border-rose-200 bg-rose-100 text-rose-700",
+};
+
 const statusOptions = [
   { value: "new", label: "새로 작성됨" },
   { value: "reviewing", label: "검토 중" },
@@ -45,6 +54,16 @@ const statusOptions = [
   { value: "completed", label: "완료" },
   { value: "rejected", label: "거부됨" },
 ];
+
+function formatDateTime(dateString: string) {
+  return new Date(dateString).toLocaleDateString("ko-KR", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
 
 export default function FeedbackDetail({ feedbackId }: { feedbackId: string }) {
   const router = useRouter();
@@ -230,8 +249,8 @@ export default function FeedbackDetail({ feedbackId }: { feedbackId: string }) {
 
   if (!feedback) {
     return (
-      <div className="rounded-lg border border-neutral-200 bg-white p-8 text-center">
-        <p className="text-neutral-500">피드백을 찾을 수 없습니다.</p>
+      <div className="space-y-4">
+        <Notice>피드백을 찾을 수 없습니다.</Notice>
         <Link href="/feedback" className="mt-4 inline-block text-sm text-slate-600 hover:text-slate-900">
           목록으로 돌아가기
         </Link>
@@ -242,23 +261,18 @@ export default function FeedbackDetail({ feedbackId }: { feedbackId: string }) {
   const canEdit = currentUserRole === "admin" || currentUserRole === "manager";
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <Link
-          href="/feedback"
-          className="text-sm text-neutral-600 hover:text-neutral-900"
-        >
-          ← 목록으로
-        </Link>
-      </div>
-
-      <div className="rounded-lg border border-neutral-200 bg-white p-6">
+    <div className="space-y-4">
+      <div className="surface-card p-5 md:p-6">
         <div className="space-y-4">
           <div className="flex items-center gap-2">
             <span className="text-xs font-medium text-neutral-500">
               {categoryLabels[feedback.category] || feedback.category}
             </span>
-            <span className="text-xs font-medium px-2 py-0.5 rounded bg-neutral-100 text-neutral-700">
+            <span
+              className={`rounded-full border px-2 py-0.5 text-xs font-medium ${
+                statusBadgeStyles[feedback.status] || "border-neutral-200 bg-neutral-100 text-neutral-700"
+              }`}
+            >
               {statusLabels[feedback.status] || feedback.status}
             </span>
           </div>
@@ -268,18 +282,10 @@ export default function FeedbackDetail({ feedbackId }: { feedbackId: string }) {
           <div className="text-sm text-neutral-500">
             <span>{feedback.author_name || feedback.author_email || "익명"}</span>
             <span className="mx-2">•</span>
-            <span>
-              {new Date(feedback.created_at).toLocaleDateString("ko-KR", {
-                year: "numeric",
-                month: "long",
-                day: "numeric",
-                hour: "2-digit",
-                minute: "2-digit",
-              })}
-            </span>
+            <span>{formatDateTime(feedback.created_at)}</span>
           </div>
 
-          <div className="pt-4 border-t border-neutral-200">
+          <div className="border-t border-neutral-200 pt-4">
             <p className="text-neutral-700 whitespace-pre-wrap">{feedback.content}</p>
           </div>
         </div>
@@ -287,15 +293,15 @@ export default function FeedbackDetail({ feedbackId }: { feedbackId: string }) {
 
       {/* 관리자 답변 섹션 */}
       {canEdit && (
-        <div className="rounded-lg border border-neutral-200 bg-white p-6">
-          <h2 className="text-lg font-semibold text-neutral-900 mb-4">관리자 답변</h2>
+        <div className="surface-card p-5 md:p-6">
+          <h2 className="mb-4 text-lg font-semibold text-neutral-900">관리자 답변</h2>
 
           {message && (
             <div
-              className={`mb-4 rounded-lg p-3 text-sm ${
+              className={`mb-4 rounded-xl border px-4 py-3 text-sm ${
                 message.includes("실패")
-                  ? "bg-rose-50 text-rose-700"
-                  : "bg-emerald-50 text-emerald-700"
+                  ? "border-rose-200 bg-rose-50 text-rose-700"
+                  : "border-emerald-200 bg-emerald-50 text-emerald-700"
               }`}
             >
               {message}
@@ -340,21 +346,13 @@ export default function FeedbackDetail({ feedbackId }: { feedbackId: string }) {
             </div>
 
             {feedback.admin_response && feedback.admin_response_at && (
-              <div className="rounded-lg bg-neutral-50 p-4">
-                <div className="text-sm text-neutral-600 mb-2">
+              <div className="rounded-xl border border-neutral-200 bg-neutral-50 p-4">
+                <div className="mb-2 text-sm text-neutral-600">
                   <span className="font-medium">
                     {feedback.responded_by_name || "관리자"}
                   </span>
                   <span className="mx-2">•</span>
-                  <span>
-                    {new Date(feedback.admin_response_at).toLocaleDateString("ko-KR", {
-                      year: "numeric",
-                      month: "long",
-                      day: "numeric",
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
-                  </span>
+                  <span>{formatDateTime(feedback.admin_response_at)}</span>
                 </div>
                 <p className="text-neutral-700 whitespace-pre-wrap">
                   {feedback.admin_response}
@@ -362,36 +360,30 @@ export default function FeedbackDetail({ feedbackId }: { feedbackId: string }) {
               </div>
             )}
 
-            <button
-              type="button"
-              onClick={handleUpdate}
-              disabled={submitting}
-              className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {submitting ? "저장 중..." : "저장"}
-            </button>
+            <div className="flex justify-end">
+              <button
+                type="button"
+                onClick={handleUpdate}
+                disabled={submitting}
+                className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {submitting ? "저장 중..." : "저장"}
+              </button>
+            </div>
           </div>
         </div>
       )}
 
       {/* 일반 사용자에게 관리자 답변 표시 */}
       {!canEdit && feedback.admin_response && (
-        <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-6">
-          <h2 className="text-lg font-semibold text-emerald-900 mb-4">관리자 답변</h2>
-          <div className="text-sm text-emerald-700 mb-2">
+        <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5 md:p-6">
+          <h2 className="mb-4 text-lg font-semibold text-emerald-900">관리자 답변</h2>
+          <div className="mb-2 text-sm text-emerald-700">
             <span className="font-medium">
               {feedback.responded_by_name || "관리자"}
             </span>
             <span className="mx-2">•</span>
-            <span>
-              {new Date(feedback.admin_response_at!).toLocaleDateString("ko-KR", {
-                year: "numeric",
-                month: "long",
-                day: "numeric",
-                hour: "2-digit",
-                minute: "2-digit",
-              })}
-            </span>
+            <span>{formatDateTime(feedback.admin_response_at!)}</span>
           </div>
           <p className="text-emerald-800 whitespace-pre-wrap">
             {feedback.admin_response}

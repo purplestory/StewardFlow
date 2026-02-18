@@ -89,7 +89,7 @@ export default function AssetReservationSection({
         <ReservationListCard resourceLabel="물품" reservations={sortedReservations} />
       </div>
 
-      <ReservationRequestCard>
+      <ReservationRequestCard title="대여 신청">
         <ReservationForm
           assetId={assetId}
           presetStartDate={startDate}

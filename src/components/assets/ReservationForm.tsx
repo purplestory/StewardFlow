@@ -5,6 +5,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { createReservation } from "@/actions/booking-actions";
 import { supabase } from "@/lib/supabase";
 import { formatRecurrenceDescription } from "@/lib/recurrence";
+import Notice from "@/components/common/Notice";
 import {
   Dialog,
   DialogClose,
@@ -115,6 +116,7 @@ export default function ReservationForm({
 
   const dayNames = ["일", "월", "화", "수", "목", "금", "토"];
   const formDisabled = isDisabled || isPending;
+  const submitLabel = resourceType === "space" ? "예약 신청" : "대여 신청";
   const reservationQueryKey =
     resourceType === "space"
       ? "spaceReservations"
@@ -135,10 +137,16 @@ export default function ReservationForm({
   return (
     <form
       action={formAction}
-      className="space-y-4"
+      className="space-y-5"
       onSubmit={() => setDismissedSuccessMessage(null)}
     >
-      <input type="hidden" name="asset_id" value={assetId} />
+      {resourceType === "space" ? (
+        <input type="hidden" name="space_id" value={assetId} />
+      ) : resourceType === "vehicle" ? (
+        <input type="hidden" name="vehicle_id" value={assetId} />
+      ) : (
+        <input type="hidden" name="asset_id" value={assetId} />
+      )}
       <input type="hidden" name="resource_type" value={resourceType} />
       {authAccessToken && (
         <input type="hidden" name="auth_access_token" value={authAccessToken} />
@@ -228,7 +236,7 @@ export default function ReservationForm({
           />
 
           {showRecurrence && recurrenceType !== "none" && (
-            <div className="space-y-4 rounded-xl border border-neutral-200 bg-neutral-50 p-4">
+            <div className="space-y-4 rounded-2xl border border-neutral-200 bg-neutral-50 p-4">
               <div className="space-y-3">
                 <div className="grid gap-3 md:grid-cols-2">
                   <label className="flex flex-col gap-2">
@@ -238,7 +246,7 @@ export default function ReservationForm({
                       type="number"
                       min="1"
                       value={recurrenceInterval}
-                      onChange={(e) => setRecurrenceInterval(parseInt(e.target.value) || 1)}
+                      onChange={(e) => setRecurrenceInterval(Number.parseInt(e.target.value, 10) || 1)}
                       className="form-input"
                       placeholder="1"
                       disabled={formDisabled}
@@ -276,7 +284,7 @@ export default function ReservationForm({
                           disabled={formDisabled}
                           className={`h-10 w-10 rounded-xl border text-sm transition-colors ${
                             selectedDaysOfWeek.includes(index)
-                              ? "border-black bg-black text-white"
+                              ? "border-slate-900 bg-slate-900 text-white"
                               : "border-neutral-300 bg-white text-neutral-700 hover:border-neutral-400"
                           } disabled:cursor-not-allowed disabled:opacity-50`}
                         >
@@ -301,7 +309,7 @@ export default function ReservationForm({
                       min="1"
                       max="31"
                       value={dayOfMonth}
-                      onChange={(e) => setDayOfMonth(parseInt(e.target.value) || 1)}
+                      onChange={(e) => setDayOfMonth(Number.parseInt(e.target.value, 10) || 1)}
                       className="form-input"
                       disabled={formDisabled}
                     />
@@ -354,31 +362,35 @@ export default function ReservationForm({
             name="note"
             className="form-textarea min-h-[120px]"
             placeholder="예: 주일 예배 음향 지원"
+            disabled={formDisabled}
           />
         </label>
       </fieldset>
 
       {isDisabled && disabledReason && (
-        <p className="text-sm text-amber-600" role="status">
-          {disabledReason}
-        </p>
+        <div role="status">
+          <Notice variant="warning" className="p-3 text-left">
+            {disabledReason}
+          </Notice>
+        </div>
       )}
 
       {state.message && !state.ok && (
-        <p
-          className="text-sm text-rose-600"
-          role="status"
-        >
-          {state.message}
-        </p>
+        <div role="status">
+          <Notice variant="error" className="p-3 text-left">
+            {state.message}
+          </Notice>
+        </div>
       )}
 
-      <button
-        disabled={formDisabled}
-        className="btn-primary w-full"
-      >
-        {isPending ? "신청 처리 중..." : "대여 신청"}
-      </button>
+      <div className="flex justify-end">
+        <button
+          disabled={formDisabled}
+          className="btn-primary w-full sm:w-auto sm:min-w-[140px]"
+        >
+          {isPending ? "신청 처리 중..." : submitLabel}
+        </button>
+      </div>
 
       <Dialog
         open={showSuccessModal && state.ok}

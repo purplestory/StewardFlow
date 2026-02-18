@@ -67,7 +67,7 @@ export default function SpaceReservationSection({
         <ReservationListCard resourceLabel="공간" reservations={sortedReservations} />
       </div>
 
-      <ReservationRequestCard>
+      <ReservationRequestCard title="예약 신청">
         <ReservationForm
           assetId={spaceId}
           resourceType="space"

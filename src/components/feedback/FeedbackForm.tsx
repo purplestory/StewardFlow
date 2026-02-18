@@ -91,13 +91,13 @@ export default function FeedbackForm() {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form onSubmit={handleSubmit} className="space-y-5">
       {message && (
         <div
-          className={`rounded-lg p-3 text-sm ${
+          className={`rounded-xl border px-4 py-3 text-sm ${
             message.includes("실패") || message.includes("필요")
-              ? "bg-rose-50 text-rose-700"
-              : "bg-emerald-50 text-emerald-700"
+              ? "border-rose-200 bg-rose-50 text-rose-700"
+              : "border-emerald-200 bg-emerald-50 text-emerald-700"
           }`}
         >
           {message}
@@ -158,18 +158,18 @@ export default function FeedbackForm() {
         </p>
       </div>
 
-      <div className="flex gap-3">
+      <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
         <button
           type="submit"
           disabled={submitting}
-          className="btn-primary flex-1 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed sm:min-w-[140px]"
         >
           {submitting ? "제출 중..." : "피드백 제출"}
         </button>
         <button
           type="button"
           onClick={() => router.back()}
-          className="btn-ghost"
+          className="btn-secondary"
           disabled={submitting}
         >
           취소

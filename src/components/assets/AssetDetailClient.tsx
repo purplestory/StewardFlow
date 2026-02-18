@@ -7,10 +7,19 @@ import ImageSlider from "@/components/common/ImageSlider";
 import AssetReservationSection from "@/components/assets/AssetReservationSection";
 import AssetAdminActions from "@/components/assets/AssetAdminActions";
 import AssetTransferRequest from "@/components/assets/AssetTransferRequest";
-import { useAsset, useAssetReservations, useUserRole, useApprovalPolicies } from "@/hooks/useAssets";
+import {
+  useAsset,
+  useAssetReservations,
+  useUserRole,
+  useApprovalPolicies,
+} from "@/hooks/useAssets";
 import Notice from "@/components/common/Notice";
 import PageHero from "@/components/ui/PageHero";
 import SectionCard from "@/components/ui/SectionCard";
+import ResourceStatusBadge from "@/components/ui/ResourceStatusBadge";
+import ResourceInfoGrid, {
+  type ResourceInfoItem,
+} from "@/components/ui/ResourceDetailInfo";
 
 const assetStatusLabel: Record<
   "available" | "rented" | "repair" | "lost" | "retired",
@@ -22,6 +31,7 @@ const assetStatusLabel: Record<
   lost: "분실",
   retired: "불용품",
 };
+
 const mobilityLabel: Record<"fixed" | "movable", string> = {
   fixed: "고정",
   movable: "이동",
@@ -47,45 +57,57 @@ function formatDateTime(dateString: string): string {
   });
 }
 
+function EditIcon() {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      fill="none"
+      viewBox="0 0 24 24"
+      strokeWidth={1.5}
+      stroke="currentColor"
+      className="h-5 w-5"
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10"
+      />
+    </svg>
+  );
+}
+
 export default function AssetDetailClient() {
   const params = useParams();
   const id = (params?.id as string) || null;
 
-  // id가 없으면 404
   if (!id) {
     notFound();
   }
 
-  // React Query를 사용한 데이터 페칭
   const { data: asset, isLoading: assetLoading, error: assetError } = useAsset(id);
   const { data: reservations = [] } = useAssetReservations(asset?.id ?? null);
   const { data: userRoleData } = useUserRole();
   const { data: policyData } = useApprovalPolicies(asset?.organization_id ?? null);
 
-  // Required role 계산
   const requiredRole = useMemo(() => {
     if (!policyData || !asset) return "manager" as const;
 
-    const department =
-      asset.owner_scope === "organization" ? null : asset.owner_department;
-    const exactPolicy = policyData.find(
-      (policy) => policy.department === department
-    );
-    const fallbackPolicy = policyData.find(
-      (policy) => policy.department === null
-    );
+    const department = asset.owner_scope === "organization" ? null : asset.owner_department;
+    const exactPolicy = policyData.find((policy) => policy.department === department);
+    const fallbackPolicy = policyData.find((policy) => policy.department === null);
+
     return (
-      (exactPolicy?.required_role ??
-        fallbackPolicy?.required_role ??
-        "manager") as "admin" | "manager" | "user"
+      (exactPolicy?.required_role ?? fallbackPolicy?.required_role ?? "manager") as
+        | "admin"
+        | "manager"
+        | "user"
     );
   }, [policyData, asset]);
 
-  const loading = assetLoading;
   const userRole = userRoleData?.role ?? null;
   const userDepartment = userRoleData?.department ?? null;
 
-  if (loading) {
+  if (assetLoading) {
     return (
       <section className="space-y-6">
         <SectionCard>
@@ -113,21 +135,72 @@ export default function AssetDetailClient() {
     notFound();
   }
 
-  const usableUntilLabel = asset.usable_until
-    ? formatDate(asset.usable_until)
-    : "미등록";
-  const purchaseDateLabel = asset.purchase_date
-    ? formatDate(asset.purchase_date)
-    : "미등록";
+  const canEdit =
+    userRole === "admin" ||
+    (userRole === "manager" &&
+      (asset.owner_scope === "organization" || asset.owner_department === userDepartment));
+
+  const editHref = canEdit ? `/assets/${asset.short_id || asset.id}/edit` : null;
+
+  const isUnavailableConfig =
+    asset.status === "available" && (asset.loanable === false || asset.mobility === "fixed");
+
+  const statusLabel = isUnavailableConfig ? "대여 불가" : assetStatusLabel[asset.status];
+  const statusTone = isUnavailableConfig ? "repair" : asset.status;
+
+  const usableUntilLabel = asset.usable_until ? formatDate(asset.usable_until) : "미등록";
+  const purchaseDateLabel = asset.purchase_date ? formatDate(asset.purchase_date) : "미등록";
   const purchasePriceLabel = asset.purchase_price
     ? `${asset.purchase_price.toLocaleString("ko-KR")}원`
     : "미등록";
-  const usefulLifeLabel = asset.useful_life_years
-    ? `${asset.useful_life_years}년`
-    : "미등록";
-  const lastUsedLabel = asset.last_used_at
-    ? formatDateTime(asset.last_used_at)
-    : "미등록";
+  const usefulLifeLabel = asset.useful_life_years ? `${asset.useful_life_years}년` : "미등록";
+  const lastUsedLabel = asset.last_used_at ? formatDateTime(asset.last_used_at) : "미등록";
+
+  const infoItems: ResourceInfoItem[] = [
+    {
+      label: "소유 범위",
+      value: asset.owner_scope === "organization" ? "기관 공용" : "부서 소유",
+    },
+    {
+      label: "소유 부서",
+      value: asset.owner_department || "미등록",
+      hidden: asset.owner_scope !== "department",
+    },
+    {
+      label: "설치(보관) 장소",
+      value: asset.location || "미등록",
+    },
+    {
+      label: "수량",
+      value: asset.quantity,
+    },
+    {
+      label: "설치 형태",
+      value: asset.mobility ? mobilityLabel[asset.mobility] : mobilityLabel.movable,
+    },
+    {
+      label: "사용 기한",
+      value: usableUntilLabel,
+    },
+    {
+      label: "구입일",
+      value: purchaseDateLabel,
+    },
+    {
+      label: "구입 금액",
+      value: purchasePriceLabel,
+    },
+    {
+      label: "사용 수명",
+      value: usefulLifeLabel,
+    },
+    {
+      label: "최종 사용",
+      value: lastUsedLabel,
+      hidden: !asset.last_used_at,
+    },
+  ];
+
   const tags = asset.tags ?? [];
 
   return (
@@ -137,219 +210,56 @@ export default function AssetDetailClient() {
         description="물품의 상태, 소유 정보, 예약 현황을 확인할 수 있습니다."
       />
 
-      <SectionCard bodyClassName="p-6">
-      <div className="flex flex-col gap-6 md:flex-row">
-        {/* 이미지 섹션 - 모바일에서는 위에, 데스크톱에서는 왼쪽 */}
-        <div className="w-full md:w-1/2">
-          <ImageSlider
-            images={
-              (asset.image_urls && asset.image_urls.length > 0)
-                ? asset.image_urls
-                : asset.image_url
-                ? [asset.image_url]
-                : []
-            }
-            alt={asset.name}
-          />
-        </div>
-        
-        {/* 텍스트 정보 섹션 - 모바일에서는 아래에, 데스크톱에서는 오른쪽 */}
-        <div className="w-full space-y-4 md:w-1/2">
-          {/* 상태 뱃지 - 제목 위에 표시 */}
-          <div className="flex items-center gap-2">
-            <span
-              className={`inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium ${
-                asset.status === "available"
-                  ? // 대여 불가 설정이거나 고정 설치된 경우는 다른 색상으로 표시
-                    (asset.loanable === false || asset.mobility === "fixed")
-                    ? "bg-amber-500 text-white"
-                    : "bg-emerald-500 text-white"
-                  : asset.status === "rented"
-                  ? "bg-blue-500 text-white"
-                  : asset.status === "repair"
-                  ? "bg-amber-500 text-white"
-                  : asset.status === "lost"
-                  ? "bg-rose-500 text-white"
-                  : asset.status === "retired"
-                  ? "bg-neutral-600 text-white"
-                  : "bg-neutral-100 text-neutral-700"
-              }`}
-            >
-              {asset.status === "available" && 
-               (asset.loanable === false || asset.mobility === "fixed")
-                ? "대여 불가"
-                : assetStatusLabel[asset.status]}
-            </span>
+      <SectionCard bodyClassName="p-5 md:p-6">
+        <div className="flex flex-col gap-6 md:flex-row">
+          <div className="w-full md:w-1/2">
+            <ImageSlider
+              images={
+                asset.image_urls && asset.image_urls.length > 0
+                  ? asset.image_urls
+                  : asset.image_url
+                    ? [asset.image_url]
+                    : []
+              }
+              alt={asset.name}
+            />
           </div>
 
-          <div className="flex flex-col gap-3">
+          <div className="w-full space-y-4 md:w-1/2">
+            <div className="flex items-center gap-2">
+              <ResourceStatusBadge
+                status={statusTone as "available" | "rented" | "repair" | "lost" | "retired"}
+                label={statusLabel}
+              />
+            </div>
+
             <div className="flex items-start gap-2">
               <div className="flex-1">
-                <h1 className="text-2xl font-bold text-neutral-900 break-words">{asset.name}</h1>
-                {asset.model_name && (
-                  <p className="text-sm text-neutral-500 mt-1">{asset.model_name}</p>
-                )}
+                <h1 className="break-words text-2xl font-bold text-neutral-900">{asset.name}</h1>
+                {asset.model_name ? (
+                  <p className="mt-1 text-sm text-neutral-500">{asset.model_name}</p>
+                ) : null}
               </div>
-              {(() => {
-                // Admin은 항상 수정 가능
-                if (userRole === "admin") {
-                  return (
-                    <Link
-                      href={`/assets/${asset.short_id || asset.id}/edit`}
-                      className="icon-button"
-                      title="수정"
-                    >
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        strokeWidth={1.5}
-                        stroke="currentColor"
-                        className="w-5 h-5"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10"
-                        />
-                      </svg>
-                    </Link>
-                  );
-                }
-                // Manager는 자신의 부서 소유이거나 기관 공용인 경우 수정 가능
-                if (userRole === "manager") {
-                  const canEdit = 
-                    asset.owner_scope === "organization" ||
-                    (asset.owner_scope === "department" && asset.owner_department === userDepartment);
-                  if (canEdit) {
-                    return (
-                      <Link
-                        href={`/assets/${asset.short_id || asset.id}/edit`}
-                        className="icon-button"
-                        title="수정"
-                      >
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          strokeWidth={1.5}
-                          stroke="currentColor"
-                          className="w-5 h-5"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10"
-                          />
-                        </svg>
-                      </Link>
-                    );
-                  }
-                }
-                return null;
-              })()}
+              {editHref ? (
+                <Link href={editHref} className="icon-button" title="수정">
+                  <EditIcon />
+                </Link>
+              ) : null}
             </div>
+
+            <ResourceInfoGrid items={infoItems} />
+
+            {tags.length > 0 ? (
+              <div className="flex flex-wrap gap-1.5">
+                {tags.map((tag) => (
+                  <span key={tag} className="chip-muted">
+                    {tag}
+                  </span>
+                ))}
+              </div>
+            ) : null}
           </div>
-          
-          <div className="space-y-3">
-            <div className="flex items-start gap-3">
-              <span className="min-w-[100px] text-sm font-semibold text-neutral-700">
-                소유 범위
-              </span>
-              <span className="text-sm text-neutral-600">
-                {asset.owner_scope === "organization" ? "기관 공용" : "부서 소유"}
-              </span>
-            </div>
-            {asset.owner_scope === "department" && (
-              <div className="flex items-start gap-3">
-                <span className="min-w-[100px] text-sm font-semibold text-neutral-700">
-                  소유 부서
-                </span>
-                <span className="text-sm text-neutral-600">
-                  {asset.owner_department}
-                </span>
-              </div>
-            )}
-            
-            <div className="flex items-start gap-3">
-              <span className="text-sm font-semibold text-neutral-700 min-w-[100px]">
-                설치(보관) 장소
-              </span>
-              <span className="text-sm text-neutral-600">
-                {asset.location || "미등록"}
-              </span>
-            </div>
-            
-            <div className="flex items-start gap-3">
-              <span className="text-sm font-semibold text-neutral-700 min-w-[100px]">
-                수량
-              </span>
-              <span className="text-sm text-neutral-600">{asset.quantity}</span>
-            </div>
-            
-            <div className="flex items-start gap-3">
-              <span className="text-sm font-semibold text-neutral-700 min-w-[100px]">
-                설치 형태
-              </span>
-              <span className="text-sm text-neutral-600">
-                {asset.mobility
-                  ? mobilityLabel[asset.mobility]
-                  : mobilityLabel.movable}
-              </span>
-            </div>
-            
-            <div className="flex items-start gap-3">
-              <span className="text-sm font-semibold text-neutral-700 min-w-[100px]">
-                사용 기한
-              </span>
-              <span className="text-sm text-neutral-600">{usableUntilLabel}</span>
-            </div>
-            
-            <div className="flex items-start gap-3">
-              <span className="text-sm font-semibold text-neutral-700 min-w-[100px]">
-                구입일
-              </span>
-              <span className="text-sm text-neutral-600">{purchaseDateLabel}</span>
-            </div>
-            
-            <div className="flex items-start gap-3">
-              <span className="text-sm font-semibold text-neutral-700 min-w-[100px]">
-                구입 금액
-              </span>
-              <span className="text-sm text-neutral-600">{purchasePriceLabel}</span>
-            </div>
-            
-            <div className="flex items-start gap-3">
-              <span className="text-sm font-semibold text-neutral-700 min-w-[100px]">
-                사용 수명
-              </span>
-              <span className="text-sm text-neutral-600">{usefulLifeLabel}</span>
-            </div>
-            
-            {asset.last_used_at && (
-              <div className="flex items-start gap-3">
-                <span className="text-sm font-semibold text-neutral-700 min-w-[100px]">
-                  최종 사용
-                </span>
-                <span className="text-sm text-neutral-600">{lastUsedLabel}</span>
-              </div>
-            )}
-          </div>
-          
-          {tags.length > 0 && (
-            <div className="flex flex-wrap gap-1.5">
-              {tags.map((tag) => (
-                <span
-                  key={tag}
-                  className="inline-flex items-center rounded-full border border-neutral-200 bg-neutral-50 px-2 py-0.5 text-xs font-medium text-neutral-700"
-                >
-                  {tag}
-                </span>
-              ))}
-            </div>
-          )}
         </div>
-      </div>
       </SectionCard>
 
       <AssetReservationSection

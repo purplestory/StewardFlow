@@ -342,6 +342,17 @@ input[type="time"] {
   filter: brightness(1.03);
 }
 
+.btn-kakao {
+  @apply inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl px-5 text-sm font-semibold text-black transition-all duration-200;
+  @apply focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2;
+  @apply disabled:cursor-not-allowed disabled:opacity-50;
+  background-color: #fee500;
+}
+
+.btn-kakao:hover {
+  background-color: #fdd835;
+}
+
 /* Shared Surface Styles */
 .surface-panel {
   @apply rounded-2xl border border-neutral-200 bg-white/95 p-6;

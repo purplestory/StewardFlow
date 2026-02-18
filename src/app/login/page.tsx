@@ -114,16 +114,16 @@ function LoginPageContent() {
     <div className="flex min-h-screen items-center justify-center px-4 py-12">
       <div className="w-full max-w-md space-y-6">
         <div className="text-center">
-          <h1 className="text-2xl font-semibold">로그인 / 가입</h1>
-          <p className="text-sm text-neutral-600 mt-2">
+          <h1 className="text-2xl font-semibold tracking-tight text-slate-900">로그인 / 가입</h1>
+          <p className="mt-2 text-sm text-neutral-600">
             카카오톡으로만 로그인할 수 있습니다.
             <br />
             관리자가 보낸 초대 링크가 있어야 가입할 수 있습니다.
           </p>
         </div>
         <AuthCard />
-        <div className="rounded-xl border border-neutral-200 bg-white p-6">
-          <p className="font-medium text-sm mb-4">초대 링크로 가입하기</p>
+        <div className="surface-card p-5 md:p-6">
+          <p className="mb-4 text-sm font-medium text-slate-900">초대 링크로 가입하기</p>
           <form onSubmit={handleInviteTokenSubmit} className="space-y-3">
             <input
               type="text"
@@ -134,13 +134,15 @@ function LoginPageContent() {
             />
             <button
               type="submit"
-              className="btn-secondary w-full"
+              className="btn-ghost w-full"
             >
               초대 링크로 가입하기
             </button>
           </form>
           {inviteMessage && (
-            <p className="mt-3 text-xs text-red-600">{inviteMessage}</p>
+            <p className="mt-3 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
+              {inviteMessage}
+            </p>
           )}
           <p className="mt-4 text-xs text-neutral-500">
             관리자가 보낸 초대 링크 전체, 또는 토큰을 붙여넣으세요.
@@ -154,7 +156,7 @@ function LoginPageContent() {
 export default function LoginPage() {
   return (
     <Suspense fallback={
-      <div className="flex min-h-screen items-center justify-center bg-white">
+      <div className="flex min-h-screen items-center justify-center bg-neutral-50">
         <div className="text-center">
           <div className="space-y-2">
             <div className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-neutral-300 border-t-neutral-600"></div>

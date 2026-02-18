@@ -289,12 +289,6 @@ export default function AuthCard() {
     try {
       const origin = getOrigin();
       const redirectUrl = `${origin}/auth/callback?next=/`;
-      console.log("Starting Kakao login:", {
-        origin,
-        redirectUrl,
-        windowOrigin: typeof window !== "undefined" ? window.location.origin : "N/A",
-        envUrl: process.env.NEXT_PUBLIC_APP_URL || "not set",
-      });
       
       // OAuth URL 생성 - redirectTo를 명시적으로 설정하고 queryParams에도 추가
       const { data, error } = await supabase.auth.signInWithOAuth({
@@ -316,7 +310,6 @@ export default function AuthCard() {
       }
 
       if (data?.url) {
-        console.log("Redirecting to Kakao:", data.url);
         // iframe 대신 직접 리다이렉트 (카카오톡 로그인은 iframe에서 작동하지 않음)
         window.location.href = data.url;
       } else {
@@ -391,13 +384,13 @@ export default function AuthCard() {
     profile.phone;
 
   return (
-    <div className="rounded-xl border border-neutral-200 bg-white p-6">
+    <div className="surface-card p-5 md:p-6">
       <div className="space-y-3">
         <button
           type="button"
           onClick={handleKakaoSignIn}
           disabled={loading}
-          className="flex w-full items-center justify-center gap-2 h-12 rounded-lg bg-[#FEE500] px-6 text-sm font-semibold text-black transition-all duration-200 hover:bg-[#FDD835] hover:shadow-md active:bg-[#FBC02D] active:shadow-sm focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-[#FEE500] disabled:hover:shadow-none"
+          className="btn-kakao"
         >
           <svg
             width="18"
@@ -415,8 +408,8 @@ export default function AuthCard() {
         </button>
       </div>
 
-        {status.userId && profile && (
-          <form onSubmit={handleProfileUpdate} className="mt-6 space-y-3">
+      {status.userId && profile && (
+        <form onSubmit={handleProfileUpdate} className="mt-6 space-y-3">
           <div className="text-sm font-medium">프로필</div>
           <label className="flex flex-col gap-2">
             <span className="form-label">담당자 이름</span>
@@ -445,7 +438,6 @@ export default function AuthCard() {
               placeholder="010-0000-0000"
             />
           </label>
-          {/* 프로필이 완전히 저장되어 있으면 저장 버튼 숨김 */}
           {!isProfileComplete && (
             <button
               type="submit"
@@ -456,15 +448,22 @@ export default function AuthCard() {
             </button>
           )}
           {isProfileComplete && (
-            <p className="text-xs text-neutral-500 text-center">
+            <p className="text-xs text-center text-neutral-500">
               프로필이 저장되어 있습니다. 정보를 수정하면 저장 버튼이 표시됩니다.
             </p>
           )}
-          </form>
-        )}
+        </form>
+      )}
 
       {message && (
-        <p className="mt-3 text-sm text-neutral-600" role="status">
+        <p
+          className={`mt-3 rounded-xl border px-3 py-2 text-sm ${
+            message.includes("오류") || message.includes("실패")
+              ? "border-rose-200 bg-rose-50 text-rose-700"
+              : "border-emerald-200 bg-emerald-50 text-emerald-700"
+          }`}
+          role="status"
+        >
           {message}
         </p>
       )}

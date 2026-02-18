@@ -320,14 +320,14 @@ function JoinPageContent() {
   if ((!token && isAuthenticated) || (token && !inviteInfo && !loading)) {
     return (
       <div className="flex min-h-screen items-center justify-center p-4 bg-neutral-50">
-        <div className="w-full max-w-md space-y-6 rounded-xl border border-neutral-200 bg-white p-8 shadow-sm">
+        <div className="surface-card w-full max-w-md space-y-6 p-6 md:p-8">
           <div className="text-center">
             <h1 className="text-2xl font-bold text-neutral-900">초대 토큰 입력</h1>
             <p className="mt-2 text-sm text-neutral-600">관리자가 보낸 초대 링크의 토큰을 입력해주세요.</p>
           </div>
 
           {message && (
-            <div className="rounded-lg bg-red-50 p-4 text-sm text-red-600 border border-red-100">
+            <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">
               {message}
             </div>
           )}
@@ -339,7 +339,7 @@ function JoinPageContent() {
                 type="text"
                 value={token}
                 onChange={(e) => setToken(e.target.value)}
-                className="w-full rounded-lg border border-neutral-200 px-3 py-2"
+                className="form-input w-full"
                 placeholder="초대 토큰을 입력하세요"
                 required
               />
@@ -362,7 +362,7 @@ function JoinPageContent() {
   if (!token && !isAuthenticated) {
     return (
       <div className="flex min-h-screen items-center justify-center">
-        <div className="rounded-xl border border-neutral-200 bg-white p-8 text-center shadow-sm">
+        <div className="surface-card p-8 text-center">
           <p className="text-sm text-neutral-600 mb-4">초대 링크가 올바르지 않습니다.</p>
           <Link href="/login" className="btn-primary inline-block text-sm">
             로그인 페이지로 이동
@@ -388,7 +388,7 @@ function JoinPageContent() {
 
     return (
       <div className="flex min-h-screen items-center justify-center p-4 bg-neutral-50">
-        <div className="w-full max-w-md space-y-6 rounded-xl border border-neutral-200 bg-white p-8 shadow-sm">
+        <div className="surface-card w-full max-w-md space-y-6 p-6 md:p-8">
           {/* 헤더 */}
           <div>
             <div className="flex justify-center mb-4">
@@ -401,7 +401,7 @@ function JoinPageContent() {
             </h1>
             
             {/* 초대 정보 카드 */}
-            <div className="mt-4 space-y-2 rounded-lg border border-neutral-200 bg-neutral-50 p-4 text-sm">
+            <div className="mt-4 space-y-2 rounded-xl border border-neutral-200 bg-neutral-50 p-4 text-sm">
               <p className="text-neutral-700 leading-relaxed">
                 <span className="font-semibold text-neutral-900">{inviterName}</span>님께서{" "}
                 <span className="font-semibold text-neutral-900">{inviteeName}</span>님을{" "}
@@ -425,7 +425,7 @@ function JoinPageContent() {
                     type="email"
                     value={email}
                     disabled // 이메일은 변경 불가 (로그인 계정과 일치해야 안전)
-                    className="w-full rounded-lg border border-neutral-200 px-3 py-2 bg-neutral-100 text-neutral-500 cursor-not-allowed"
+                    className="form-input w-full bg-neutral-100 text-neutral-500 cursor-not-allowed"
                   />
                 </div>
 
@@ -435,7 +435,7 @@ function JoinPageContent() {
                     type="text"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    className="w-full rounded-lg border border-neutral-200 px-3 py-2"
+                    className="form-input w-full"
                     placeholder="실명을 입력하세요"
                     required
                   />
@@ -447,7 +447,7 @@ function JoinPageContent() {
                     <select
                       value={department}
                       onChange={(e) => setDepartment(e.target.value)}
-                      className="w-full rounded-lg border border-neutral-200 px-3 py-2"
+                      className="form-select w-full"
                     >
                       <option value="">부서 선택</option>
                       {availableDepartments.map((dept) => (
@@ -459,7 +459,7 @@ function JoinPageContent() {
                       type="text"
                       value={department}
                       onChange={(e) => setDepartment(e.target.value)}
-                      className="w-full rounded-lg border border-neutral-200 px-3 py-2"
+                      className="form-input w-full"
                       placeholder="예: 유년부"
                     />
                   )}
@@ -471,7 +471,7 @@ function JoinPageContent() {
                     type="tel"
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
-                    className="w-full rounded-lg border border-neutral-200 px-3 py-2"
+                    className="form-input w-full"
                     placeholder="010-0000-0000"
                   />
                 </div>
@@ -479,7 +479,7 @@ function JoinPageContent() {
                 <button
                   type="submit"
                   disabled={signingUp}
-                  className="btn-primary w-full py-3 font-semibold"
+                  className="btn-primary w-full"
                 >
                   {signingUp ? "처리 중..." : "초대 수락 및 입장하기"}
                 </button>
@@ -495,7 +495,7 @@ function JoinPageContent() {
                 type="button"
                 onClick={handleKakaoSignIn}
                 disabled={signingUp}
-                className="flex w-full items-center justify-center gap-2 h-12 rounded-lg bg-[#FEE500] px-6 text-sm font-semibold text-black hover:bg-[#FDD835] active:bg-[#FBC02D] disabled:opacity-50 transition-all"
+                className="btn-kakao"
               >
                 <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
                   <path d="M9 0C4.03 0 0 3.27 0 7.3c0 2.55 1.7 4.8 4.25 6.05L3 18l5.25-2.8c.5.05 1 .1 1.5.1 4.97 0 9-3.27 9-7.3S13.97 0 9 0z" fill="currentColor"/>
@@ -506,7 +506,7 @@ function JoinPageContent() {
           )}
 
           {message && (
-            <div className="text-sm text-center text-rose-600 bg-rose-50 p-3 rounded-lg border border-rose-100">
+            <div className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-center text-sm text-rose-700">
               {message}
             </div>
           )}

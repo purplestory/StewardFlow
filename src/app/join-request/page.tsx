@@ -193,7 +193,7 @@ export default function JoinRequestPage() {
 
   return (
     <div className="flex min-h-screen items-center justify-center p-4">
-      <div className="w-full max-w-md space-y-6 rounded-xl border border-neutral-200 bg-white p-8">
+      <div className="surface-card w-full max-w-md space-y-6 p-6 md:p-8">
         <div>
           {/* 로고 */}
           <div className="flex justify-center mb-4">
@@ -211,7 +211,7 @@ export default function JoinRequestPage() {
           </p>
           
           {/* 안내 정보 */}
-          <div className="mt-4 space-y-2 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm">
+          <div className="mt-4 space-y-2 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm">
             <div className="font-medium text-amber-900">안내사항</div>
             <div className="space-y-1 text-amber-700">
               <p>• 초대코드 없이 가입하신 경우, 관리자 승인이 필요합니다.</p>
@@ -231,8 +231,7 @@ export default function JoinRequestPage() {
               type="email"
               value={email}
               disabled
-              className="w-full rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2 text-neutral-500"
-              style={{ height: "38px" }}
+              className="form-input w-full bg-neutral-50 text-neutral-500"
             />
             <p className="text-xs text-neutral-500">
               로그인에 사용된 이메일입니다.
@@ -246,12 +245,11 @@ export default function JoinRequestPage() {
             <input
               id="name"
               type="text"
-              className="w-full rounded-lg border border-neutral-200 px-3 py-2"
+              className="form-input w-full"
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="예: 김철수"
               required
-              style={{ height: "38px" }}
             />
           </div>
 
@@ -262,11 +260,10 @@ export default function JoinRequestPage() {
             <input
               id="phone"
               type="tel"
-              className="w-full rounded-lg border border-neutral-200 px-3 py-2"
+              className="form-input w-full"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
               placeholder="010-0000-0000"
-              style={{ height: "38px" }}
             />
           </div>
 
@@ -276,7 +273,7 @@ export default function JoinRequestPage() {
             </label>
             <textarea
               id="message"
-              className="w-full rounded-lg border border-neutral-200 px-3 py-2"
+              className="form-textarea w-full"
               value={requestMessage}
               onChange={(e) => setRequestMessage(e.target.value)}
               placeholder="가입 사유를 간단히 입력해주세요"
@@ -286,9 +283,9 @@ export default function JoinRequestPage() {
 
           {message && (
             <div
-              className={`rounded-lg border p-3 text-sm ${
+              className={`rounded-xl border p-3 text-sm ${
                 message.includes("완료")
-                  ? "border-green-200 bg-green-50 text-green-700"
+                  ? "border-emerald-200 bg-emerald-50 text-emerald-700"
                   : "border-rose-200 bg-rose-50 text-rose-700"
               }`}
               role="status"
@@ -302,7 +299,6 @@ export default function JoinRequestPage() {
               type="submit"
               disabled={submitting}
               className="flex-1 btn-primary"
-              style={{ height: "38px" }}
             >
               {submitting ? "신청 중..." : "가입 신청"}
             </button>
@@ -310,7 +306,6 @@ export default function JoinRequestPage() {
               type="button"
               onClick={() => router.push("/?skip_redirect=true")}
               className="flex-1 btn-ghost"
-              style={{ height: "38px" }}
             >
               취소
             </button>
@@ -331,7 +326,7 @@ export default function JoinRequestPage() {
                 await supabase.auth.signOut();
                 router.push("/");
               }}
-              className="w-full text-sm text-neutral-600 hover:text-neutral-900 py-2"
+              className="btn-ghost w-full"
             >
               로그아웃
             </button>

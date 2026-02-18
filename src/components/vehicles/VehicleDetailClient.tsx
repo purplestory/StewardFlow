@@ -10,6 +10,7 @@ import { useVehicle, useVehicleReservations, useVehicleApprovalPolicies } from "
 import { useUserRole } from "@/hooks/useAssets";
 import PageHero from "@/components/ui/PageHero";
 import SectionCard from "@/components/ui/SectionCard";
+import ResourceStatusBadge from "@/components/ui/ResourceStatusBadge";
 
 export default function VehicleDetailClient() {
   const params = useParams();
@@ -89,21 +90,10 @@ export default function VehicleDetailClient() {
 
           <div className="w-full space-y-4 md:w-1/2">
             <div className="flex items-center gap-2">
-              <span
-                className={`inline-flex items-center rounded-lg px-3 py-1.5 text-sm font-medium ${
-                  vehicle.status === "available"
-                    ? "bg-emerald-500 text-white"
-                    : vehicle.status === "rented"
-                    ? "bg-blue-500 text-white"
-                    : vehicle.status === "repair"
-                    ? "bg-amber-500 text-white"
-                    : vehicle.status === "lost"
-                    ? "bg-rose-500 text-white"
-                    : "bg-neutral-100 text-neutral-700"
-                }`}
-              >
-                {vehicleStatusLabel[vehicle.status]}
-              </span>
+              <ResourceStatusBadge
+                status={vehicle.status as "available" | "rented" | "repair" | "lost"}
+                label={vehicleStatusLabel[vehicle.status]}
+              />
             </div>
 
             <div className="flex flex-col gap-3">

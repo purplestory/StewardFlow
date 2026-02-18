@@ -192,12 +192,8 @@ export default function VehicleForm({ vehicle }: VehicleFormProps = {}) {
     const files = Array.from(event.target.files || []);
     setMessage(null);
 
-    console.log("handleFileChange called with", files.length, "files");
-
     if (files.length > 0) {
       addImageFiles(files);
-    } else {
-      console.log("No files selected");
     }
     
     // Reset input value to allow selecting the same file again
@@ -221,8 +217,6 @@ export default function VehicleForm({ vehicle }: VehicleFormProps = {}) {
         return;
       }
 
-      console.log(`Adding ${newImageFiles.length} image files`);
-
       // 현재 existingImageUrls 값을 ref에서 가져오기
       const currentExisting = existingImageUrlsRef.current;
       
@@ -239,14 +233,12 @@ export default function VehicleForm({ vehicle }: VehicleFormProps = {}) {
         // 미리보기 URL도 즉시 업데이트
         const newPreviewUrls = limited.map(file => {
           const url = URL.createObjectURL(file);
-          console.log(`Created preview URL for ${file.name}: ${url}`);
           return url;
         });
         
         // 기존 이미지 URL과 새 미리보기 URL 합치기
         setPreviewUrls([...currentExisting, ...newPreviewUrls]);
         
-        console.log(`Total image files: ${limited.length}, Existing: ${currentExisting.length}, New previews: ${newPreviewUrls.length}`);
         return limited;
       });
     }
@@ -519,7 +511,7 @@ export default function VehicleForm({ vehicle }: VehicleFormProps = {}) {
   return (
     <form onSubmit={handleSubmit} className="form-section">
       {!organizationId && (
-        <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
+        <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
           기관 설정이 필요합니다.{" "}
           <Link href="/settings/org" className="underline font-medium">
             기관 설정
@@ -603,7 +595,7 @@ export default function VehicleForm({ vehicle }: VehicleFormProps = {}) {
       </div>
 
       <div className="form-grid">
-        <label className="flex flex-col gap-2 md:col-span-2">
+        <label className="form-grid-item md:col-span-2">
           <span className="form-label">차량명</span>
           <input
             name="name"
@@ -613,7 +605,7 @@ export default function VehicleForm({ vehicle }: VehicleFormProps = {}) {
             required
           />
         </label>
-        <label className="flex flex-col gap-2">
+        <label className="form-grid-item">
           <span className="form-label">차량 번호판</span>
           <input
             name="license_plate"
@@ -622,7 +614,7 @@ export default function VehicleForm({ vehicle }: VehicleFormProps = {}) {
             defaultValue={vehicle?.license_plate || ""}
           />
         </label>
-        <label className="flex flex-col gap-2">
+        <label className="form-grid-item">
           <span className="form-label">차종</span>
           <select
             name="vehicle_type"
@@ -637,7 +629,7 @@ export default function VehicleForm({ vehicle }: VehicleFormProps = {}) {
             ))}
           </select>
         </label>
-        <label className="flex flex-col gap-2">
+        <label className="form-grid-item">
           <span className="form-label">연료 타입</span>
           <select
             name="fuel_type"
@@ -653,9 +645,9 @@ export default function VehicleForm({ vehicle }: VehicleFormProps = {}) {
           </select>
         </label>
         {vehiclesOwnershipPolicy === "organization_only" ? (
-          <div className="flex flex-col gap-2 md:col-span-2">
+          <div className="form-grid-item md:col-span-2">
             <span className="form-label">소유 범위</span>
-            <div className="h-12 rounded-lg border border-neutral-200 bg-neutral-50 px-4 text-sm text-neutral-600 flex items-center">
+            <div className="field-static">
               기관 공용
             </div>
             <p className="text-xs text-neutral-500 mt-1">
@@ -664,7 +656,7 @@ export default function VehicleForm({ vehicle }: VehicleFormProps = {}) {
           </div>
         ) : (
           canRegisterOrganizationWide && (
-            <label className="flex flex-col gap-2">
+            <label className="form-grid-item">
               <span className="form-label">소유 범위</span>
               <select
                 name="owner_scope"
@@ -684,7 +676,7 @@ export default function VehicleForm({ vehicle }: VehicleFormProps = {}) {
           )
         )}
         {vehiclesOwnershipPolicy === "department_allowed" && ownerScope === "department" && canRegisterOrganizationWide && (
-          <label className="flex flex-col gap-2">
+          <label className="form-grid-item">
             <span className="form-label">소유 부서</span>
             <input
               name="owner_department"
@@ -696,9 +688,9 @@ export default function VehicleForm({ vehicle }: VehicleFormProps = {}) {
           </label>
         )}
         {vehiclesOwnershipPolicy === "department_allowed" && !canRegisterOrganizationWide && (
-          <div className="flex flex-col gap-2 md:col-span-2">
+          <div className="form-grid-item md:col-span-2">
             <span className="form-label">소유 부서</span>
-            <div className="h-12 rounded-lg border border-neutral-200 bg-neutral-50 px-4 text-sm text-neutral-600 flex items-center">
+            <div className="field-static">
               {ownerDepartment || "부서 미설정"}
             </div>
             <p className="text-xs text-neutral-500 mt-1">
@@ -706,7 +698,7 @@ export default function VehicleForm({ vehicle }: VehicleFormProps = {}) {
             </p>
           </div>
         )}
-        <label className="flex flex-col gap-2">
+        <label className="form-grid-item">
           <span className="form-label">
             관리 부서
             <span className="form-label-optional">(선택)</span>
@@ -728,7 +720,7 @@ export default function VehicleForm({ vehicle }: VehicleFormProps = {}) {
             정기적으로 사용하고 관리하는 부서를 선택하세요.
           </p>
         </label>
-        <label className="flex flex-col gap-2">
+        <label className="form-grid-item">
           <span className="form-label">탑승 인원</span>
           <input
             name="capacity"
@@ -739,7 +731,7 @@ export default function VehicleForm({ vehicle }: VehicleFormProps = {}) {
             defaultValue={vehicle?.capacity || ""}
           />
         </label>
-        <label className="flex flex-col gap-2">
+        <label className="form-grid-item">
           <span className="form-label">현재 주행거리 (km)</span>
           <input
             name="current_odometer"
@@ -753,7 +745,7 @@ export default function VehicleForm({ vehicle }: VehicleFormProps = {}) {
             차량 등록 시점의 주행거리를 입력하세요.
           </p>
         </label>
-        <label className="flex flex-col gap-2 md:col-span-2">
+        <label className="form-grid-item md:col-span-2">
           <span className="form-label">주차 장소</span>
           <input
             name="location"
@@ -762,7 +754,7 @@ export default function VehicleForm({ vehicle }: VehicleFormProps = {}) {
             defaultValue={vehicle?.location || ""}
           />
         </label>
-        <label className="flex flex-col gap-2 md:col-span-2">
+        <label className="form-grid-item md:col-span-2">
           <span className="form-label">비고</span>
           <textarea
             name="note"
@@ -774,7 +766,7 @@ export default function VehicleForm({ vehicle }: VehicleFormProps = {}) {
       </div>
 
       {message && (
-        <div className={`rounded-lg px-4 py-3 text-sm ${
+        <div className={`rounded-xl px-4 py-3 text-sm ${
           message.includes("오류") || message.includes("실패")
             ? "bg-rose-50 text-rose-700 border border-rose-200"
             : "bg-emerald-50 text-emerald-700 border border-emerald-200"

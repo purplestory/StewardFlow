@@ -10,6 +10,7 @@ import { useSpace, useSpaceReservations, useSpaceApprovalPolicies } from "@/hook
 import { useUserRole } from "@/hooks/useAssets";
 import PageHero from "@/components/ui/PageHero";
 import SectionCard from "@/components/ui/SectionCard";
+import ResourceStatusBadge from "@/components/ui/ResourceStatusBadge";
 
 const statusLabel: Record<Space["status"], string> = {
   available: "사용 가능",
@@ -92,21 +93,10 @@ export default function SpaceDetailClient() {
           <div className="w-full space-y-4 md:w-1/2">
             {/* 상태 뱃지 - 제목 위에 표시 */}
             <div className="flex items-center gap-2">
-              <span
-                className={`inline-flex items-center rounded-lg px-3 py-1.5 text-sm font-medium ${
-                  space.status === "available"
-                    ? "bg-emerald-500 text-white"
-                    : space.status === "rented"
-                    ? "bg-blue-500 text-white"
-                    : space.status === "repair"
-                    ? "bg-amber-500 text-white"
-                    : space.status === "lost"
-                    ? "bg-rose-500 text-white"
-                    : "bg-neutral-100 text-neutral-700"
-                }`}
-              >
-                {statusLabel[space.status]}
-              </span>
+              <ResourceStatusBadge
+                status={space.status as "available" | "rented" | "repair" | "lost"}
+                label={statusLabel[space.status]}
+              />
             </div>
 
             <div className="flex flex-col gap-3">

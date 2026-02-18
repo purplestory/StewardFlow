@@ -431,7 +431,7 @@ export default function SpaceForm({ space }: SpaceFormProps = {}) {
   return (
     <form onSubmit={handleSubmit} className="form-section">
       {!organizationId && (
-        <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
+        <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
           기관 설정이 필요합니다.{" "}
           <Link href="/settings/org" className="underline font-medium">
             기관 설정
@@ -515,7 +515,7 @@ export default function SpaceForm({ space }: SpaceFormProps = {}) {
       </div>
 
       <div className="form-grid">
-        <label className="flex flex-col gap-2 md:col-span-2">
+        <label className="form-grid-item md:col-span-2">
           <span className="form-label">공간명</span>
           <input
             name="name"
@@ -526,9 +526,9 @@ export default function SpaceForm({ space }: SpaceFormProps = {}) {
           />
         </label>
         {spacesOwnershipPolicy === "organization_only" ? (
-          <div className="flex flex-col gap-2 md:col-span-2">
+          <div className="form-grid-item md:col-span-2">
             <span className="form-label">소유 범위</span>
-            <div className="h-12 rounded-lg border border-neutral-200 bg-neutral-50 px-4 text-sm text-neutral-600 flex items-center">
+            <div className="field-static">
               기관 공용
             </div>
             <p className="text-xs text-neutral-500 mt-1">
@@ -537,7 +537,7 @@ export default function SpaceForm({ space }: SpaceFormProps = {}) {
           </div>
         ) : (
           canRegisterOrganizationWide && (
-            <label className="flex flex-col gap-2">
+            <label className="form-grid-item">
               <span className="form-label">소유 범위</span>
               <select
                 name="owner_scope"
@@ -557,7 +557,7 @@ export default function SpaceForm({ space }: SpaceFormProps = {}) {
           )
         )}
         {spacesOwnershipPolicy === "department_allowed" && ownerScope === "department" && canRegisterOrganizationWide && (
-          <label className="flex flex-col gap-2">
+          <label className="form-grid-item">
             <span className="form-label">소유 부서</span>
             <input
               name="owner_department"
@@ -569,9 +569,9 @@ export default function SpaceForm({ space }: SpaceFormProps = {}) {
           </label>
         )}
         {spacesOwnershipPolicy === "department_allowed" && !canRegisterOrganizationWide && (
-          <div className="flex flex-col gap-2 md:col-span-2">
+          <div className="form-grid-item md:col-span-2">
             <span className="form-label">소유 부서</span>
-            <div className="h-12 rounded-lg border border-neutral-200 bg-neutral-50 px-4 text-sm text-neutral-600 flex items-center">
+            <div className="field-static">
               {ownerDepartment || "부서 미설정"}
             </div>
             <p className="text-xs text-neutral-500 mt-1">
@@ -579,7 +579,7 @@ export default function SpaceForm({ space }: SpaceFormProps = {}) {
             </p>
           </div>
         )}
-        <label className="flex flex-col gap-2">
+        <label className="form-grid-item">
           <span className="form-label">
             관리 부서
             <span className="form-label-optional">(선택)</span>
@@ -601,7 +601,7 @@ export default function SpaceForm({ space }: SpaceFormProps = {}) {
             정기적으로 사용하고 관리하는 부서를 선택하세요.
           </p>
         </label>
-        <label className="flex flex-col gap-2">
+        <label className="form-grid-item">
           <span className="form-label">수용 인원</span>
           <input
             name="capacity"
@@ -612,7 +612,7 @@ export default function SpaceForm({ space }: SpaceFormProps = {}) {
             placeholder="예: 30"
           />
         </label>
-        <label className="flex flex-col gap-2 md:col-span-2">
+        <label className="form-grid-item md:col-span-2">
           <span className="form-label">위치</span>
           <input
             name="location"
@@ -621,7 +621,7 @@ export default function SpaceForm({ space }: SpaceFormProps = {}) {
             placeholder="예: 교육관 2층"
           />
         </label>
-        <label className="flex flex-col gap-2 md:col-span-2">
+        <label className="form-grid-item md:col-span-2">
           <span className="form-label">비고</span>
           <textarea
             name="note"
@@ -633,7 +633,7 @@ export default function SpaceForm({ space }: SpaceFormProps = {}) {
       </div>
 
       {message && (
-        <div className={`rounded-lg px-4 py-3 text-sm ${
+        <div className={`rounded-xl px-4 py-3 text-sm ${
           message.includes("오류") || message.includes("실패")
             ? "bg-rose-50 text-rose-700 border border-rose-200"
             : "bg-emerald-50 text-emerald-700 border border-emerald-200"

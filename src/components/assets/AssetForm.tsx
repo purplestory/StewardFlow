@@ -247,12 +247,8 @@ export default function AssetForm({ asset }: AssetFormProps = {}) {
     const files = Array.from(event.target.files || []);
     setMessage(null);
 
-    console.log("handleFileChange called with", files.length, "files");
-    
     if (files.length > 0) {
       addImageFiles(files);
-    } else {
-      console.log("No files selected");
     }
     
     // Reset input value to allow selecting the same file again
@@ -277,8 +273,6 @@ export default function AssetForm({ asset }: AssetFormProps = {}) {
         return;
       }
 
-      console.log(`[addImageFiles] Adding ${newImageFiles.length} image files:`, newImageFiles.map(f => ({ name: f.name, size: f.size, type: f.type })));
-
       // 현재 existingImageUrls 값을 ref에서 가져오기
       const currentExisting = existingImageUrlsRef.current;
       
@@ -292,19 +286,15 @@ export default function AssetForm({ asset }: AssetFormProps = {}) {
           setMessage("최대 10개까지 이미지를 업로드할 수 있습니다.");
         }
         
-        console.log(`[addImageFiles] Total image files: ${limited.length}, Existing: ${currentExisting.length}`);
-        
         // 미리보기 URL 즉시 생성
         const newPreviewUrls = limited.map(file => {
           const url = URL.createObjectURL(file);
-          console.log(`[addImageFiles] Created preview URL for ${file.name}: ${url}`);
           blobUrlsRef.current.push(url);
           return url;
         });
         
         // 기존 이미지 URL과 새 미리보기 URL 합치기
         const allPreviewUrls = [...currentExisting, ...newPreviewUrls];
-        console.log(`[addImageFiles] Setting preview URLs: ${allPreviewUrls.length} total`);
         setPreviewUrls(allPreviewUrls);
         
         return limited;
@@ -436,38 +426,26 @@ export default function AssetForm({ asset }: AssetFormProps = {}) {
       // 여러 이미지 업로드
       const uploadedUrls: string[] = [];
       
-      console.log(`Starting upload for ${imageFiles.length} files`);
-      
       for (const imageFile of imageFiles) {
         const fileExt = imageFile.name.split(".").pop() ?? "jpg";
         const filePath = `assets/${Date.now()}-${crypto.randomUUID()}.${fileExt}`;
 
-        console.log(`Uploading ${imageFile.name} to ${filePath}`);
-
-        const { error: uploadError, data: uploadData } = await supabase.storage
+        const { error: uploadError } = await supabase.storage
           .from("asset-images")
           .upload(filePath, imageFile);
 
         if (uploadError) {
-          console.error("Upload error:", uploadError);
           throw new Error(`이미지 업로드 실패: ${uploadError.message}`);
         }
-
-        console.log(`Upload successful:`, uploadData);
 
         const { data: urlData } = supabase.storage
           .from("asset-images")
           .getPublicUrl(filePath);
         
         if (urlData?.publicUrl) {
-          console.log(`Public URL: ${urlData.publicUrl}`);
           uploadedUrls.push(urlData.publicUrl);
-        } else {
-          console.warn(`No public URL for ${filePath}`);
         }
       }
-      
-      console.log(`Uploaded ${uploadedUrls.length} images`);
 
       // 기존 이미지와 새로 업로드한 이미지 합치기
       const finalImageUrls = [...existingImageUrls, ...uploadedUrls];

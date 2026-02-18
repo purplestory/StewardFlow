@@ -94,10 +94,6 @@ export default function NotificationBadge() {
     };
   }, []);
 
-  if (count === 0) {
-    return null;
-  }
-
   return (
     <Link
       href="/notifications"
@@ -112,9 +108,11 @@ export default function NotificationBadge() {
           d="M14.857 17H9.143M18 17H6l1.2-1.6A2 2 0 0 0 7.6 14.2V10a4.4 4.4 0 1 1 8.8 0v4.2a2 2 0 0 0 .4 1.2L18 17Z"
         />
       </svg>
-      <span className="absolute -right-1 -top-1 rounded-full bg-rose-500 px-1.5 py-0.5 text-[10px] font-semibold text-white">
-        {count > 99 ? "99+" : count}
-      </span>
+      {count > 0 && (
+        <span className="absolute -right-1 -top-1 rounded-full bg-rose-500 px-1.5 py-0.5 text-[10px] font-semibold text-white">
+          {count > 99 ? "99+" : count}
+        </span>
+      )}
     </Link>
   );
 }

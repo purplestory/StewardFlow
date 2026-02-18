@@ -5,6 +5,13 @@ import Notice from "@/components/common/Notice";
 import { supabase } from "@/lib/supabase";
 import ReservationCalendarView from "./ReservationCalendarView";
 import ReservationDetailModal from "./ReservationDetailModal";
+import StatusFilterPills from "@/components/ui/StatusFilterPills";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+} from "@/components/ui/select";
 import {
   formatBorrowerName,
   formatDateTimeRange,
@@ -58,6 +65,10 @@ type PermissionContext = {
 
 const statusOptions = reservationStatusOptions;
 const statusLabel = reservationStatusLabel;
+const viewModeOptions = [
+  { value: "list", label: "목록" },
+  { value: "calendar", label: "달력" },
+] as const;
 
 export default function VehicleReservationManager() {
   const [reservations, setReservations] = useState<ReservationRow[]>([]);
@@ -293,7 +304,7 @@ export default function VehicleReservationManager() {
   }
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-4 p-4 md:p-5">
       <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-neutral-600">
         <div className="flex flex-wrap items-center gap-2">
           <span>총 {reservations.length}건</span>
@@ -306,20 +317,11 @@ export default function VehicleReservationManager() {
           </button>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <button
-            type="button"
-            onClick={() => setViewMode("list")}
-            className={`filter-pill ${viewMode === "list" ? "filter-pill-active" : ""}`}
-          >
-            목록
-          </button>
-          <button
-            type="button"
-            onClick={() => setViewMode("calendar")}
-            className={`filter-pill ${viewMode === "calendar" ? "filter-pill-active" : ""}`}
-          >
-            달력
-          </button>
+          <StatusFilterPills
+            options={viewModeOptions}
+            value={viewMode}
+            onChange={(next) => setViewMode(next as "list" | "calendar")}
+          />
           {viewMode === "list" && (
             <>
               <input
@@ -328,21 +330,22 @@ export default function VehicleReservationManager() {
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
               />
-              <select
-                className="form-select text-sm md:w-40"
+              <Select
                 value={statusFilter}
-                onChange={(event) =>
-                  setStatusFilter(
-                    event.target.value as ReservationRow["status"] | "all"
-                  )
+                onValueChange={(next) =>
+                  setStatusFilter(next as ReservationRow["status"] | "all")
                 }
               >
-                <option value="all">전체 상태</option>
-                <option value="pending">대기</option>
-                <option value="approved">승인</option>
-                <option value="returned">반납 확인</option>
-                <option value="rejected">반려</option>
-              </select>
+                <SelectTrigger className="form-select text-sm md:w-40">
+                  <SelectContent>
+                    <SelectItem value="all">전체 상태</SelectItem>
+                    <SelectItem value="pending">대기</SelectItem>
+                    <SelectItem value="approved">승인</SelectItem>
+                    <SelectItem value="returned">반납 확인</SelectItem>
+                    <SelectItem value="rejected">반려</SelectItem>
+                  </SelectContent>
+                </SelectTrigger>
+              </Select>
             </>
           )}
         </div>
@@ -382,7 +385,7 @@ export default function VehicleReservationManager() {
             filteredReservations.map((reservation) => (
         <div
           key={reservation.id}
-          className="cursor-pointer rounded-xl border border-neutral-200 px-4 py-3 transition-colors hover:bg-neutral-50"
+          className="surface-card cursor-pointer px-4 py-3 transition-colors hover:bg-neutral-50"
           onClick={() => setSelectedReservation(reservation)}
         >
           <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
@@ -410,16 +413,14 @@ export default function VehicleReservationManager() {
                 상세
               </button>
               <span className="text-xs text-neutral-500">상태</span>
-              <select
+              <Select
                 value={reservation.status}
-                onChange={(event) =>
+                onValueChange={(nextStatus) =>
                   handleStatusChange(
                     reservation.id,
-                    event.target.value as ReservationRow["status"]
+                    nextStatus as ReservationRow["status"]
                   )
                 }
-                onClick={(event) => event.stopPropagation()}
-                className="form-select h-8 w-28 px-2 text-xs"
                 disabled={
                   reservation.status === "returned" ||
                   !context ||
@@ -431,12 +432,19 @@ export default function VehicleReservationManager() {
                     ]
                 }
               >
-                {statusOptions.map((status) => (
-                  <option key={status} value={status} disabled={status === "returned"}>
-                    {statusLabel[status]}
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger
+                  className="form-select h-8 w-28 px-2 text-xs"
+                  onClick={(event) => event.stopPropagation()}
+                >
+                  <SelectContent>
+                    {statusOptions.map((status) => (
+                      <SelectItem key={status} value={status}>
+                        {statusLabel[status]}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </SelectTrigger>
+              </Select>
             </div>
           </div>
           {context && reservation.vehicles && (

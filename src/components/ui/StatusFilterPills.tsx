@@ -6,7 +6,7 @@ type StatusFilterOption<T extends string> = {
 };
 
 type StatusFilterPillsProps<T extends string> = {
-  options: Array<StatusFilterOption<T>>;
+  options: ReadonlyArray<StatusFilterOption<T>>;
   value: T | "";
   onChange: (next: T | "") => void;
   className?: string;
@@ -36,4 +36,3 @@ export default function StatusFilterPills<T extends string>({
     </div>
   );
 }
-

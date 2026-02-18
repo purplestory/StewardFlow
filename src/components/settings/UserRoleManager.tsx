@@ -4,35 +4,16 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { generateShortId } from "@/lib/short-id";
 import { deleteUserAccount } from "@/actions/auth-actions";
-import type { DepartmentChangeRequest } from "@/types/database";
-
-type ProfileRow = {
-  id: string;
-  email: string;
-  name: string | null;
-  department: string | null;
-  role: "admin" | "manager" | "user";
-  organization_id: string | null;
-  created_at?: string;
-};
-
-type InviteRow = {
-  id: string;
-  email: string;
-  role: "admin" | "manager" | "user";
-  department: string | null;
-  name: string | null;
-  created_at: string;
-  accepted_at: string | null;
-  revoked_at: string | null;
-  token: string | null;
-};
-
-const roleLabel: Record<ProfileRow["role"], string> = {
-  admin: "관리자",
-  manager: "부서 관리자",
-  user: "일반 사용자",
-};
+import type {
+  DeletionRequestRow,
+  DepartmentRequestWithProfile,
+  InviteRow,
+  ProfileRow,
+} from "@/components/settings/user-role-manager/types";
+import {
+  roleLabel,
+  roleOptions,
+} from "@/components/settings/user-role-manager/types";
 
 const debugLog = (...args: unknown[]) => {
   if (process.env.NODE_ENV !== "production") {
@@ -60,7 +41,7 @@ export default function UserRoleManager() {
   const [lastLoadedAt, setLastLoadedAt] = useState<string | null>(null);
   const [needsOrganization, setNeedsOrganization] = useState(false);
   const [departmentChangeRequests, setDepartmentChangeRequests] = useState<
-    (DepartmentChangeRequest & { requester_name: string | null; requester_email: string })[]
+    DepartmentRequestWithProfile[]
   >([]);
   const [pendingUsers, setPendingUsers] = useState<ProfileRow[]>([]);
   const [allOrganizations, setAllOrganizations] = useState<Array<{ id: string; name: string }>>([]);
@@ -75,20 +56,7 @@ export default function UserRoleManager() {
   const [deletingUserId, setDeletingUserId] = useState<string | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [userToDelete, setUserToDelete] = useState<{ id: string; name: string } | null>(null);
-  const [deletionRequests, setDeletionRequests] = useState<Array<{
-    id: string;
-    requester_id: string;
-    requester_name: string | null;
-    requester_email: string | null;
-    requester_role: string | null;
-    requester_department: string | null;
-    transfer_to_user_id: string | null;
-    transfer_to_user_name: string | null;
-    status: string;
-    note: string | null;
-    admin_note: string | null;
-    created_at: string;
-  }>>([]);
+  const [deletionRequests, setDeletionRequests] = useState<DeletionRequestRow[]>([]);
   const [adminNote, setAdminNote] = useState("");
   const [processingRequestId, setProcessingRequestId] = useState<string | null>(null);
 
@@ -296,10 +264,10 @@ export default function UserRoleManager() {
         .order("created_at", { ascending: false });
 
       if (!requestsError && requestsData) {
-        type DepartmentRequestWithProfile = DepartmentChangeRequest & {
+        type DepartmentRequestQueryRow = DepartmentRequestWithProfile & {
           profiles?: { name?: string | null; email?: string | null } | null;
         };
-        const requestsWithRequester = (requestsData as DepartmentRequestWithProfile[]).map((req) => ({
+        const requestsWithRequester = (requestsData as DepartmentRequestQueryRow[]).map((req) => ({
           ...req,
           requester_name: req.profiles?.name || null,
           requester_email: req.profiles?.email || "",
@@ -1185,7 +1153,9 @@ export default function UserRoleManager() {
     await load(); // Reload all data
   };
 
-  const approveDepartmentChange = async (request: DepartmentChangeRequest) => {
+  const approveDepartmentChange = async (
+    request: DepartmentRequestWithProfile
+  ) => {
     setMessage(null);
 
     if (currentUserRole === "user") {
@@ -1266,7 +1236,9 @@ export default function UserRoleManager() {
     await load();
   };
 
-  const rejectDepartmentChange = async (request: DepartmentChangeRequest) => {
+  const rejectDepartmentChange = async (
+    request: DepartmentRequestWithProfile
+  ) => {
     setMessage(null);
 
     if (currentUserRole === "user") {
@@ -1579,12 +1551,15 @@ export default function UserRoleManager() {
             }
             disabled={currentUserRole === "user"}
           >
-            <option value="user">일반 사용자</option>
-            <option value="manager">부서 관리자</option>
-            {/* 부서 관리자는 관리자 역할로 초대할 수 없음 */}
-            {currentUserRole === "admin" && (
-              <option value="admin">관리자</option>
-            )}
+            {roleOptions
+              .filter((option) =>
+                currentUserRole === "admin" ? true : option.value !== "admin"
+              )
+              .map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
           </select>
           <select
             className="form-select flex-1 min-w-[140px]"
@@ -1894,9 +1869,11 @@ export default function UserRoleManager() {
                       }
                       required
                     >
-                      <option value="user">일반 사용자</option>
-                      <option value="manager">부서 관리자</option>
-                      <option value="admin">관리자</option>
+                      {roleOptions.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
                     </select>
                   </div>
                 </>
@@ -1986,9 +1963,17 @@ export default function UserRoleManager() {
                     (currentUserRole === "manager" && profile.role === "admin")
                   }
                 >
-                  <option value="admin">관리자</option>
-                  <option value="manager">부서 관리자</option>
-                  <option value="user">일반 사용자</option>
+                  {roleOptions
+                    .filter((option) =>
+                      currentUserRole === "manager"
+                        ? profile.role === "admin" || option.value !== "admin"
+                        : true
+                    )
+                    .map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
                 </select>
                 {/* 삭제 버튼 (관리자만, 자기 자신 제외) */}
                 {currentUserRole === "admin" && profile.id !== currentUserId && (

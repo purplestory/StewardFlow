@@ -5,6 +5,13 @@ import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import Notice from "@/components/common/Notice";
 import type { Space } from "@/types/database";
+import StatusFilterPills from "@/components/ui/StatusFilterPills";
+import ResourceStatusBadge from "@/components/ui/ResourceStatusBadge";
+import {
+  Select,
+  SelectItem,
+  SelectTrigger,
+} from "@/components/ui/select";
 
 const statusFilterOptions: Array<{ value: Space["status"] | "all"; label: string }> = [
   { value: "all", label: "전체" },
@@ -144,7 +151,7 @@ export default function SpaceAdminPanel() {
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 p-4 md:p-5">
       <div className="flex items-start justify-between gap-4">
         <div>
           <h2 className="text-lg font-semibold">공간 관리</h2>
@@ -181,21 +188,11 @@ export default function SpaceAdminPanel() {
         </div>
       </div>
 
-      {/* 상태 필터 버튼 */}
-      <div className="rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-3">
-        <div className="flex flex-wrap items-center gap-2">
-          {statusFilterOptions.map((option) => (
-            <button
-              key={option.value}
-              type="button"
-              onClick={() => setStatusFilter(option.value)}
-              className={`filter-pill ${statusFilter === option.value ? "filter-pill-active" : ""}`}
-            >
-              {option.label}
-            </button>
-          ))}
-        </div>
-      </div>
+      <StatusFilterPills
+        options={statusFilterOptions}
+        value={statusFilter}
+        onChange={(next) => setStatusFilter(next as Space["status"] | "all")}
+      />
 
       {/* 일괄 변경 - 선택된 항목이 있을 때만 표시 */}
       {selectedIds.size > 0 && (
@@ -203,23 +200,23 @@ export default function SpaceAdminPanel() {
           <span className="text-neutral-600 font-medium">
             선택된 항목({selectedIds.size}건):
           </span>
-          <select
-            className="form-select h-9 text-xs"
+          <Select
             value=""
-            onChange={(event) => {
-              const status = event.target.value as Space["status"];
+            onValueChange={(next) => {
+              const status = next as Space["status"];
               if (status) {
                 bulkUpdateStatus(status);
-                event.target.value = ""; // 선택 초기화
               }
             }}
             disabled={updating}
           >
-            <option value="">일괄 상태 변경...</option>
-            <option value="available">→ 사용 가능</option>
-            <option value="rented">→ 예약 중</option>
-            <option value="repair">→ 사용 불가</option>
-          </select>
+            <SelectTrigger className="form-select h-9 text-xs">
+              <SelectItem value="">일괄 상태 변경...</SelectItem>
+              <SelectItem value="available">→ 사용 가능</SelectItem>
+              <SelectItem value="rented">→ 예약 중</SelectItem>
+              <SelectItem value="repair">→ 사용 불가</SelectItem>
+            </SelectTrigger>
+          </Select>
           <button
             type="button"
             onClick={() => setSelectedIds(new Set())}
@@ -254,7 +251,7 @@ export default function SpaceAdminPanel() {
         </Notice>
       ) : (
         <div className="space-y-2">
-          <div className="flex items-center gap-2 rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-2 text-xs text-neutral-600">
+          <div className="flex items-center gap-2 rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-600">
             <input
               type="checkbox"
               checked={
@@ -268,7 +265,7 @@ export default function SpaceAdminPanel() {
           {filteredSpaces.map((space) => (
             <div
               key={space.id}
-              className="flex items-center justify-between rounded-xl border border-neutral-200 px-3 py-2 text-xs"
+              className="flex items-center justify-between rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm"
             >
               <label className="flex items-center gap-2 flex-1 min-w-0">
                 <input
@@ -278,46 +275,17 @@ export default function SpaceAdminPanel() {
                   className="flex-shrink-0"
                 />
                 <span className="truncate">{space.name}</span>
-                {/* 상태 뱃지 - 제품명 옆에 표시 */}
-                <span
-                  className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium flex-shrink-0 ${
+                <ResourceStatusBadge
+                  status={space.status as "available" | "rented" | "repair" | "lost"}
+                  label={
                     space.status === "available"
-                      ? "bg-emerald-100 text-emerald-700 border border-emerald-200"
+                      ? "사용 가능"
                       : space.status === "rented"
-                      ? "bg-blue-100 text-blue-700 border border-blue-200"
-                      : space.status === "repair"
-                      ? "bg-amber-100 text-amber-700 border border-amber-200"
-                      : space.status === "lost"
-                      ? "bg-rose-100 text-rose-700 border border-rose-200"
-                      : "bg-neutral-100 text-neutral-700 border border-neutral-200"
-                  }`}
-                >
-                  {space.status === "available" && (
-                    <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                    </svg>
-                  )}
-                  {space.status === "rented" && (
-                    <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
-                    </svg>
-                  )}
-                  {space.status === "repair" && (
-                    <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                      <path d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" />
-                    </svg>
-                  )}
-                  {space.status === "lost" && (
-                    <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                    </svg>
-                  )}
-                  <span>
-                    {space.status === "available" ? "사용 가능" : 
-                     space.status === "rented" ? "예약 중" :
-                     space.status === "repair" ? "사용 불가" : "사용 불가"}
-                  </span>
-                </span>
+                      ? "예약 중"
+                      : "사용 불가"
+                  }
+                  className="shrink-0"
+                />
               </label>
               <div className="flex items-center gap-2">
                 <Link

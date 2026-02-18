@@ -6,6 +6,20 @@ import { supabase } from "@/lib/supabase";
 import Notice from "@/components/common/Notice";
 import type { Asset } from "@/types/database";
 import { isUUID } from "@/lib/short-id";
+import StatusFilterPills from "@/components/ui/StatusFilterPills";
+import ResourceStatusBadge from "@/components/ui/ResourceStatusBadge";
+import {
+  Select,
+  SelectItem,
+  SelectTrigger,
+} from "@/components/ui/select";
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 const statusLabel: Record<Asset["status"], string> = {
   available: "대여 가능",
@@ -157,7 +171,7 @@ export default function AssetAdminPanel() {
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 p-4 md:p-5">
       <div className="flex items-start justify-between gap-4">
         <div>
           <h2 className="text-lg font-semibold">물품 관리</h2>
@@ -194,21 +208,11 @@ export default function AssetAdminPanel() {
         </div>
       </div>
 
-      {/* 상태 필터 버튼 */}
-      <div className="rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-3">
-        <div className="flex flex-wrap items-center gap-2">
-          {statusFilterOptions.map((option) => (
-            <button
-              key={option.value}
-              type="button"
-              onClick={() => setStatusFilter(option.value)}
-              className={`filter-pill ${statusFilter === option.value ? "filter-pill-active" : ""}`}
-            >
-              {option.label}
-            </button>
-          ))}
-        </div>
-      </div>
+      <StatusFilterPills
+        options={statusFilterOptions}
+        value={statusFilter}
+        onChange={(next) => setStatusFilter(next as Asset["status"] | "all")}
+      />
 
       {/* 일괄 변경 - 선택된 항목이 있을 때만 표시 */}
       {selectedIds.size > 0 && (
@@ -216,24 +220,24 @@ export default function AssetAdminPanel() {
           <span className="text-neutral-600 font-medium">
             선택된 항목({selectedIds.size}건):
           </span>
-          <select
-            className="form-select h-9 text-xs"
+          <Select
             value=""
-            onChange={(event) => {
-              const status = event.target.value as Asset["status"];
+            onValueChange={(next) => {
+              const status = next as Asset["status"];
               if (status) {
                 bulkUpdateStatus(status);
-                event.target.value = ""; // 선택 초기화
               }
             }}
             disabled={updating}
           >
-            <option value="">일괄 상태 변경...</option>
-            <option value="available">→ 대여 가능</option>
-            <option value="rented">→ 대여 중</option>
-            <option value="repair">→ 수리 중</option>
-            <option value="retired">→ 불용품</option>
-          </select>
+            <SelectTrigger className="form-select h-9 text-xs">
+              <SelectItem value="">일괄 상태 변경...</SelectItem>
+              <SelectItem value="available">→ 대여 가능</SelectItem>
+              <SelectItem value="rented">→ 대여 중</SelectItem>
+              <SelectItem value="repair">→ 수리 중</SelectItem>
+              <SelectItem value="retired">→ 불용품</SelectItem>
+            </SelectTrigger>
+          </Select>
           <button
             type="button"
             onClick={() => setSelectedIds(new Set())}
@@ -268,7 +272,7 @@ export default function AssetAdminPanel() {
         </Notice>
       ) : (
         <div className="space-y-2">
-          <div className="flex items-center gap-2 rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-2 text-xs text-neutral-600">
+          <div className="flex items-center gap-2 rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-600">
             <input
               type="checkbox"
               checked={
@@ -282,7 +286,7 @@ export default function AssetAdminPanel() {
           {filteredAssets.map((asset) => (
             <div
               key={asset.id}
-              className="flex items-center justify-between rounded-xl border border-neutral-200 px-3 py-2 text-xs"
+              className="flex items-center justify-between rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm"
             >
               <label className="flex items-center gap-2 flex-1 min-w-0">
                 <input
@@ -292,49 +296,11 @@ export default function AssetAdminPanel() {
                   className="flex-shrink-0"
                 />
                 <span className="truncate">{asset.name}</span>
-                {/* 상태 뱃지 - 제품명 옆에 표시 */}
-                <span
-                  className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium flex-shrink-0 ${
-                    asset.status === "available"
-                      ? "bg-emerald-100 text-emerald-700 border border-emerald-200"
-                      : asset.status === "rented"
-                      ? "bg-blue-100 text-blue-700 border border-blue-200"
-                      : asset.status === "repair"
-                      ? "bg-amber-100 text-amber-700 border border-amber-200"
-                      : asset.status === "lost"
-                      ? "bg-rose-100 text-rose-700 border border-rose-200"
-                      : asset.status === "retired"
-                      ? "bg-neutral-100 text-neutral-700 border border-neutral-200"
-                      : "bg-neutral-100 text-neutral-700 border border-neutral-200"
-                  }`}
-                >
-                  {asset.status === "available" && (
-                    <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                    </svg>
-                  )}
-                  {asset.status === "rented" && (
-                    <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
-                    </svg>
-                  )}
-                  {asset.status === "repair" && (
-                    <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                      <path d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" />
-                    </svg>
-                  )}
-                  {asset.status === "lost" && (
-                    <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                    </svg>
-                  )}
-                  {asset.status === "retired" && (
-                    <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-                    </svg>
-                  )}
-                  <span>{statusLabel[asset.status]}</span>
-                </span>
+                <ResourceStatusBadge
+                  status={asset.status}
+                  label={statusLabel[asset.status]}
+                  className="shrink-0"
+                />
               </label>
               <div className="flex items-center gap-2">
                 <div className="flex items-center gap-1">
@@ -368,176 +334,183 @@ export default function AssetAdminPanel() {
         </div>
       )}
 
-      {/* 삭제 확인 모달 */}
-      {showDeleteDialog && (
-        <div className="modal-backdrop">
-          <div className="modal-surface max-w-md p-0">
-            {/* 모달 헤더 */}
-            <div className="rounded-t-2xl border-b border-neutral-200 px-6 py-4">
-              <h3 className="text-lg font-semibold text-neutral-900">물품 삭제</h3>
+      <Dialog
+        open={Boolean(showDeleteDialog)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setShowDeleteDialog(null);
+            setDeletionReason("");
+            setDeletionReasonOther("");
+          }
+        }}
+      >
+        <DialogContent className="max-w-md p-0">
+          <DialogHeader className="rounded-t-2xl border-b border-neutral-200 px-6 py-4">
+            <DialogTitle>물품 삭제</DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4 px-6 py-4">
+            <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3">
+              <p className="text-sm text-rose-700">
+                정말 이 물품을 삭제하시겠습니까? 삭제된 물품은 휴지통으로 이동하며, 최고 관리자가 영구 삭제할 수 있습니다.
+              </p>
             </div>
 
-            {/* 모달 본문 */}
-            <div className="px-6 py-4 space-y-4">
-              <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3">
-                <p className="text-sm text-rose-700">
-                  정말 이 물품을 삭제하시겠습니까? 삭제된 물품은 휴지통으로 이동하며, 최고 관리자가 영구 삭제할 수 있습니다.
-                </p>
-              </div>
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-neutral-900">
+                삭제 사유 <span className="text-rose-500">*</span>
+              </label>
+              <Select
+                value={deletionReason}
+                onValueChange={(next) => {
+                  setDeletionReason(next);
+                  if (next !== "기타") {
+                    setDeletionReasonOther("");
+                  }
+                }}
+              >
+                <SelectTrigger className="w-full form-select" autoFocus>
+                  <SelectItem value="">선택하세요</SelectItem>
+                  <SelectItem value="불용품">불용품 (사용 가능한 상태)</SelectItem>
+                  <SelectItem value="잔존 수명 종료">잔존 수명 종료</SelectItem>
+                  <SelectItem value="고장">고장</SelectItem>
+                  <SelectItem value="분실">분실</SelectItem>
+                  <SelectItem value="신제품 등록">신제품 등록</SelectItem>
+                  <SelectItem value="기타">기타</SelectItem>
+                </SelectTrigger>
+              </Select>
+            </div>
 
+            {deletionReason === "기타" && (
               <div className="space-y-2">
                 <label className="block text-sm font-medium text-neutral-900">
-                  삭제 사유 <span className="text-rose-500">*</span>
+                  사유 입력 <span className="text-rose-500">*</span>
                 </label>
-                <select
-                  value={deletionReason}
-                  onChange={(e) => {
-                    setDeletionReason(e.target.value);
-                    if (e.target.value !== "기타") {
-                      setDeletionReasonOther("");
-                    }
-                  }}
-                  className="w-full form-select"
+                <input
+                  type="text"
+                  value={deletionReasonOther}
+                  onChange={(e) => setDeletionReasonOther(e.target.value)}
+                  placeholder="삭제 사유를 입력하세요"
+                  className="w-full form-input"
                   autoFocus
-                >
-                  <option value="">선택하세요</option>
-                  <option value="불용품">불용품 (사용 가능한 상태)</option>
-                  <option value="잔존 수명 종료">잔존 수명 종료</option>
-                  <option value="고장">고장</option>
-                  <option value="분실">분실</option>
-                  <option value="신제품 등록">신제품 등록</option>
-                  <option value="기타">기타</option>
-                </select>
+                />
               </div>
+            )}
 
-              {deletionReason === "기타" && (
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-neutral-900">
-                    사유 입력 <span className="text-rose-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={deletionReasonOther}
-                    onChange={(e) => setDeletionReasonOther(e.target.value)}
-                    placeholder="삭제 사유를 입력하세요"
-                    className="w-full form-input"
-                    autoFocus
-                  />
-                </div>
-              )}
-
-              {message && message.includes("삭제") && (
-                <div className={`rounded-xl px-4 py-3 text-sm ${
+            {message && message.includes("삭제") && (
+              <div
+                className={`rounded-xl border px-4 py-3 text-sm ${
                   message.includes("오류") || message.includes("실패")
-                    ? "bg-rose-50 text-rose-700 border border-rose-200"
-                    : "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                }`}>
-                  {message}
-                </div>
-              )}
-            </div>
+                    ? "border-rose-200 bg-rose-50 text-rose-700"
+                    : "border-emerald-200 bg-emerald-50 text-emerald-700"
+                }`}
+              >
+                {message}
+              </div>
+            )}
+          </div>
 
-            {/* 모달 하단 버튼 */}
-            <div className="flex gap-3 rounded-b-2xl border-t border-neutral-200 bg-neutral-50 px-6 py-4">
-              <button
-                type="button"
-                onClick={async () => {
-                  if (!deletionReason) {
-                    setMessage("삭제 사유를 선택해주세요.");
-                    return;
+          <div className="flex gap-3 rounded-b-2xl border-t border-neutral-200 bg-neutral-50 px-6 py-4">
+            <button
+              type="button"
+              onClick={async () => {
+                if (!deletionReason) {
+                  setMessage("삭제 사유를 선택해주세요.");
+                  return;
+                }
+                if (deletionReason === "기타" && !deletionReasonOther.trim()) {
+                  setMessage("기타 사유를 입력해주세요.");
+                  return;
+                }
+                const asset = filteredAssets.find((a) => a.id === showDeleteDialog);
+                if (!asset) return;
+                setDeletingId(asset.id);
+                try {
+                  const { data: sessionData } = await supabase.auth.getSession();
+                  if (!sessionData.session) {
+                    throw new Error("인증이 필요합니다. 로그인 후 다시 시도해주세요.");
                   }
-                  if (deletionReason === "기타" && !deletionReasonOther.trim()) {
-                    setMessage("기타 사유를 입력해주세요.");
-                    return;
+
+                  const user = sessionData.session.user;
+                  const { data: profileData, error: profileError } = await supabase
+                    .from("profiles")
+                    .select("role, organization_id, department")
+                    .eq("id", user.id)
+                    .maybeSingle();
+
+                  if (profileError || !profileData) {
+                    throw new Error("사용자 정보를 가져올 수 없습니다.");
                   }
-                  const asset = filteredAssets.find((a) => a.id === showDeleteDialog);
-                  if (!asset) return;
-                  setDeletingId(asset.id);
-                  try {
-                    // 클라이언트에서 직접 삭제 처리
-                    const { data: sessionData } = await supabase.auth.getSession();
-                    if (!sessionData.session) {
-                      throw new Error("인증이 필요합니다. 로그인 후 다시 시도해주세요.");
-                    }
 
-                    const user = sessionData.session.user;
-                    
-                    // 사용자 프로필 확인
-                    const { data: profileData, error: profileError } = await supabase
-                      .from("profiles")
-                      .select("role, organization_id, department")
-                      .eq("id", user.id)
-                      .maybeSingle();
+                  const assetId = asset.short_id || asset.id;
+                  const isUuid = isUUID(assetId);
+                  let assetQuery = supabase
+                    .from("assets")
+                    .select("id, organization_id, owner_scope, owner_department")
+                    .is("deleted_at", null);
 
-                    if (profileError || !profileData) {
-                      throw new Error("사용자 정보를 가져올 수 없습니다.");
-                    }
+                  if (isUuid) {
+                    assetQuery = assetQuery.eq("id", assetId);
+                  } else {
+                    assetQuery = assetQuery.eq("short_id", assetId);
+                  }
 
-                    // 자산 정보 확인
-                    const assetId = asset.short_id || asset.id;
-                    const isUuid = isUUID(assetId);
-                    let assetQuery = supabase
-                      .from("assets")
-                      .select("id, organization_id, owner_scope, owner_department")
-                      .is("deleted_at", null);
-                    
-                    if (isUuid) {
-                      assetQuery = assetQuery.eq("id", assetId);
-                    } else {
-                      assetQuery = assetQuery.eq("short_id", assetId);
-                    }
-                    
-                    const { data: assetData, error: assetError } = await assetQuery.maybeSingle();
-                    
-                    if (assetError || !assetData) {
-                      throw new Error("물품을 찾을 수 없습니다.");
-                    }
+                  const { data: assetData, error: assetError } = await assetQuery.maybeSingle();
+                  if (assetError || !assetData) {
+                    throw new Error("물품을 찾을 수 없습니다.");
+                  }
 
-                    // 권한 확인
-                    const isAdmin = profileData.role === "admin";
-                    const isManager = profileData.role === "manager" || isAdmin;
-                    const isOwner = assetData.owner_scope === "organization" 
+                  const isAdmin = profileData.role === "admin";
+                  const isManager = profileData.role === "manager" || isAdmin;
+                  const isOwner =
+                    assetData.owner_scope === "organization"
                       ? assetData.organization_id === profileData.organization_id
                       : assetData.owner_department === profileData.department;
 
-                    if (!isManager && !isOwner) {
-                      throw new Error("삭제 권한이 없습니다.");
-                    }
-
-                    // Soft delete 실행
-                    const finalReason = deletionReason === "기타" ? deletionReasonOther.trim() : deletionReason;
-                    const { error: updateError } = await supabase
-                      .from("assets")
-                      .update({ 
-                        deleted_at: new Date().toISOString(),
-                        deletion_reason: finalReason || null
-                      })
-                      .eq("id", assetData.id);
-
-                    if (updateError) {
-                      throw new Error(`삭제 실패: ${updateError.message}`);
-                    }
-
-                    await load();
-                    setMessage("물품이 삭제되었습니다.");
-                    setShowDeleteDialog(null);
-                    setDeletionReason("");
-                    setDeletionReasonOther("");
-                  } catch (error) {
-                    setMessage(`삭제 실패: ${error instanceof Error ? error.message : "알 수 없는 오류"}`);
-                    // 에러가 발생해도 모달은 닫기
-                    setShowDeleteDialog(null);
-                    setDeletionReason("");
-                    setDeletionReasonOther("");
-                  } finally {
-                    setDeletingId(null);
+                  if (!isManager && !isOwner) {
+                    throw new Error("삭제 권한이 없습니다.");
                   }
-                }}
-                disabled={!deletionReason || (deletionReason === "기타" && !deletionReasonOther.trim()) || deletingId === showDeleteDialog}
-                className="btn-danger flex-1 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {deletingId === showDeleteDialog ? "삭제 중..." : "삭제"}
-              </button>
+
+                  const finalReason =
+                    deletionReason === "기타" ? deletionReasonOther.trim() : deletionReason;
+                  const { error: updateError } = await supabase
+                    .from("assets")
+                    .update({
+                      deleted_at: new Date().toISOString(),
+                      deletion_reason: finalReason || null,
+                    })
+                    .eq("id", assetData.id);
+
+                  if (updateError) {
+                    throw new Error(`삭제 실패: ${updateError.message}`);
+                  }
+
+                  await load();
+                  setMessage("물품이 삭제되었습니다.");
+                  setShowDeleteDialog(null);
+                  setDeletionReason("");
+                  setDeletionReasonOther("");
+                } catch (error) {
+                  setMessage(
+                    `삭제 실패: ${error instanceof Error ? error.message : "알 수 없는 오류"}`
+                  );
+                  setShowDeleteDialog(null);
+                  setDeletionReason("");
+                  setDeletionReasonOther("");
+                } finally {
+                  setDeletingId(null);
+                }
+              }}
+              disabled={
+                !deletionReason ||
+                (deletionReason === "기타" && !deletionReasonOther.trim()) ||
+                deletingId === showDeleteDialog
+              }
+              className="btn-danger flex-1 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {deletingId === showDeleteDialog ? "삭제 중..." : "삭제"}
+            </button>
+            <DialogClose asChild>
               <button
                 type="button"
                 onClick={() => {
@@ -546,14 +519,14 @@ export default function AssetAdminPanel() {
                   setDeletionReasonOther("");
                 }}
                 disabled={deletingId === showDeleteDialog}
-                className="flex-1 btn-ghost"
+                className="btn-ghost flex-1"
               >
                 취소
               </button>
-            </div>
+            </DialogClose>
           </div>
-        </div>
-      )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

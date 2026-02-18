@@ -8,7 +8,6 @@ import ReservationDetailModal from "./ReservationDetailModal";
 import StatusFilterPills from "@/components/ui/StatusFilterPills";
 import {
   Select,
-  SelectContent,
   SelectItem,
   SelectTrigger,
 } from "@/components/ui/select";
@@ -305,50 +304,48 @@ export default function VehicleReservationManager() {
 
   return (
     <div className="space-y-4 p-4 md:p-5">
-      <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-neutral-600">
-        <div className="flex flex-wrap items-center gap-2">
-          <span>총 {reservations.length}건</span>
-          <button
-            type="button"
-            onClick={load}
-            className="btn-ghost"
-          >
-            새로고침
-          </button>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
+      <div className="surface-card space-y-3 p-3 md:p-4">
+        <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-neutral-600">
+          <div className="flex flex-wrap items-center gap-2">
+            <span>총 {reservations.length}건</span>
+            <button
+              type="button"
+              onClick={load}
+              className="btn-ghost"
+            >
+              새로고침
+            </button>
+          </div>
           <StatusFilterPills
             options={viewModeOptions}
             value={viewMode}
             onChange={(next) => setViewMode(next as "list" | "calendar")}
           />
-          {viewMode === "list" && (
-            <>
-              <input
-                className="form-input text-sm md:w-72"
-                placeholder="차량명/신청자 검색"
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-              />
-              <Select
-                value={statusFilter}
-                onValueChange={(next) =>
-                  setStatusFilter(next as ReservationRow["status"] | "all")
-                }
-              >
-                <SelectTrigger className="form-select text-sm md:w-40">
-                  <SelectContent>
-                    <SelectItem value="all">전체 상태</SelectItem>
-                    <SelectItem value="pending">대기</SelectItem>
-                    <SelectItem value="approved">승인</SelectItem>
-                    <SelectItem value="returned">반납 확인</SelectItem>
-                    <SelectItem value="rejected">반려</SelectItem>
-                  </SelectContent>
-                </SelectTrigger>
-              </Select>
-            </>
-          )}
         </div>
+        {viewMode === "list" && (
+          <div className="grid gap-2 md:grid-cols-[minmax(0,1fr)_10rem]">
+            <input
+              className="form-input text-sm"
+              placeholder="차량명/신청자 검색"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+            />
+            <Select
+              value={statusFilter}
+              onValueChange={(next) =>
+                setStatusFilter(next as ReservationRow["status"] | "all")
+              }
+            >
+              <SelectTrigger className="form-select text-sm">
+                <SelectItem value="all">전체 상태</SelectItem>
+                <SelectItem value="pending">대기</SelectItem>
+                <SelectItem value="approved">승인</SelectItem>
+                <SelectItem value="returned">반납 확인</SelectItem>
+                <SelectItem value="rejected">반려</SelectItem>
+              </SelectTrigger>
+            </Select>
+          </div>
+        )}
       </div>
 
       {viewMode === "calendar" ? (
@@ -385,7 +382,7 @@ export default function VehicleReservationManager() {
             filteredReservations.map((reservation) => (
         <div
           key={reservation.id}
-          className="surface-card cursor-pointer px-4 py-3 transition-colors hover:bg-neutral-50"
+          className="cursor-pointer rounded-xl border border-neutral-200 bg-white px-4 py-3 transition-colors hover:bg-neutral-50"
           onClick={() => setSelectedReservation(reservation)}
         >
           <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
@@ -436,13 +433,11 @@ export default function VehicleReservationManager() {
                   className="form-select h-8 w-28 px-2 text-xs"
                   onClick={(event) => event.stopPropagation()}
                 >
-                  <SelectContent>
-                    {statusOptions.map((status) => (
-                      <SelectItem key={status} value={status} disabled={status === "returned"}>
-                        {statusLabel[status]}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
+                  {statusOptions.map((status) => (
+                    <SelectItem key={status} value={status} disabled={status === "returned"}>
+                      {statusLabel[status]}
+                    </SelectItem>
+                  ))}
                 </SelectTrigger>
               </Select>
             </div>

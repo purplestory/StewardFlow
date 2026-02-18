@@ -32,24 +32,10 @@ function PlatformIntroContent() {
           .maybeSingle();
 
         if (profileError) {
-          console.error("PlatformIntro - 프로필 조회 오류:", profileError);
-          console.error("에러 상세:", {
-            code: profileError.code,
-            message: profileError.message,
-            details: profileError.details,
-            hint: profileError.hint,
-            userId: user.id,
-          });
+          console.error("메인 소개 프로필 조회 오류:", profileError.message);
           // 프로필 조회 실패 시에도 리다이렉트하지 않음 (에러 표시)
           return;
         }
-
-        // 디버깅: 프로필 데이터 확인
-        console.log("PlatformIntro - 프로필 데이터:", {
-          userId: user.id,
-          hasProfile: !!profileData,
-          organizationId: profileData?.organization_id,
-        });
 
         // skip_redirect 파라미터가 있으면 리다이렉트하지 않음
         const skipRedirect = searchParams.get("skip_redirect") === "true";
@@ -58,7 +44,6 @@ function PlatformIntroContent() {
         // - 초대 링크로 가입하는 사용자는 /join에서 토큰 입력 후 수락
         // - 초대 없이 가입하려는 사용자는 /join에서 "가입 신청" 링크로 이동 가능
         if (!profileData?.organization_id && !skipRedirect) {
-          console.log("PlatformIntro - organization_id가 없어서 초대 토큰 입력 페이지로 리다이렉트");
           router.push("/join");
           return;
         }
@@ -72,7 +57,7 @@ function PlatformIntroContent() {
             .maybeSingle();
 
           if (orgError) {
-            console.error("기관 정보 조회 오류:", orgError);
+            console.error("메인 소개 기관 정보 조회 오류:", orgError.message);
           } else if (orgData) {
             setFeatures({
               equipment: orgData.features?.equipment ?? true,

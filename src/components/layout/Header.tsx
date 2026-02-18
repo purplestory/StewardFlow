@@ -66,7 +66,7 @@ export default function Header() {
         if (!isMounted) return;
         
         if (sessionError) {
-          console.error("Session error:", sessionError);
+          console.error("세션 조회 오류:", sessionError.message);
           setRole("user");
           setHasOrganization(false);
           setLoading(false);
@@ -97,29 +97,13 @@ export default function Header() {
         if (!isMounted) return;
         
         if (profileError) {
-          console.error("Header - Profile fetch error:", profileError);
-          console.error("Header - Error details:", {
-            code: profileError.code,
-            message: profileError.message,
-            details: profileError.details,
-            hint: profileError.hint,
-            userId: user.id,
-          });
+          console.error("프로필 조회 오류:", profileError.message);
           setRole("user");
           setHasOrganization(false);
           setLoading(false);
           return;
         }
-        
-        // 디버깅: 프로필 데이터 확인
-        console.log("Header - 프로필 데이터:", {
-          userId: user.id,
-          hasProfile: !!profileData,
-          role: profileData?.role,
-          organizationId: profileData?.organization_id,
-          name: profileData?.name,
-        });
-        
+
         setRole((profileData?.role as Role) ?? "user");
         const orgId = profileData?.organization_id ?? null;
         setHasOrganization(Boolean(orgId));
@@ -137,7 +121,7 @@ export default function Header() {
           if (!isMounted) return;
           
           if (orgError) {
-            console.error("Organization fetch error:", orgError);
+            console.error("기관 설정 조회 오류:", orgError.message);
             setLoading(false);
             return;
           }
@@ -250,7 +234,7 @@ export default function Header() {
           return;
         }
         
-        console.error("Header loadProfile error:", error);
+        console.error("헤더 초기화 오류:", error);
         setRole("user");
         setHasOrganization(false);
         setLoading(false);

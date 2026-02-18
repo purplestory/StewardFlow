@@ -39,25 +39,10 @@ export default function JoinRequestPage() {
         .maybeSingle();
 
       if (profileError) {
-        console.error("가입 신청 페이지 - 프로필 조회 오류:", profileError);
-        console.error("에러 상세:", {
-          code: profileError.code,
-          message: profileError.message,
-          details: profileError.details,
-          hint: profileError.hint,
-          userId: user.id,
-        });
+        console.error("가입 신청 프로필 조회 오류:", profileError.message);
         setLoading(false);
         return;
       }
-
-      // 디버깅: 프로필 데이터 확인
-      console.log("가입 신청 페이지 - 프로필 데이터:", {
-        userId: user.id,
-        hasProfile: !!profileData,
-        organizationId: profileData?.organization_id,
-        name: profileData?.name,
-      });
 
       if (profileData) {
         setName(profileData.name || "");
@@ -66,12 +51,9 @@ export default function JoinRequestPage() {
         
         // 이미 기관이 있으면 메인 페이지로 리다이렉트
         if (profileData.organization_id) {
-          console.log("가입 신청 페이지 - organization_id가 있어서 메인 페이지로 리다이렉트");
           router.push("/");
           return;
         }
-      } else {
-        console.log("가입 신청 페이지 - 프로필 데이터가 없음");
       }
 
       setLoading(false);
@@ -102,23 +84,17 @@ export default function JoinRequestPage() {
       .maybeSingle();
 
     if (checkError) {
-      console.error("프로필 확인 오류:", checkError);
+      console.error("가입 신청 프로필 확인 오류:", checkError.message);
       setMessage(`프로필 확인 중 오류가 발생했습니다: ${checkError.message}`);
       setSubmitting(false);
       return;
     }
-
-    console.log("가입 신청 - 프로필 확인 결과:", {
-      hasProfile: !!existingProfile,
-      organizationId: existingProfile?.organization_id,
-    });
 
     let saveError = null;
     let saveSuccess = false;
 
     if (existingProfile) {
       // 프로필이 있으면 업데이트
-      console.log("가입 신청 - 프로필 업데이트 시도");
       const { error, data } = await supabase
         .from("profiles")
         .update({
@@ -131,14 +107,8 @@ export default function JoinRequestPage() {
 
       saveError = error;
       saveSuccess = !error && !!data;
-      console.log("가입 신청 - 프로필 업데이트 결과:", {
-        success: saveSuccess,
-        error: error?.message,
-        data,
-      });
     } else {
       // 프로필이 없으면 생성 (organization_id는 null로 유지)
-      console.log("가입 신청 - 프로필 생성 시도");
       const { error, data } = await supabase
         .from("profiles")
         .insert({
@@ -152,30 +122,17 @@ export default function JoinRequestPage() {
 
       saveError = error;
       saveSuccess = !error && !!data;
-      console.log("가입 신청 - 프로필 생성 결과:", {
-        success: saveSuccess,
-        error: error?.message,
-        data,
-      });
     }
 
     if (saveError) {
-      console.error("Profile update/insert error:", saveError);
-      console.error("에러 상세:", {
-        code: saveError.code,
-        message: saveError.message,
-        details: saveError.details,
-        hint: saveError.hint,
-        userId: user.id,
-        hasExistingProfile: !!existingProfile,
-      });
+      console.error("가입 신청 정보 저장 오류:", saveError.message);
       setMessage(`정보 저장 중 오류가 발생했습니다: ${saveError.message || "알 수 없는 오류"}`);
       setSubmitting(false);
       return;
     }
 
     if (!saveSuccess) {
-      console.error("프로필 저장 실패: saveSuccess가 false입니다");
+      console.error("가입 신청 정보 저장 실패");
       setMessage("정보 저장에 실패했습니다. 다시 시도해주세요.");
       setSubmitting(false);
       return;
@@ -189,25 +146,18 @@ export default function JoinRequestPage() {
       .maybeSingle();
 
     if (verifyError) {
-      console.error("프로필 검증 오류:", verifyError);
+      console.error("가입 신청 저장 검증 오류:", verifyError.message);
       setMessage("정보는 저장되었지만 확인에 실패했습니다. 페이지를 새로고침해주세요.");
       setSubmitting(false);
       return;
     }
 
     if (!verifyProfile) {
-      console.error("프로필이 저장되지 않았습니다.");
+      console.error("가입 신청 저장 후 프로필이 조회되지 않음");
       setMessage("정보 저장에 실패했습니다. 다시 시도해주세요.");
       setSubmitting(false);
       return;
     }
-
-    console.log("가입 신청 저장 완료:", {
-      userId: user.id,
-      name: verifyProfile.name,
-      phone: verifyProfile.phone,
-      organizationId: verifyProfile.organization_id,
-    });
 
     // 가입 신청 완료 (organization_id가 null인 상태로 유지)
     // 관리자가 UserRoleManager에서 승인할 수 있음

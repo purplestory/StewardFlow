@@ -46,6 +46,7 @@ export default function NotificationsList() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [query, setQuery] = useState("");
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   const [sortOrder, setSortOrder] = useState<
     "latest" | "unread" | "status"
   >("latest");
@@ -415,7 +416,7 @@ export default function NotificationsList() {
             </button>
           </div>
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex items-center gap-2">
           <select
             className="rounded-md border border-neutral-200 px-2 py-1 text-xs"
             value={sortOrder}
@@ -432,6 +433,19 @@ export default function NotificationsList() {
             <option value="unread">미읽음 우선</option>
             <option value="status">상태 우선</option>
           </select>
+          <button
+            type="button"
+            onClick={() => setShowAdvancedFilters((prev) => !prev)}
+            className="rounded-md border border-neutral-200 px-2 py-1 text-xs text-neutral-700 hover:bg-neutral-50 md:hidden"
+          >
+            {showAdvancedFilters ? "필터 접기" : "필터 열기"}
+          </button>
+        </div>
+        <div
+          className={`flex flex-wrap gap-2 ${
+            showAdvancedFilters ? "flex" : "hidden"
+          } md:flex`}
+        >
           <label className="flex items-center gap-2 text-xs text-neutral-600">
               <input
                 type="checkbox"

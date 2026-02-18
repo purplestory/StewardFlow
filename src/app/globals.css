@@ -147,7 +147,7 @@ body {
 
 /* Professional Form Styles - Unified Design System */
 .form-input {
-  @apply h-[38px] w-full rounded-lg border border-neutral-200 bg-white text-sm font-normal text-neutral-900 placeholder:text-neutral-400 transition-all duration-200;
+  @apply h-10 w-full rounded-xl border border-neutral-200 bg-white text-sm font-normal text-neutral-900 placeholder:text-neutral-400 transition-all duration-200;
   @apply focus:border-slate-600 focus:outline-none focus:ring-2 focus:ring-slate-500/20 focus:shadow-sm;
   @apply disabled:bg-neutral-50 disabled:text-neutral-500 disabled:cursor-not-allowed;
   @apply hover:border-neutral-300;
@@ -158,7 +158,7 @@ body {
 }
 
 .form-select {
-  @apply h-[38px] w-full rounded-lg border border-neutral-200 bg-white text-sm font-normal text-neutral-900 transition-all duration-200;
+  @apply h-10 w-full rounded-xl border border-neutral-200 bg-white text-sm font-normal text-neutral-900 transition-all duration-200;
   @apply focus:border-slate-600 focus:outline-none focus:ring-2 focus:ring-slate-500/20 focus:shadow-sm;
   @apply disabled:bg-neutral-50 disabled:text-neutral-500 disabled:cursor-not-allowed;
   @apply hover:border-neutral-300;
@@ -175,7 +175,7 @@ body {
 }
 
 .form-textarea {
-  @apply min-h-[100px] w-full rounded-lg border border-neutral-200 bg-white px-4 py-3 text-sm font-normal text-neutral-900 placeholder:text-neutral-400 transition-all duration-200 resize-y;
+  @apply min-h-[100px] w-full rounded-xl border border-neutral-200 bg-white px-4 py-3 text-sm font-normal text-neutral-900 placeholder:text-neutral-400 transition-all duration-200 resize-y;
   @apply focus:border-slate-600 focus:outline-none focus:ring-2 focus:ring-slate-500/20 focus:shadow-sm;
   @apply disabled:bg-neutral-50 disabled:text-neutral-500 disabled:cursor-not-allowed;
   @apply hover:border-neutral-300;
@@ -279,7 +279,7 @@ input[type="time"] {
 
 /* Unified Button Styles */
 .btn-primary {
-  @apply h-[38px] px-4 rounded-lg text-sm font-semibold transition-all text-white;
+  @apply h-10 px-4 rounded-xl text-sm font-semibold transition-all text-white;
   @apply focus:outline-none focus:ring-2 focus:ring-neutral-500 focus:ring-offset-2;
   @apply disabled:opacity-50 disabled:cursor-not-allowed;
   @apply flex items-center justify-center whitespace-nowrap;
@@ -297,7 +297,7 @@ input[type="time"] {
 }
 
 .btn-secondary {
-  @apply h-[38px] px-4 rounded-lg text-sm font-medium transition-all bg-white text-neutral-700 border border-neutral-200;
+  @apply h-10 px-4 rounded-xl text-sm font-medium transition-all bg-white text-neutral-700 border border-neutral-200;
   @apply hover:bg-neutral-50 hover:border-neutral-300;
   @apply focus:outline-none focus:ring-2 focus:ring-neutral-500 focus:ring-offset-2;
   @apply disabled:opacity-50 disabled:cursor-not-allowed;
@@ -305,7 +305,7 @@ input[type="time"] {
 }
 
 .btn-sm {
-  @apply h-[38px] px-4 rounded-lg text-sm font-medium transition-all bg-white text-neutral-700 border border-neutral-200;
+  @apply h-10 px-4 rounded-xl text-sm font-medium transition-all bg-white text-neutral-700 border border-neutral-200;
   @apply hover:bg-neutral-50 hover:border-neutral-300;
   @apply focus:outline-none focus:ring-2 focus:ring-neutral-500 focus:ring-offset-2;
   @apply disabled:opacity-50 disabled:cursor-not-allowed;
@@ -313,7 +313,7 @@ input[type="time"] {
 }
 
 .btn-outline {
-  @apply h-[38px] px-4 rounded-lg text-sm font-medium transition-all bg-white text-neutral-700 border border-neutral-200;
+  @apply h-10 px-4 rounded-xl text-sm font-medium transition-all bg-white text-neutral-700 border border-neutral-200;
   @apply hover:bg-neutral-50 hover:border-neutral-300;
   @apply focus:outline-none focus:ring-2 focus:ring-neutral-500 focus:ring-offset-2;
   @apply disabled:opacity-50 disabled:cursor-not-allowed;
@@ -321,16 +321,30 @@ input[type="time"] {
 }
 
 .btn-ghost {
-  @apply h-[38px] px-4 rounded-lg text-sm font-medium transition-all bg-white text-neutral-700 border border-neutral-200;
+  @apply h-10 px-4 rounded-xl text-sm font-medium transition-all bg-white text-neutral-700 border border-neutral-200;
   @apply hover:bg-neutral-50 hover:border-neutral-300;
   @apply focus:outline-none focus:ring-2 focus:ring-neutral-500 focus:ring-offset-2;
   @apply disabled:opacity-50 disabled:cursor-not-allowed;
   @apply flex items-center justify-center whitespace-nowrap;
 }
 
+.btn-danger {
+  @apply h-10 px-4 rounded-xl text-sm font-semibold text-white transition-all;
+  @apply focus:outline-none focus:ring-2 focus:ring-rose-500 focus:ring-offset-2;
+  @apply disabled:opacity-50 disabled:cursor-not-allowed;
+  @apply flex items-center justify-center whitespace-nowrap;
+  background: linear-gradient(135deg, #dc2626 0%, #be123c 100%);
+  box-shadow: 0 10px 20px rgba(220, 38, 38, 0.2);
+}
+
+.btn-danger:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.03);
+}
+
 /* Shared Surface Styles */
 .surface-panel {
-  @apply rounded-3xl border border-neutral-200 bg-white/95 p-6;
+  @apply rounded-2xl border border-neutral-200 bg-white/95 p-6;
   box-shadow: var(--shadow-card);
 }
 
@@ -360,6 +374,44 @@ input[type="time"] {
 
 .chip-muted {
   @apply inline-flex items-center rounded-full border border-neutral-200 bg-neutral-50 px-2.5 py-1 text-xs font-medium text-neutral-600;
+}
+
+.filter-pill {
+  @apply h-10 rounded-xl border border-neutral-200 bg-white px-4 text-sm font-medium text-neutral-700 transition-all;
+  @apply hover:border-neutral-300 hover:bg-neutral-50;
+  @apply focus:outline-none focus:ring-2 focus:ring-slate-500/20;
+}
+
+.filter-pill-active {
+  @apply border-slate-900 bg-slate-900 text-white;
+}
+
+.tab-shell {
+  @apply mb-6 rounded-2xl border border-neutral-200 bg-white p-2 shadow-[0_8px_20px_rgba(15,23,42,0.04)];
+}
+
+.tab-chip {
+  @apply inline-flex h-10 items-center justify-center shrink-0 whitespace-nowrap rounded-xl px-4 text-sm font-medium transition-colors;
+  @apply text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900;
+}
+
+.tab-chip-active {
+  @apply bg-slate-900 text-white hover:bg-slate-900 hover:text-white;
+}
+
+.field-static {
+  @apply h-10 rounded-xl border border-neutral-200 bg-neutral-50 px-4 text-sm text-neutral-600;
+  @apply flex items-center;
+}
+
+.icon-button {
+  @apply inline-flex h-9 w-9 items-center justify-center rounded-xl border border-neutral-200 bg-white text-neutral-600 transition-colors;
+  @apply hover:bg-neutral-50 hover:text-neutral-900;
+  @apply disabled:opacity-50 disabled:cursor-not-allowed;
+}
+
+.icon-button-danger {
+  @apply border-rose-200 text-rose-600 hover:bg-rose-50 hover:text-rose-700;
 }
 
 .form-section {

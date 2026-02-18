@@ -36,7 +36,7 @@ export default function ManageTabs() {
   ];
 
   return (
-    <div className="mb-6 rounded-2xl border border-neutral-200 bg-white p-2 shadow-[0_8px_20px_rgba(15,23,42,0.04)]">
+    <div className="tab-shell">
       <nav className="flex min-w-max items-center gap-2 overflow-x-auto pb-1" aria-label="관리 탭">
         {tabs.map((tab) => {
           let isActive = false;
@@ -52,14 +52,7 @@ export default function ManageTabs() {
             <Link
               key={tab.key}
               href={tab.href}
-              className={`
-                shrink-0 whitespace-nowrap rounded-xl px-4 py-2 text-sm font-medium transition-colors
-                ${
-                  isActive
-                    ? "bg-slate-900 text-white"
-                    : "text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900"
-                }
-              `}
+              className={`tab-chip ${isActive ? "tab-chip-active" : ""}`}
             >
               {tab.label}
             </Link>

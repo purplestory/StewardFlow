@@ -309,35 +309,27 @@ export default function VehicleReservationManager() {
           <button
             type="button"
             onClick={() => setViewMode("list")}
-            className={`h-[38px] rounded-lg px-4 text-sm font-medium transition-all ${
-              viewMode === "list"
-                ? "bg-slate-900 text-white"
-                : "bg-white border border-neutral-200 text-neutral-700 hover:bg-neutral-50"
-            }`}
+            className={`filter-pill ${viewMode === "list" ? "filter-pill-active" : ""}`}
           >
             목록
           </button>
           <button
             type="button"
             onClick={() => setViewMode("calendar")}
-            className={`h-[38px] rounded-lg px-4 text-sm font-medium transition-all ${
-              viewMode === "calendar"
-                ? "bg-slate-900 text-white"
-                : "bg-white border border-neutral-200 text-neutral-700 hover:bg-neutral-50"
-            }`}
+            className={`filter-pill ${viewMode === "calendar" ? "filter-pill-active" : ""}`}
           >
             달력
           </button>
           {viewMode === "list" && (
             <>
               <input
-                className="form-input h-[38px] text-xs"
+                className="form-input text-sm md:w-72"
                 placeholder="차량명/신청자 검색"
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
               />
               <select
-                className="form-select h-[38px] text-xs"
+                className="form-select text-sm md:w-40"
                 value={statusFilter}
                 onChange={(event) =>
                   setStatusFilter(
@@ -390,7 +382,7 @@ export default function VehicleReservationManager() {
             filteredReservations.map((reservation) => (
         <div
           key={reservation.id}
-          className="cursor-pointer rounded-lg border border-neutral-200 px-4 py-3 transition-colors hover:bg-neutral-50"
+          className="cursor-pointer rounded-xl border border-neutral-200 px-4 py-3 transition-colors hover:bg-neutral-50"
           onClick={() => setSelectedReservation(reservation)}
         >
           <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
@@ -409,7 +401,7 @@ export default function VehicleReservationManager() {
             <div className="flex items-center gap-2">
               <button
                 type="button"
-                className="rounded-md border border-neutral-200 px-2 py-1 text-xs text-neutral-700 hover:bg-white"
+                className="btn-ghost h-8 px-3 text-xs"
                 onClick={(event) => {
                   event.stopPropagation();
                   setSelectedReservation(reservation);
@@ -427,7 +419,7 @@ export default function VehicleReservationManager() {
                   )
                 }
                 onClick={(event) => event.stopPropagation()}
-                className="rounded-md border border-neutral-200 px-2 py-1 text-xs"
+                className="form-select h-8 w-28 px-2 text-xs"
                 disabled={
                   reservation.status === "returned" ||
                   !context ||

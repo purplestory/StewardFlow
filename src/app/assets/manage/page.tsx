@@ -66,26 +66,26 @@ export default function AssetManagePage() {
 
   return (
     <ManageLayout>
-      <div className="rounded-xl border border-neutral-200 bg-white p-6 mb-6">
+      <div className="surface-panel mb-6">
         <h2 className="text-lg font-semibold">자원 관리</h2>
-        <p className="text-sm text-neutral-600 mt-1">
+        <p className="mt-1 text-sm text-neutral-600">
           물품 상태 관리와 예약 승인 처리를 함께 수행합니다.
         </p>
       </div>
       <CategoryTabs />
       <OrganizationGate>
         <div className="space-y-6">
-          <div className="rounded-xl border border-neutral-200 bg-white p-6">
+          <div className="surface-card p-6">
             <AssetAdminPanel />
           </div>
-          <div className="rounded-xl border border-neutral-200 bg-white p-6">
+          <div className="surface-card p-6">
             <ReservationManager />
           </div>
-          <div className="rounded-xl border border-neutral-200 bg-white p-6">
+          <div className="surface-card p-6">
             <AssetTransferRequestsBoard />
           </div>
           {organizationId && currentUserId && (
-            <div className="rounded-xl border border-neutral-200 bg-white p-6">
+            <div className="surface-card p-6">
               <SampleDataGenerator
                 organizationId={organizationId}
                 userId={currentUserId}

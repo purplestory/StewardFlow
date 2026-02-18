@@ -106,7 +106,7 @@ export default function AssetsListClient() {
 
   return (
     <div className="space-y-6">
-      <div className="rounded-2xl border border-neutral-200 bg-white p-6">
+      <div className="surface-panel">
         <div className="flex items-start justify-between">
           <div>
             <h1 className="text-2xl font-semibold">물품</h1>
@@ -118,7 +118,7 @@ export default function AssetsListClient() {
             <button
               type="button"
               onClick={() => setShowRegisterForm(!showRegisterForm)}
-              className="px-4 py-2 rounded-lg text-sm font-medium transition-all bg-neutral-900 text-white hover:bg-neutral-800 whitespace-nowrap"
+              className="btn-primary whitespace-nowrap"
             >
               {showRegisterForm ? "목록 보기" : "물품 등록"}
             </button>
@@ -161,23 +161,7 @@ export default function AssetsListClient() {
                     setStatus(option.value as Asset["status"] | "");
                   }
                 }}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                  status === option.value
-                    ? option.value === ""
-                      ? "bg-neutral-900 text-white"
-                      : option.value === "available"
-                      ? "bg-emerald-500 text-white"
-                      : option.value === "rented"
-                      ? "bg-blue-500 text-white"
-                      : option.value === "repair"
-                      ? "bg-amber-500 text-white"
-                      : option.value === "lost"
-                      ? "bg-rose-500 text-white"
-                      : option.value === "retired"
-                      ? "bg-neutral-600 text-white"
-                      : "bg-neutral-100 text-neutral-700"
-                    : "bg-white text-neutral-700 border border-neutral-200 hover:bg-neutral-50"
-                }`}
+                className={`filter-pill ${status === option.value ? "filter-pill-active" : ""}`}
               >
                 {option.label}
               </button>
@@ -187,18 +171,18 @@ export default function AssetsListClient() {
       </div>
 
       {showRegisterForm && isManager && hasOrganization === true && (
-        <div className="rounded-xl border border-neutral-200 bg-white p-6">
+        <div className="surface-card p-6">
           <h2 className="mb-4 text-lg font-semibold">물품 등록</h2>
           <AssetForm />
         </div>
       )}
 
       {loading || hasOrganization === null ? (
-        <Notice className="rounded-xl bg-white p-10">
+        <Notice className="p-10">
           자산 목록을 불러오는 중입니다.
         </Notice>
       ) : !hasOrganization ? (
-        <Notice variant="warning" className="rounded-xl p-10">
+        <Notice variant="warning" className="p-10">
           기관 설정이 필요합니다.{" "}
           <Link href="/settings/org" className="underline">
             기관 설정
@@ -206,11 +190,11 @@ export default function AssetsListClient() {
           으로 이동해 생성/참여를 완료해주세요.
         </Notice>
       ) : message ? (
-        <Notice variant="error" className="rounded-xl p-10">
+        <Notice variant="error" className="p-10">
           {message}
         </Notice>
       ) : filteredAssets.length === 0 ? (
-        <Notice className="rounded-xl bg-white p-10">
+        <Notice className="p-10">
           <p>조건에 맞는 자산이 없습니다.</p>
           <button
             type="button"
@@ -219,7 +203,7 @@ export default function AssetsListClient() {
               setCategory("");
               setStatus("");
             }}
-            className="mt-3 px-4 py-2 rounded-lg text-sm font-medium transition-all bg-white text-neutral-700 border border-neutral-200 hover:bg-neutral-50"
+            className="btn-ghost mt-3"
           >
             필터 초기화
           </button>

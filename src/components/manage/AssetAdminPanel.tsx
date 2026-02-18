@@ -15,6 +15,14 @@ const statusLabel: Record<Asset["status"], string> = {
   retired: "불용품",
 };
 
+const statusFilterOptions: Array<{ value: Asset["status"] | "all"; label: string }> = [
+  { value: "all", label: "전체" },
+  { value: "available", label: "대여 가능" },
+  { value: "rented", label: "대여 중" },
+  { value: "repair", label: "수리 중" },
+  { value: "retired", label: "불용품" },
+];
+
 export default function AssetAdminPanel() {
   const [assets, setAssets] = useState<Asset[]>([]);
   const [loading, setLoading] = useState(true);
@@ -178,7 +186,7 @@ export default function AssetAdminPanel() {
         </div>
         <div className="flex flex-wrap gap-2">
           <input
-            className="form-input h-[38px] text-xs"
+            className="form-input text-sm md:w-72"
             placeholder="자산명/소유 부서 검색"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
@@ -187,74 +195,29 @@ export default function AssetAdminPanel() {
       </div>
 
       {/* 상태 필터 버튼 */}
-      <div className="rounded-lg border border-neutral-200 bg-neutral-50 px-4 py-3">
+      <div className="rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-3">
         <div className="flex flex-wrap items-center gap-2">
-          <button
-            type="button"
-            onClick={() => setStatusFilter("all")}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-              statusFilter === "all"
-                ? "bg-black text-white shadow-sm"
-                : "bg-white text-neutral-700 border border-neutral-300 hover:border-neutral-400 hover:bg-neutral-50"
-            }`}
-          >
-            전체
-          </button>
-          <button
-            type="button"
-            onClick={() => setStatusFilter("available")}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-              statusFilter === "available"
-                ? "bg-emerald-500 text-white shadow-sm"
-                : "bg-white text-neutral-700 border border-neutral-300 hover:border-emerald-200 hover:bg-emerald-50"
-            }`}
-          >
-            대여 가능
-          </button>
-          <button
-            type="button"
-            onClick={() => setStatusFilter("rented")}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-              statusFilter === "rented"
-                ? "bg-blue-500 text-white shadow-sm"
-                : "bg-white text-neutral-700 border border-neutral-300 hover:border-blue-200 hover:bg-blue-50"
-            }`}
-          >
-            대여 중
-          </button>
-          <button
-            type="button"
-            onClick={() => setStatusFilter("repair")}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-              statusFilter === "repair"
-                ? "bg-amber-500 text-white shadow-sm"
-                : "bg-white text-neutral-700 border border-neutral-300 hover:border-amber-200 hover:bg-amber-50"
-            }`}
-          >
-            수리 중
-          </button>
-          <button
-            type="button"
-            onClick={() => setStatusFilter("retired")}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-              statusFilter === "retired"
-                ? "bg-neutral-600 text-white shadow-sm"
-                : "bg-white text-neutral-700 border border-neutral-300 hover:border-neutral-400 hover:bg-neutral-50"
-            }`}
-          >
-            불용품
-          </button>
+          {statusFilterOptions.map((option) => (
+            <button
+              key={option.value}
+              type="button"
+              onClick={() => setStatusFilter(option.value)}
+              className={`filter-pill ${statusFilter === option.value ? "filter-pill-active" : ""}`}
+            >
+              {option.label}
+            </button>
+          ))}
         </div>
       </div>
 
       {/* 일괄 변경 - 선택된 항목이 있을 때만 표시 */}
       {selectedIds.size > 0 && (
-        <div className="flex flex-wrap items-center gap-2 text-xs border-t border-neutral-200 pt-3 mt-3">
+        <div className="mt-3 flex flex-wrap items-center gap-2 rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-3 text-xs">
           <span className="text-neutral-600 font-medium">
             선택된 항목({selectedIds.size}건):
           </span>
           <select
-            className="form-select h-8 text-xs"
+            className="form-select h-9 text-xs"
             value=""
             onChange={(event) => {
               const status = event.target.value as Asset["status"];
@@ -305,7 +268,7 @@ export default function AssetAdminPanel() {
         </Notice>
       ) : (
         <div className="space-y-2">
-          <div className="flex items-center gap-2 rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2 text-xs text-neutral-600">
+          <div className="flex items-center gap-2 rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-2 text-xs text-neutral-600">
             <input
               type="checkbox"
               checked={
@@ -319,7 +282,7 @@ export default function AssetAdminPanel() {
           {filteredAssets.map((asset) => (
             <div
               key={asset.id}
-              className="flex items-center justify-between rounded-lg border border-neutral-200 px-3 py-2 text-xs"
+              className="flex items-center justify-between rounded-xl border border-neutral-200 px-3 py-2 text-xs"
             >
               <label className="flex items-center gap-2 flex-1 min-w-0">
                 <input
@@ -377,7 +340,7 @@ export default function AssetAdminPanel() {
                 <div className="flex items-center gap-1">
                   <Link
                     href={`/assets/${asset.short_id || asset.id}/edit`}
-                    className="p-2 text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100 rounded transition-colors"
+                    className="icon-button"
                     title="수정"
                   >
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -391,7 +354,7 @@ export default function AssetAdminPanel() {
                       setDeletionReason("");
                     }}
                     disabled={deletingId === asset.id || updating}
-                    className="p-2 text-rose-600 hover:text-rose-700 hover:bg-rose-50 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="icon-button icon-button-danger disabled:opacity-50 disabled:cursor-not-allowed"
                     title="삭제"
                   >
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -407,16 +370,16 @@ export default function AssetAdminPanel() {
 
       {/* 삭제 확인 모달 */}
       {showDeleteDialog && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="w-full max-w-md rounded-lg bg-white shadow-xl">
+        <div className="modal-backdrop">
+          <div className="modal-surface max-w-md p-0">
             {/* 모달 헤더 */}
-            <div className="rounded-t-lg bg-blue-600 px-6 py-4">
-              <h3 className="text-lg font-semibold text-white">물품 삭제</h3>
+            <div className="rounded-t-2xl border-b border-neutral-200 px-6 py-4">
+              <h3 className="text-lg font-semibold text-neutral-900">물품 삭제</h3>
             </div>
 
             {/* 모달 본문 */}
             <div className="px-6 py-4 space-y-4">
-              <div className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3">
+              <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3">
                 <p className="text-sm text-rose-700">
                   정말 이 물품을 삭제하시겠습니까? 삭제된 물품은 휴지통으로 이동하며, 최고 관리자가 영구 삭제할 수 있습니다.
                 </p>
@@ -464,7 +427,7 @@ export default function AssetAdminPanel() {
               )}
 
               {message && message.includes("삭제") && (
-                <div className={`rounded-lg px-4 py-3 text-sm ${
+                <div className={`rounded-xl px-4 py-3 text-sm ${
                   message.includes("오류") || message.includes("실패")
                     ? "bg-rose-50 text-rose-700 border border-rose-200"
                     : "bg-emerald-50 text-emerald-700 border border-emerald-200"
@@ -475,7 +438,7 @@ export default function AssetAdminPanel() {
             </div>
 
             {/* 모달 하단 버튼 */}
-            <div className="flex gap-3 rounded-b-lg border-t border-neutral-200 bg-neutral-50 px-6 py-4">
+            <div className="flex gap-3 rounded-b-2xl border-t border-neutral-200 bg-neutral-50 px-6 py-4">
               <button
                 type="button"
                 onClick={async () => {
@@ -571,7 +534,7 @@ export default function AssetAdminPanel() {
                   }
                 }}
                 disabled={!deletionReason || (deletionReason === "기타" && !deletionReasonOther.trim()) || deletingId === showDeleteDialog}
-                className="flex-1 btn-primary bg-rose-600 hover:bg-rose-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="btn-danger flex-1 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {deletingId === showDeleteDialog ? "삭제 중..." : "삭제"}
               </button>

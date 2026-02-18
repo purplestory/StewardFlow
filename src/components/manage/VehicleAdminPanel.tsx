@@ -13,6 +13,13 @@ const statusLabel: Record<Vehicle["status"], string> = {
   lost: "분실",
 };
 
+const statusFilterOptions: Array<{ value: Vehicle["status"] | "all"; label: string }> = [
+  { value: "all", label: "전체" },
+  { value: "available", label: "사용 가능" },
+  { value: "rented", label: "예약 중" },
+  { value: "repair", label: "사용 불가" },
+];
+
 export default function VehicleAdminPanel() {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [loading, setLoading] = useState(true);
@@ -196,7 +203,7 @@ export default function VehicleAdminPanel() {
         </div>
         <div className="flex flex-wrap gap-2">
           <input
-            className="form-input h-[38px] text-xs"
+            className="form-input text-sm md:w-72"
             placeholder="차량명/소유 부서 검색"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
@@ -205,63 +212,29 @@ export default function VehicleAdminPanel() {
       </div>
 
       {/* 상태 필터 버튼 */}
-      <div className="rounded-lg border border-neutral-200 bg-neutral-50 px-4 py-3">
+      <div className="rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-3">
         <div className="flex flex-wrap items-center gap-2">
-          <button
-            type="button"
-            onClick={() => setStatusFilter("all")}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-              statusFilter === "all"
-                ? "bg-black text-white shadow-sm"
-                : "bg-white text-neutral-700 border border-neutral-300 hover:border-neutral-400 hover:bg-neutral-50"
-            }`}
-          >
-            전체
-          </button>
-          <button
-            type="button"
-            onClick={() => setStatusFilter("available")}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-              statusFilter === "available"
-                ? "bg-emerald-500 text-white shadow-sm"
-                : "bg-white text-neutral-700 border border-neutral-300 hover:border-emerald-200 hover:bg-emerald-50"
-            }`}
-          >
-            사용 가능
-          </button>
-          <button
-            type="button"
-            onClick={() => setStatusFilter("rented")}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-              statusFilter === "rented"
-                ? "bg-blue-500 text-white shadow-sm"
-                : "bg-white text-neutral-700 border border-neutral-300 hover:border-blue-200 hover:bg-blue-50"
-            }`}
-          >
-            예약 중
-          </button>
-          <button
-            type="button"
-            onClick={() => setStatusFilter("repair")}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-              statusFilter === "repair"
-                ? "bg-amber-500 text-white shadow-sm"
-                : "bg-white text-neutral-700 border border-neutral-300 hover:border-amber-200 hover:bg-amber-50"
-            }`}
-          >
-            사용 불가
-          </button>
+          {statusFilterOptions.map((option) => (
+            <button
+              key={option.value}
+              type="button"
+              onClick={() => setStatusFilter(option.value)}
+              className={`filter-pill ${statusFilter === option.value ? "filter-pill-active" : ""}`}
+            >
+              {option.label}
+            </button>
+          ))}
         </div>
       </div>
 
       {/* 일괄 변경 - 선택된 항목이 있을 때만 표시 */}
       {selectedIds.size > 0 && (
-        <div className="flex flex-wrap items-center gap-2 text-xs border-t border-neutral-200 pt-3 mt-3">
+        <div className="mt-3 flex flex-wrap items-center gap-2 rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-3 text-xs">
           <span className="text-neutral-600 font-medium">
             선택된 항목({selectedIds.size}건):
           </span>
           <select
-            className="form-select h-8 text-xs"
+            className="form-select h-9 text-xs"
             value=""
             onChange={(event) => {
               const status = event.target.value as Vehicle["status"];
@@ -311,7 +284,7 @@ export default function VehicleAdminPanel() {
         </Notice>
       ) : (
         <div className="space-y-2">
-          <div className="flex items-center gap-2 rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2 text-xs text-neutral-600">
+          <div className="flex items-center gap-2 rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-2 text-xs text-neutral-600">
             <input
               type="checkbox"
               checked={
@@ -325,7 +298,7 @@ export default function VehicleAdminPanel() {
           {filteredVehicles.map((vehicle) => (
             <div
               key={vehicle.id}
-              className="flex items-center justify-between rounded-lg border border-neutral-200 px-3 py-2 text-xs"
+              className="flex items-center justify-between rounded-xl border border-neutral-200 px-3 py-2 text-xs"
             >
               <label className="flex items-center gap-2 flex-1 min-w-0">
                 <input

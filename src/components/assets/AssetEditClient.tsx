@@ -15,7 +15,7 @@ export default function AssetEditClient() {
   if (loading) {
     return (
       <section className="space-y-6">
-        <div className="rounded-2xl border border-neutral-200 bg-white p-6">
+        <div className="surface-panel">
           <p className="text-center text-neutral-500">로딩 중...</p>
         </div>
       </section>
@@ -28,12 +28,16 @@ export default function AssetEditClient() {
 
   return (
     <section className="space-y-6">
-      <h1 className="text-2xl font-semibold">물품 수정</h1>
-      <p className="text-sm text-neutral-600">
-        등록된 물품의 정보를 수정할 수 있습니다.
-      </p>
+      <div className="surface-panel">
+        <h1 className="text-2xl font-semibold">물품 수정</h1>
+        <p className="mt-2 text-sm text-neutral-600">
+          등록된 물품의 정보를 수정할 수 있습니다.
+        </p>
+      </div>
       <OrganizationGate>
-        <AssetEditForm asset={asset} />
+        <div className="surface-card p-6">
+          <AssetEditForm asset={asset} />
+        </div>
       </OrganizationGate>
     </section>
   );

@@ -99,9 +99,21 @@ export default function NotificationBadge() {
   }
 
   return (
-    <Link href="/notifications" className="relative inline-flex items-center">
-      <span className="rounded-full bg-rose-500 px-2 py-0.5 text-xs text-white">
-        {count}
+    <Link
+      href="/notifications"
+      className="relative inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-neutral-700 transition-colors hover:bg-slate-50 hover:text-slate-900"
+      aria-label={`알림 ${count}개`}
+    >
+      <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={1.8}
+          d="M14.857 17H9.143M18 17H6l1.2-1.6A2 2 0 0 0 7.6 14.2V10a4.4 4.4 0 1 1 8.8 0v4.2a2 2 0 0 0 .4 1.2L18 17Z"
+        />
+      </svg>
+      <span className="absolute -right-1 -top-1 rounded-full bg-rose-500 px-1.5 py-0.5 text-[10px] font-semibold text-white">
+        {count > 99 ? "99+" : count}
       </span>
     </Link>
   );

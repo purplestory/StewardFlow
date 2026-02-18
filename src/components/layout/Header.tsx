@@ -36,9 +36,16 @@ export default function Header() {
   const navLinkClass = (href: string) => {
     const isActive = pathname === href || pathname.startsWith(`${href}/`);
     if (isActive) {
-      return "rounded-full bg-slate-900 px-3 py-1.5 font-medium text-white shadow-sm";
+      return "inline-flex h-10 items-center rounded-xl bg-slate-900 px-3.5 text-sm font-medium text-white shadow-sm";
     }
-    return "rounded-full px-3 py-1.5 text-neutral-600 hover:bg-slate-50 hover:text-slate-900";
+    return "inline-flex h-10 items-center rounded-xl px-3.5 text-sm font-medium text-neutral-600 hover:bg-slate-50 hover:text-slate-900";
+  };
+
+  const mobileNavLinkClass = (href: string) => {
+    const isActive = pathname === href || pathname.startsWith(`${href}/`);
+    return isActive
+      ? "block rounded-xl bg-slate-100 px-3 py-2.5 text-sm font-medium text-slate-900"
+      : "block rounded-xl px-3 py-2.5 text-sm text-neutral-600 hover:bg-slate-50 hover:text-slate-900";
   };
 
   useEffect(() => {
@@ -57,7 +64,7 @@ export default function Header() {
 
   return (
     <header className="sticky top-0 z-40 border-b border-slate-200/80 bg-white/92 shadow-[0_6px_18px_rgba(15,23,42,0.06)] backdrop-blur-md">
-      <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-4 py-3 md:px-6">
+      <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-4 py-2.5 md:px-6">
         <Link
           href="/"
           className="flex items-center gap-2 transition-opacity hover:opacity-85"
@@ -73,7 +80,7 @@ export default function Header() {
           </div>
         </Link>
 
-        <nav className="hidden items-center gap-3 text-sm md:flex">
+        <nav className="hidden items-center gap-2 md:flex">
           {mainNavItems.map((item) => (
             <Link key={item.href} href={item.href} className={navLinkClass(item.href)}>
               {item.label}
@@ -87,7 +94,7 @@ export default function Header() {
                   <button
                     type="button"
                     onClick={() => toggleDropdown("user")}
-                    className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-neutral-700 hover:border-slate-300 hover:text-slate-900"
+                    className="inline-flex h-10 items-center gap-1 rounded-xl border border-slate-200 bg-white px-3 text-sm font-medium text-neutral-700 hover:border-slate-300 hover:text-slate-900"
                   >
                     <span className="max-w-[180px] truncate">{userMenuLabel}</span>
                     <span className="text-xs">▼</span>
@@ -120,13 +127,13 @@ export default function Header() {
                 </div>
               ) : (
                 <>
-                  <span className="max-w-[180px] truncate rounded-full border border-slate-200 bg-white px-3 py-1.5 text-neutral-700">
+                  <span className="inline-flex h-10 max-w-[180px] items-center truncate rounded-xl border border-slate-200 bg-white px-3 text-sm text-neutral-700">
                     {userMenuLabel}
                   </span>
                   <button
                     type="button"
                     onClick={() => void handleSignOut()}
-                    className="rounded-full px-3 py-1.5 text-neutral-600 hover:bg-slate-50 hover:text-slate-900"
+                    className="btn-ghost"
                   >
                     로그아웃
                   </button>
@@ -138,7 +145,7 @@ export default function Header() {
           {!loading && !isAuthed && (
             <Link
               href="/login"
-              className="rounded-full border border-slate-200 bg-white px-4 py-1.5 text-neutral-700 hover:border-slate-300 hover:text-slate-900"
+              className="btn-ghost"
             >
               로그인
             </Link>
@@ -156,7 +163,7 @@ export default function Header() {
           <button
             type="button"
             onClick={() => setMobileMenuOpen((prev) => !prev)}
-            className="rounded-lg border border-slate-200 bg-white p-2 text-neutral-600 hover:bg-slate-100 hover:text-slate-900"
+            className="icon-button h-10 w-10"
             aria-label="메뉴 열기"
           >
             {mobileMenuOpen ? (
@@ -174,16 +181,13 @@ export default function Header() {
 
       {mobileMenuOpen && (
         <div className="border-t border-slate-200 bg-white/95 backdrop-blur md:hidden">
-          <nav className="mx-auto w-full max-w-6xl space-y-2 px-4 py-3">
+          <nav className="mx-auto w-full max-w-6xl px-4 py-3">
+            <div className="surface-card space-y-1 p-2">
             {mainNavItems.map((item) => (
               <Link
                 key={item.href}
                 href={item.href}
-                className={`block rounded-lg px-3 py-2 text-sm ${
-                  pathname === item.href || pathname.startsWith(`${item.href}/`)
-                    ? "bg-slate-100 font-medium text-slate-900"
-                    : "text-neutral-600 hover:bg-slate-50 hover:text-slate-900"
-                }`}
+                className={mobileNavLinkClass(item.href)}
                 onClick={() => setMobileMenuOpen(false)}
               >
                 {item.label}
@@ -200,11 +204,7 @@ export default function Header() {
                   <Link
                     key={`${item.href}-${index}`}
                     href={item.href}
-                    className={`block rounded-lg px-3 py-2 text-sm ${
-                      pathname === item.href || pathname.startsWith(`${item.href}/`)
-                        ? "bg-slate-100 font-medium text-slate-900"
-                        : "text-neutral-600 hover:bg-slate-50 hover:text-slate-900"
-                    }`}
+                    className={mobileNavLinkClass(item.href)}
                     onClick={() => setMobileMenuOpen(false)}
                   >
                     {item.label}
@@ -222,7 +222,7 @@ export default function Header() {
                     setMobileMenuOpen(false);
                     void handleSignOut();
                   }}
-                  className="block w-full rounded-lg px-3 py-2 text-left text-sm text-neutral-600 hover:bg-slate-50 hover:text-slate-900"
+                  className="block w-full rounded-xl px-3 py-2.5 text-left text-sm text-neutral-600 hover:bg-slate-50 hover:text-slate-900"
                 >
                   로그아웃
                 </button>
@@ -232,12 +232,13 @@ export default function Header() {
             {!loading && !isAuthed && (
               <Link
                 href="/login"
-                className="block rounded-lg px-3 py-2 text-sm text-neutral-600 hover:bg-slate-50 hover:text-slate-900"
+                className="block rounded-xl px-3 py-2.5 text-sm text-neutral-600 hover:bg-slate-50 hover:text-slate-900"
                 onClick={() => setMobileMenuOpen(false)}
               >
                 로그인
               </Link>
             )}
+            </div>
           </nav>
         </div>
       )}

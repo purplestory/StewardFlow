@@ -37,7 +37,7 @@ export default function ManageTabs() {
 
   return (
     <div className="tab-shell">
-      <nav className="flex min-w-max items-center gap-2 overflow-x-auto pb-1" aria-label="관리 탭">
+      <nav className="flex min-w-max items-center gap-2 overflow-x-auto px-1 pb-1" aria-label="관리 탭">
         {tabs.map((tab) => {
           let isActive = false;
           if (tab.key === "resources") {

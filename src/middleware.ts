@@ -41,14 +41,7 @@ export async function middleware(request: NextRequest) {
 
   // Refresh session if expired - required for Server Components
   // This ensures the session is available in Server Components
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  // Log for debugging (only in development)
-  if (process.env.NODE_ENV === "development") {
-    console.log(`[Middleware] User: ${user?.id || "none"}, Path: ${request.nextUrl.pathname}`);
-  }
+  await supabase.auth.getUser();
 
   return supabaseResponse;
 }

@@ -13,8 +13,7 @@ export function useSpaces() {
         .order("created_at", { ascending: false });
 
       if (error) {
-        console.error("Spaces query error:", error);
-        console.error("Error details:", {
+        console.error("Spaces query error:", {
           message: error.message,
           code: error.code,
           details: error.details,
@@ -22,12 +21,7 @@ export function useSpaces() {
         });
         throw error;
       }
-      
-      console.log("Spaces loaded:", {
-        count: data?.length ?? 0,
-        spaces: data?.map(s => ({ id: s.id, name: s.name, organization_id: s.organization_id })),
-      });
-      
+
       return (data ?? []) as Space[];
     },
     staleTime: 1000 * 60 * 2, // 2분간 fresh 상태 유지

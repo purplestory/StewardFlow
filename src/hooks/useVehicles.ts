@@ -13,8 +13,7 @@ export function useVehicles() {
         .order("created_at", { ascending: false });
 
       if (error) {
-        console.error("Vehicles query error:", error);
-        console.error("Error details:", {
+        console.error("Vehicles query error:", {
           message: error.message,
           code: error.code,
           details: error.details,
@@ -22,12 +21,7 @@ export function useVehicles() {
         });
         throw error;
       }
-      
-      console.log("Vehicles loaded:", {
-        count: data?.length ?? 0,
-        vehicles: data?.map(v => ({ id: v.id, name: v.name, organization_id: v.organization_id })),
-      });
-      
+
       return (data ?? []) as Vehicle[];
     },
     staleTime: 1000 * 60 * 2, // 2분간 fresh 상태 유지

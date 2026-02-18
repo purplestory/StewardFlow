@@ -1,25 +1,15 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import Link from "next/link";
-import Image from "next/image";
 import { supabase } from "@/lib/supabase";
 import Notice from "@/components/common/Notice";
 import { emitNotificationBadgeSync } from "@/lib/notification-ui-events";
+import NotificationListItem from "@/components/notifications/NotificationListItem";
+import NotificationsToolbar from "@/components/notifications/NotificationsToolbar";
 import {
-  formatDateTime,
   formatGroupDate,
-  getItemStatusLabel,
-  getResourcePath,
-  getThumbnail,
-  getTypeColor,
-  getTypeIcon,
   groupByDate,
-  renderNotificationDetail,
   renderPageNumbers,
-  renderSummary,
-  renderTemplateMessage,
-  renderTitle,
   type NotificationRow,
 } from "@/components/notifications/notification-view-helpers";
 
@@ -374,134 +364,29 @@ export default function NotificationsList() {
 
   return (
     <div className="space-y-3">
-      <div className="space-y-3">
-        <div className="flex flex-wrap items-center justify-between gap-3 text-sm">
-          <span className="text-neutral-600">
-            미읽음 {unreadCount}건
-          </span>
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={load}
-              className="px-4 py-2 rounded-lg text-sm font-medium transition-all bg-white text-neutral-700 border border-neutral-200 hover:bg-neutral-50"
-            >
-              새로고침
-            </button>
-            <label className="flex items-center gap-2 text-xs text-neutral-600">
-              <input
-                type="checkbox"
-                checked={showUnreadOnly}
-                onChange={(event) => {
-                  setShowUnreadOnly(event.target.checked);
-                  setPage(1);
-                }}
-              />
-              미읽음만 보기
-            </label>
-            <button
-              type="button"
-              onClick={markAllAsRead}
-              disabled={updating || unreadCount === 0}
-              className="px-4 py-2 rounded-lg text-sm font-medium transition-all bg-white text-neutral-700 border border-neutral-200 hover:bg-neutral-50"
-            >
-              모두 읽음 처리
-            </button>
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <select
-            className="rounded-md border border-neutral-200 px-2 py-1 text-xs"
-            value={sortOrder}
-              onChange={(event) =>
-                {
-                  setSortOrder(
-                    event.target.value as "latest" | "unread" | "status"
-                  );
-                  setPage(1);
-                }
-              }
-          >
-            <option value="latest">최신순</option>
-            <option value="unread">미읽음 우선</option>
-            <option value="status">상태 우선</option>
-          </select>
-          <button
-            type="button"
-            onClick={() => setShowAdvancedFilters((prev) => !prev)}
-            className="rounded-md border border-neutral-200 px-2 py-1 text-xs text-neutral-700 hover:bg-neutral-50 md:hidden"
-          >
-            {showAdvancedFilters ? "필터 접기" : "필터 열기"}
-          </button>
-        </div>
-        <div
-          className={`flex flex-wrap gap-2 ${
-            showAdvancedFilters ? "flex" : "hidden"
-          } md:flex`}
-        >
-          <label className="flex items-center gap-2 text-xs text-neutral-600">
-              <input
-                type="checkbox"
-                checked={compactView}
-                onChange={(event) => setCompactView(event.target.checked)}
-              />
-            컴팩트 보기
-          </label>
-              <input
-                className="rounded-md border border-neutral-200 px-2 py-1 text-xs"
-                placeholder="검색어 입력"
-                value={query}
-                onChange={(event) => {
-                  setQuery(event.target.value);
-                  setPage(1);
-                }}
-              />
-              <select
-                className="rounded-md border border-neutral-200 px-2 py-1 text-xs"
-                value={typeFilter}
-                onChange={(event) => {
-                  setTypeFilter(event.target.value);
-                  setPage(1);
-                }}
-              >
-            <option value="all">전체 유형</option>
-            <option value="reservation_created">물품 예약 신청</option>
-            <option value="reservation_status_changed">물품 예약 상태 변경</option>
-            <option value="space_reservation_created">공간 예약 신청</option>
-            <option value="space_reservation_status_changed">
-              공간 예약 상태 변경
-            </option>
-            <option value="asset_transfer_request_created">불용품 양도 요청</option>
-            <option value="asset_transfer_request_approved">불용품 양도 요청 승인</option>
-            <option value="asset_transfer_request_rejected">불용품 양도 요청 거절</option>
-            <option value="asset_transfer_request_cancelled">불용품 양도 요청 취소</option>
-          </select>
-              <select
-                className="rounded-md border border-neutral-200 px-2 py-1 text-xs"
-                value={statusFilter}
-                onChange={(event) => {
-                  setStatusFilter(event.target.value);
-                  setPage(1);
-                }}
-              >
-            <option value="all">전체 상태</option>
-            <option value="pending">대기</option>
-            <option value="sent">발송 완료</option>
-            <option value="failed">실패</option>
-          </select>
-              <select
-                className="rounded-md border border-neutral-200 px-2 py-1 text-xs"
-                value={pageSize}
-                onChange={(event) => {
-                  setPageSize(Number(event.target.value));
-                  setPage(1);
-                }}
-              >
-            <option value={5}>5개씩</option>
-            <option value={10}>10개씩</option>
-            <option value={20}>20개씩</option>
-          </select>
-        </div>
-      </div>
+      <NotificationsToolbar
+        unreadCount={unreadCount}
+        updating={updating}
+        showUnreadOnly={showUnreadOnly}
+        setShowUnreadOnly={setShowUnreadOnly}
+        markAllAsRead={markAllAsRead}
+        load={load}
+        sortOrder={sortOrder}
+        setSortOrder={setSortOrder}
+        showAdvancedFilters={showAdvancedFilters}
+        setShowAdvancedFilters={setShowAdvancedFilters}
+        compactView={compactView}
+        setCompactView={setCompactView}
+        query={query}
+        setQuery={setQuery}
+        typeFilter={typeFilter}
+        setTypeFilter={setTypeFilter}
+        statusFilter={statusFilter}
+        setStatusFilter={setStatusFilter}
+        pageSize={pageSize}
+        setPageSize={setPageSize}
+        setPage={setPage}
+      />
       <div className="flex items-center justify-between text-xs text-neutral-500">
         <span>
           {safePage} / {totalPages} 페이지
@@ -551,90 +436,15 @@ export default function NotificationsList() {
             {formatGroupDate(group.date)}
           </div>
           {group.items.map((item) => (
-            <div
+            <NotificationListItem
               key={item.id}
-              className={`rounded-lg border px-4 py-3 ${
-                item.read_at
-                  ? "border-neutral-200 bg-white"
-                  : "border-amber-200 bg-amber-50"
-              }`}
-            >
-          <div className="flex items-start gap-3">
-            {getThumbnail(item) ? (
-              <Image
-                src={getThumbnail(item) ?? ""}
-                alt=""
-                width={48}
-                height={48}
-                className="h-12 w-12 rounded-lg object-cover"
-                unoptimized
-              />
-            ) : (
-              <div className="flex h-12 w-12 items-center justify-center rounded-lg border border-neutral-200 text-xs text-neutral-400">
-                없음
-              </div>
-            )}
-            <div className="flex-1">
-              <button
-                type="button"
-                onClick={() => toggleExpanded(item.id)}
-                className="flex w-full items-start gap-2 text-left"
-              >
-                <span
-                  className={`mt-1 inline-flex h-2 w-2 rounded-full ${getTypeColor(item.type)}`}
-                />
-                <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-neutral-200 text-[10px] text-neutral-600">
-                  {getTypeIcon(item.type)}
-                </span>
-                <span className="text-sm font-medium text-neutral-900">
-                  {renderTitle(item)}
-                </span>
-                <span className="ml-auto shrink-0 text-xs text-neutral-500">
-                  {formatDateTime(item.created_at)}
-                </span>
-                <span className="shrink-0 text-xs text-neutral-500">
-                  {expandedIds.includes(item.id) ? "▲" : "▼"}
-                </span>
-              </button>
-              {expandedIds.includes(item.id) && (
-                <div className="mt-2 space-y-2">
-                  {!compactView && renderTemplateMessage(item)}
-                  {!compactView && renderSummary(item)}
-                  <p className="text-xs text-neutral-500 flex items-center gap-2">
-                    <span>{getItemStatusLabel(item).label}:</span>
-                    <span
-                      className={`rounded-full px-2 py-0.5 text-[10px] ${getItemStatusLabel(item).badgeClass}`}
-                    >
-                      {getItemStatusLabel(item).value}
-                    </span>
-                  </p>
-                  {!compactView && renderNotificationDetail(item)}
-                  <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
-                    {(item.payload?.resource_id as string | undefined) && (
-                      <Link
-                        href={getResourcePath(item)}
-                        onClick={() => markAsRead(item.id)}
-                        className="rounded-md bg-neutral-900 px-3 py-1 text-white"
-                      >
-                        바로가기
-                      </Link>
-                    )}
-                    {!item.read_at && (
-                      <button
-                        type="button"
-                        onClick={() => markAsRead(item.id)}
-                        disabled={updating}
-                        className="rounded-md border border-neutral-200 px-2 py-1"
-                      >
-                        읽음 처리
-                      </button>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-            </div>
+              item={item}
+              isExpanded={expandedIds.includes(item.id)}
+              compactView={compactView}
+              updating={updating}
+              onToggle={toggleExpanded}
+              onMarkAsRead={markAsRead}
+            />
           ))}
         </div>
       ))}

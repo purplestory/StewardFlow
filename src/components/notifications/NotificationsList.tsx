@@ -67,81 +67,88 @@ export default function NotificationsList() {
     setLoading(true);
     setMessage(null);
 
-    const { data: sessionData } = await supabase.auth.getSession();
-    const user = sessionData.session?.user ?? null;
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const user = sessionData.session?.user ?? null;
 
-    if (!user) {
-      setNotifications([]);
-      setTotalCount(0);
-      setUnreadTotal(0);
-      emitNotificationBadgeSync(0);
-      setLoading(false);
-      userIdRef.current = null;
-      return;
-    }
+      if (!user) {
+        setNotifications([]);
+        setTotalCount(0);
+        setUnreadTotal(0);
+        emitNotificationBadgeSync(0);
+        userIdRef.current = null;
+        return;
+      }
 
-    userIdRef.current = user.id;
+      userIdRef.current = user.id;
 
-    let queryBuilder = supabase
-      .from("notifications")
-      .select("id,type,status,payload,read_at,created_at", { count: "exact" })
-      .eq("user_id", user.id);
+      let queryBuilder = supabase
+        .from("notifications")
+        .select("id,type,status,payload,read_at,created_at", { count: "exact" })
+        .eq("user_id", user.id);
 
-    if (showUnreadOnly) {
-      queryBuilder = queryBuilder.is("read_at", null);
-    }
+      if (showUnreadOnly) {
+        queryBuilder = queryBuilder.is("read_at", null);
+      }
 
-    if (typeFilter !== "all") {
-      queryBuilder = queryBuilder.eq("type", typeFilter);
-    }
+      if (typeFilter !== "all") {
+        queryBuilder = queryBuilder.eq("type", typeFilter);
+      }
 
-    if (statusFilter !== "all") {
-      queryBuilder = queryBuilder.eq("status", statusFilter);
-    }
+      if (statusFilter !== "all") {
+        queryBuilder = queryBuilder.eq("status", statusFilter);
+      }
 
-    if (query.trim()) {
-      const normalized = `%${query.trim()}%`;
-      queryBuilder = queryBuilder.or(
-        `payload->>resource_name.ilike.${normalized},payload->>resource_id.ilike.${normalized},payload->>start_date.ilike.${normalized},payload->>end_date.ilike.${normalized},type.ilike.${normalized},status.ilike.${normalized}`
-      );
-    }
+      if (query.trim()) {
+        const normalized = `%${query.trim()}%`;
+        queryBuilder = queryBuilder.or(
+          `payload->>resource_name.ilike.${normalized},payload->>resource_id.ilike.${normalized},payload->>start_date.ilike.${normalized},payload->>end_date.ilike.${normalized},type.ilike.${normalized},status.ilike.${normalized}`
+        );
+      }
 
-    const from = (page - 1) * pageSize;
-    const to = from + pageSize - 1;
+      const from = (page - 1) * pageSize;
+      const to = from + pageSize - 1;
 
-    const listQuery = queryBuilder
-      .order("read_at", { ascending: sortOrder !== "unread" })
-      .order("status", { ascending: sortOrder === "status" })
-      .order("created_at", { ascending: false })
-      .range(from, to);
+      const listQuery = queryBuilder
+        .order("read_at", { ascending: sortOrder !== "unread" })
+        .order("status", { ascending: sortOrder === "status" })
+        .order("created_at", { ascending: false })
+        .range(from, to);
 
-    const unreadQuery = supabase
-      .from("notifications")
-      .select("id", { count: "exact", head: true })
-      .eq("user_id", user.id)
-      .is("read_at", null);
+      const unreadQuery = supabase
+        .from("notifications")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", user.id)
+        .is("read_at", null);
 
-    const [{ data, error, count }, { count: unreadCount }] = await Promise.all([
-      listQuery,
-      unreadQuery,
-    ]);
+      const [{ data, error, count }, { count: unreadCount }] = await Promise.all([
+        listQuery,
+        unreadQuery,
+      ]);
 
-    if (error) {
-      setMessage(error.message);
+      if (error) {
+        setMessage(error.message);
+        setNotifications([]);
+        setExpandedIds([]);
+      } else {
+        setNotifications((data ?? []) as NotificationRow[]);
+        setTotalCount(count ?? 0);
+        const loadedIds = new Set((data ?? []).map((item) => (item as NotificationRow).id));
+        setExpandedIds((prev) => prev.filter((id) => loadedIds.has(id)));
+      }
+
+      const nextUnreadCount = unreadCount ?? 0;
+      setUnreadTotal(nextUnreadCount);
+      emitNotificationBadgeSync(nextUnreadCount);
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : "알림을 불러오지 못했습니다.";
+      setMessage(errorMessage);
       setNotifications([]);
       setExpandedIds([]);
-    } else {
-      setNotifications((data ?? []) as NotificationRow[]);
-      setTotalCount(count ?? 0);
-      const loadedIds = new Set((data ?? []).map((item) => (item as NotificationRow).id));
-      setExpandedIds((prev) => prev.filter((id) => loadedIds.has(id)));
+    } finally {
+      setLoading(false);
     }
-
-    const nextUnreadCount = unreadCount ?? 0;
-    setUnreadTotal(nextUnreadCount);
-    emitNotificationBadgeSync(nextUnreadCount);
-
-    setLoading(false);
   }, [page, pageSize, query, showUnreadOnly, sortOrder, statusFilter, typeFilter]);
 
   const loadRef = useRef(load);
@@ -151,10 +158,6 @@ export default function NotificationsList() {
   }, [load]);
 
   useEffect(() => {
-    const initialLoadTimer = setTimeout(() => {
-      void loadRef.current();
-    }, 0);
-
     const channel = supabase
       .channel("notifications-list")
       .on(
@@ -176,7 +179,6 @@ export default function NotificationsList() {
     });
 
     return () => {
-      clearTimeout(initialLoadTimer);
       supabase.removeChannel(channel);
       authSubscription?.subscription?.unsubscribe();
     };
@@ -198,116 +200,122 @@ export default function NotificationsList() {
     if (updating) return;
     setUpdating(true);
     setMessage(null);
-    const existingNotification = notifications.find((item) => item.id === id);
-    const shouldDecreaseUnread = Boolean(existingNotification && !existingNotification.read_at);
-    const accessToken = await getAccessToken();
-    if (!accessToken) {
-      setMessage("로그인이 필요합니다.");
-      setUpdating(false);
-      return;
-    }
+    try {
+      const existingNotification = notifications.find((item) => item.id === id);
+      const shouldDecreaseUnread = Boolean(existingNotification && !existingNotification.read_at);
+      const accessToken = await getAccessToken();
+      if (!accessToken) {
+        setMessage("로그인이 필요합니다.");
+        return;
+      }
 
-    const response = await fetch("/api/notifications/read", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        accessToken,
-        notificationId: id,
-      }),
-    });
-    const result = await response.json().catch(() => null);
-    if (!response.ok || !result?.ok) {
-      setMessage(result?.message ?? "읽음 처리에 실패했습니다.");
-      setUpdating(false);
-      return;
-    }
-    if (shouldDecreaseUnread && result.updatedCount === 0) {
-      setMessage("읽음 처리 반영에 실패했습니다. 다시 시도해 주세요.");
-      setUpdating(false);
-      void loadRef.current();
-      return;
-    }
-
-    const readAt = (result.readAt as string | undefined) ?? new Date().toISOString();
-
-    setNotifications((prev) =>
-      prev.map((item) =>
-        item.id === id ? { ...item, read_at: readAt } : item
-      )
-    );
-    if (typeof result.unreadCount === "number") {
-      setUnreadTotal(result.unreadCount);
-      emitNotificationBadgeSync(result.unreadCount);
-    } else if (shouldDecreaseUnread) {
-      setUnreadTotal((prev) => {
-        const next = Math.max(0, prev - 1);
-        emitNotificationBadgeSync(next);
-        return next;
+      const response = await fetch("/api/notifications/read", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          accessToken,
+          notificationId: id,
+        }),
       });
+      const result = await response.json().catch(() => null);
+      if (!response.ok || !result?.ok) {
+        setMessage(result?.message ?? "읽음 처리에 실패했습니다.");
+        return;
+      }
+      if (shouldDecreaseUnread && result.updatedCount === 0) {
+        setMessage("읽음 처리 반영에 실패했습니다. 다시 시도해 주세요.");
+        void loadRef.current();
+        return;
+      }
+
+      const readAt = (result.readAt as string | undefined) ?? new Date().toISOString();
+
+      setNotifications((prev) =>
+        prev.map((item) =>
+          item.id === id ? { ...item, read_at: readAt } : item
+        )
+      );
+      if (typeof result.unreadCount === "number") {
+        setUnreadTotal(result.unreadCount);
+        emitNotificationBadgeSync(result.unreadCount);
+      } else if (shouldDecreaseUnread) {
+        setUnreadTotal((prev) => {
+          const next = Math.max(0, prev - 1);
+          emitNotificationBadgeSync(next);
+          return next;
+        });
+      }
+      void loadRef.current();
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : "읽음 처리 중 오류가 발생했습니다.";
+      setMessage(errorMessage);
+    } finally {
+      setUpdating(false);
     }
-    setUpdating(false);
-    void loadRef.current();
   };
 
   const markAllAsRead = async () => {
     setUpdating(true);
     setMessage(null);
+    try {
+      const unreadIds = notifications.filter((n) => !n.read_at).map((n) => n.id);
+      if (unreadIds.length === 0) {
+        return;
+      }
 
-    const unreadIds = notifications.filter((n) => !n.read_at).map((n) => n.id);
-    if (unreadIds.length === 0) {
-      setUpdating(false);
-      return;
-    }
+      const accessToken = await getAccessToken();
+      if (!accessToken) {
+        setMessage("로그인이 필요합니다.");
+        return;
+      }
 
-    const accessToken = await getAccessToken();
-    if (!accessToken) {
-      setMessage("로그인이 필요합니다.");
-      setUpdating(false);
-      return;
-    }
-
-    const response = await fetch("/api/notifications/read", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        accessToken,
-        markAll: true,
-      }),
-    });
-    const result = await response.json().catch(() => null);
-    if (!response.ok || !result?.ok) {
-      setMessage(result?.message ?? "전체 읽음 처리에 실패했습니다.");
-      setUpdating(false);
-      return;
-    }
-    if (unreadIds.length > 0 && result.updatedCount === 0) {
-      setMessage("전체 읽음 처리 반영에 실패했습니다. 다시 시도해 주세요.");
-      setUpdating(false);
-      void loadRef.current();
-      return;
-    }
-
-    const readAt = (result.readAt as string | undefined) ?? new Date().toISOString();
-
-    setNotifications((prev) =>
-      prev.map((item) =>
-        unreadIds.includes(item.id)
-          ? { ...item, read_at: readAt }
-          : item
-      )
-    );
-    if (typeof result.unreadCount === "number") {
-      setUnreadTotal(result.unreadCount);
-      emitNotificationBadgeSync(result.unreadCount);
-    } else {
-      setUnreadTotal((prev) => {
-        const next = Math.max(0, prev - unreadIds.length);
-        emitNotificationBadgeSync(next);
-        return next;
+      const response = await fetch("/api/notifications/read", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          accessToken,
+          markAll: true,
+        }),
       });
+      const result = await response.json().catch(() => null);
+      if (!response.ok || !result?.ok) {
+        setMessage(result?.message ?? "전체 읽음 처리에 실패했습니다.");
+        return;
+      }
+      if (unreadIds.length > 0 && result.updatedCount === 0) {
+        setMessage("전체 읽음 처리 반영에 실패했습니다. 다시 시도해 주세요.");
+        void loadRef.current();
+        return;
+      }
+
+      const readAt = (result.readAt as string | undefined) ?? new Date().toISOString();
+
+      setNotifications((prev) =>
+        prev.map((item) =>
+          unreadIds.includes(item.id)
+            ? { ...item, read_at: readAt }
+            : item
+        )
+      );
+      if (typeof result.unreadCount === "number") {
+        setUnreadTotal(result.unreadCount);
+        emitNotificationBadgeSync(result.unreadCount);
+      } else {
+        setUnreadTotal((prev) => {
+          const next = Math.max(0, prev - unreadIds.length);
+          emitNotificationBadgeSync(next);
+          return next;
+        });
+      }
+      void loadRef.current();
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : "전체 읽음 처리 중 오류가 발생했습니다.";
+      setMessage(errorMessage);
+    } finally {
+      setUpdating(false);
     }
-    setUpdating(false);
-    void loadRef.current();
   };
 
   if (loading) {

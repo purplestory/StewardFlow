@@ -654,33 +654,19 @@ export default function AssetTransferRequestsBoard() {
           </p>
         )}
         {/* 탭 메뉴 */}
-        <div className="mt-4 border-b border-neutral-200">
-          <nav className="-mb-px flex w-full gap-1 overflow-x-auto pb-1" aria-label="요청 탭">
+        <div className="mt-4 -mx-1 overflow-x-auto px-1 pb-1">
+          <nav className="flex w-max min-w-full items-center gap-2" aria-label="요청 탭">
             <button
               type="button"
               onClick={() => setFilter("mine")}
-              className={`
-                whitespace-nowrap border-b-2 px-4 py-3 text-sm font-medium transition-colors
-                ${
-                  filter === "mine"
-                    ? "border-black text-black"
-                    : "border-transparent text-neutral-500 hover:border-neutral-300 hover:text-neutral-700"
-                }
-              `}
+              className={`filter-pill ${filter === "mine" ? "filter-pill-active" : ""}`}
             >
               내 요청
             </button>
             <button
               type="button"
               onClick={() => setFilter("incoming")}
-              className={`
-                whitespace-nowrap border-b-2 px-4 py-3 text-sm font-medium transition-colors
-                ${
-                  filter === "incoming"
-                    ? "border-black text-black"
-                    : "border-transparent text-neutral-500 hover:border-neutral-300 hover:text-neutral-700"
-                }
-              `}
+              className={`filter-pill ${filter === "incoming" ? "filter-pill-active" : ""}`}
             >
               내 부서 요청
             </button>
@@ -688,14 +674,7 @@ export default function AssetTransferRequestsBoard() {
               <button
                 type="button"
                 onClick={() => setFilter("all")}
-                className={`
-                  whitespace-nowrap border-b-2 px-4 py-3 text-sm font-medium transition-colors
-                  ${
-                    filter === "all"
-                      ? "border-black text-black"
-                      : "border-transparent text-neutral-500 hover:border-neutral-300 hover:text-neutral-700"
-                  }
-                `}
+                className={`filter-pill ${filter === "all" ? "filter-pill-active" : ""}`}
               >
                 전체
               </button>
@@ -705,7 +684,7 @@ export default function AssetTransferRequestsBoard() {
         
         {/* 상태 필터 버튼 */}
         <div className="mt-4 -mx-6 overflow-x-auto px-6 sm:mx-0 sm:px-0">
-          <div className="flex min-w-max items-center gap-2">
+          <div className="flex w-max min-w-full items-center gap-2">
             {statusFilterButtons.map((button) => (
               <button
                 key={button.value}

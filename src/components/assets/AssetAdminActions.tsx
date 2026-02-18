@@ -212,21 +212,21 @@ export default function AssetAdminActions({
       </div>
 
       {/* 소유 범위/부서 한 줄 표시 */}
-      <div className="flex items-center gap-3">
-        <span className="text-sm font-medium text-neutral-700 min-w-[80px]">소유 범위</span>
+      <div className="flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:gap-3">
+        <span className="text-sm font-medium text-neutral-700 sm:min-w-[80px]">소유 범위</span>
         <span className="text-sm text-neutral-600">
           {ownerScope === "organization" ? "기관 공용" : "부서 소유"}
         </span>
         {ownerScope === "department" && (
           <>
-            <span className="text-sm font-medium text-neutral-700 min-w-[80px]">소유 부서</span>
+            <span className="text-sm font-medium text-neutral-700 sm:min-w-[80px]">소유 부서</span>
             <span className="text-sm text-neutral-600">{ownerDepartment}</span>
           </>
         )}
         <button
           type="button"
           onClick={() => setShowTransferForm(!showTransferForm)}
-          className="ml-auto flex-shrink-0 p-2 rounded-lg border border-neutral-200 bg-white text-neutral-700 hover:bg-neutral-50 transition-colors h-[38px] w-[38px] flex items-center justify-center"
+          className="self-end p-2 rounded-lg border border-neutral-200 bg-white text-neutral-700 hover:bg-neutral-50 transition-colors h-[38px] w-[38px] flex items-center justify-center sm:ml-auto sm:self-auto"
           title="소유 범위/부서 변경"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

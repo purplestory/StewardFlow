@@ -67,7 +67,7 @@ export default function NotificationListItem({
             type="button"
             onClick={() => onToggle(item.id)}
             aria-expanded={isExpanded}
-            className="flex w-full items-start gap-2 text-left"
+            className="flex w-full min-w-0 items-start gap-2 text-left"
           >
             <span className={`mt-[7px] inline-flex h-2 w-2 shrink-0 rounded-full ${getTypeColor(item.type)}`} />
             <span className="min-w-0 flex-1">
@@ -80,18 +80,16 @@ export default function NotificationListItem({
                 </span>
               )}
             </span>
-            <span className="ml-auto shrink-0 text-xs text-neutral-500">
-              {formatDateTime(item.created_at)}
-            </span>
+          </button>
+          <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-neutral-500">
+            <span>{formatDateTime(item.created_at)}</span>
             {!item.read_at && (
-              <span className="shrink-0 rounded-full border border-rose-200 bg-rose-50 px-2 py-0.5 text-[10px] font-semibold text-rose-600">
+              <span className="rounded-full border border-rose-200 bg-rose-50 px-2 py-0.5 text-[10px] font-semibold text-rose-600">
                 미읽음
               </span>
             )}
-            <span className="shrink-0 text-xs text-neutral-400">
-              {isExpanded ? "접기" : "열기"}
-            </span>
-          </button>
+            <span className="text-neutral-400">{isExpanded ? "접기" : "열기"}</span>
+          </div>
           {isExpanded && (
             <div className="mt-3 rounded-xl border border-neutral-200 bg-neutral-50 p-3">
               {!compactView && templateText && (

@@ -1499,7 +1499,7 @@ export default function UserRoleManager() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-neutral-200 bg-white p-4">
+      <div className="flex flex-col gap-3 rounded-lg border border-neutral-200 bg-white p-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex items-center gap-2">
             <span className="text-sm text-neutral-600">내 역할:</span>
@@ -1516,17 +1516,17 @@ export default function UserRoleManager() {
         <button
           type="button"
           onClick={load}
-          className="px-4 py-2 rounded-lg text-sm font-medium transition-all bg-white text-neutral-700 border border-neutral-200 hover:bg-neutral-50"
+          className="w-full px-4 py-2 rounded-lg text-sm font-medium transition-all bg-white text-neutral-700 border border-neutral-200 hover:bg-neutral-50 sm:w-auto"
         >
           새로고침
         </button>
       </div>
 
       <div className="space-y-3 rounded-lg border border-neutral-200 bg-white p-4">
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="grid gap-2 sm:grid-cols-2">
           <input
             type="text"
-            className="form-input flex-1 min-w-[120px]"
+            className="form-input w-full min-w-0"
             placeholder="이름 (필수)"
             value={invitationName}
             onChange={(event) => setInvitationName(event.target.value)}
@@ -1534,7 +1534,7 @@ export default function UserRoleManager() {
             required
           />
           <input
-            className="form-input flex-1 min-w-[120px]"
+            className="form-input w-full min-w-0"
             placeholder="이메일 (선택사항, 가입 시 변경 가능)"
             value={invitationEmail}
             onChange={(event) => setInvitationEmail(event.target.value)}
@@ -1542,9 +1542,9 @@ export default function UserRoleManager() {
             type="email"
           />
         </div>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="grid gap-2 md:grid-cols-[minmax(0,160px)_minmax(0,1fr)_auto]">
           <select
-            className="form-select min-w-[140px]"
+            className="form-select w-full min-w-0"
             value={invitationRole}
             onChange={(event) =>
               setInvitationRole(event.target.value as ProfileRow["role"])
@@ -1562,7 +1562,7 @@ export default function UserRoleManager() {
               ))}
           </select>
           <select
-            className="form-select flex-1 min-w-[140px]"
+            className="form-select w-full min-w-0"
             value={invitationDepartment}
             onChange={(event) => setInvitationDepartment(event.target.value)}
             disabled={currentUserRole === "user"}
@@ -1578,7 +1578,7 @@ export default function UserRoleManager() {
             type="button"
             onClick={sendInvite}
             disabled={currentUserRole === "user" || !invitationName.trim()}
-            className="px-4 py-2 rounded-lg text-sm font-medium transition-all bg-neutral-900 text-white hover:bg-neutral-800 whitespace-nowrap"
+            className="w-full px-4 py-2 rounded-lg text-sm font-medium transition-all bg-neutral-900 text-white hover:bg-neutral-800 whitespace-nowrap md:w-auto"
           >
             초대 링크 생성
           </button>
@@ -1913,7 +1913,7 @@ export default function UserRoleManager() {
           profiles.map((profile) => (
             <div
               key={profile.id}
-              className="flex items-center gap-3 rounded-lg border border-neutral-200 px-3 py-2 text-xs"
+              className="flex flex-col gap-3 rounded-lg border border-neutral-200 px-3 py-2 text-xs sm:flex-row sm:items-center"
             >
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium">
@@ -1921,11 +1921,11 @@ export default function UserRoleManager() {
                 </p>
                 <p className="text-xs text-neutral-500">{profile.email}</p>
               </div>
-              <div className="flex items-center gap-2 flex-shrink-0">
+              <div className="grid w-full grid-cols-1 gap-2 sm:flex sm:w-auto sm:flex-shrink-0 sm:items-center">
                 {/* 최고 관리자는 부서를 변경할 수 있음 */}
                 {currentUserRole === "admin" ? (
                   <select
-                    className="form-select h-[38px] min-w-[120px]"
+                    className="form-select h-[38px] w-full sm:min-w-[120px] sm:w-auto"
                     value={profile.department || ""}
                     onChange={(event) =>
                       updateDepartment(
@@ -1943,12 +1943,12 @@ export default function UserRoleManager() {
                     ))}
                   </select>
                 ) : (
-                  <span className="text-xs text-neutral-400 min-w-[120px]">
+                  <span className="text-xs text-neutral-400 sm:min-w-[120px]">
                     {profile.department ?? "부서 미등록"}
                   </span>
                 )}
                 <select
-                  className="form-select h-10 min-w-[120px]"
+                  className="form-select h-10 w-full sm:min-w-[120px] sm:w-auto"
                   value={profile.role}
                   onChange={(event) =>
                     updateRole(
@@ -1981,7 +1981,7 @@ export default function UserRoleManager() {
                     type="button"
                     onClick={() => deleteUser(profile.id, profile.name || "이름 없음")}
                     disabled={deletingUserId === profile.id || loading}
-                    className="h-[38px] w-[38px] flex items-center justify-center rounded-lg border border-rose-200 bg-white text-rose-600 transition-all hover:bg-rose-50 hover:border-rose-300 disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
+                    className="h-[38px] w-[38px] flex items-center justify-center rounded-lg border border-rose-200 bg-white text-rose-600 transition-all hover:bg-rose-50 hover:border-rose-300 disabled:opacity-50 disabled:cursor-not-allowed justify-self-end sm:justify-self-auto"
                     title="사용자 삭제"
                   >
                     {deletingUserId === profile.id ? (
@@ -2004,8 +2004,8 @@ export default function UserRoleManager() {
 
       {/* 성공 토스트 모달 */}
       {successToast && (
-        <div className="fixed bottom-4 right-4 z-50 animate-in slide-in-from-bottom-4">
-          <div className="rounded-lg bg-emerald-500 text-white px-4 py-3 shadow-lg flex items-center gap-2 min-w-[200px]">
+        <div className="fixed inset-x-4 bottom-4 z-50 animate-in slide-in-from-bottom-4 sm:inset-x-auto sm:right-4">
+          <div className="w-full rounded-lg bg-emerald-500 text-white px-4 py-3 shadow-lg flex items-center gap-2 sm:min-w-[200px]">
             <svg className="w-5 h-5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
               <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
             </svg>
@@ -2063,7 +2063,7 @@ export default function UserRoleManager() {
                 <p className="text-sm text-emerald-700 mb-2">
                   초대 링크가 생성되었습니다. 복사하거나 모바일 공유로 바로 전송하세요.
                 </p>
-                <div className="flex items-center gap-2 mt-3">
+                <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center">
                   <input
                     type="text"
                     readOnly
@@ -2082,14 +2082,14 @@ export default function UserRoleManager() {
                         setMessage("클립보드 복사에 실패했습니다.");
                       }
                     }}
-                    className="px-4 py-2 rounded-lg text-sm font-medium transition-all bg-emerald-600 text-white hover:bg-emerald-700 whitespace-nowrap"
+                    className="w-full px-4 py-2 rounded-lg text-sm font-medium transition-all bg-emerald-600 text-white hover:bg-emerald-700 whitespace-nowrap sm:w-auto"
                   >
                     {inviteLinkCopied ? "복사됨!" : "복사"}
                   </button>
                   <button
                     type="button"
                     onClick={shareGeneratedInviteLink}
-                    className="px-4 py-2 rounded-lg text-sm font-medium transition-all bg-neutral-800 text-white hover:bg-neutral-700 whitespace-nowrap"
+                    className="w-full px-4 py-2 rounded-lg text-sm font-medium transition-all bg-neutral-800 text-white hover:bg-neutral-700 whitespace-nowrap sm:w-auto"
                   >
                     공유
                   </button>

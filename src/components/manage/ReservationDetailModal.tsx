@@ -65,40 +65,40 @@ export default function ReservationDetailModal({
           </DialogClose>
         </DialogHeader>
         <dl className="mt-4 space-y-2 rounded-xl border border-neutral-200 bg-neutral-50/80 p-4 text-sm text-neutral-700">
-          <div className="grid grid-cols-[88px_1fr] gap-2">
+          <div className="grid gap-1 sm:grid-cols-[88px_minmax(0,1fr)] sm:gap-2">
             <dt className="text-neutral-500">{resourceLabel}</dt>
             <dd className="font-medium text-neutral-900">{resourceName}</dd>
           </div>
-          <div className="grid grid-cols-[88px_1fr] gap-2">
+          <div className="grid gap-1 sm:grid-cols-[88px_minmax(0,1fr)] sm:gap-2">
             <dt className="text-neutral-500">기간</dt>
             <dd>{periodText}</dd>
           </div>
-          <div className="grid grid-cols-[88px_1fr] gap-2">
+          <div className="grid gap-1 sm:grid-cols-[88px_minmax(0,1fr)] sm:gap-2">
             <dt className="text-neutral-500">신청자</dt>
             <dd>{borrowerText}</dd>
           </div>
           {note && (
-            <div className="grid grid-cols-[88px_1fr] gap-2">
+            <div className="grid gap-1 sm:grid-cols-[88px_minmax(0,1fr)] sm:gap-2">
               <dt className="text-neutral-500">사유</dt>
               <dd>{note}</dd>
             </div>
           )}
           {requiredRoleLabel && (
-            <div className="grid grid-cols-[88px_1fr] gap-2">
+            <div className="grid gap-1 sm:grid-cols-[88px_minmax(0,1fr)] sm:gap-2">
               <dt className="text-neutral-500">승인 권한</dt>
               <dd className="font-medium text-slate-800">{requiredRoleLabel}</dd>
             </div>
           )}
         </dl>
 
-        <DialogFooter className="mt-5 flex-wrap items-center gap-2">
+        <DialogFooter className="mt-5 flex-col items-stretch gap-2 sm:flex-row sm:flex-wrap sm:items-center">
           <span className="chip-muted">상태 변경</span>
           <Select
             value={status}
             onValueChange={(nextStatus) => onStatusChange(nextStatus as ReservationStatus)}
             disabled={disableStatusChange}
           >
-            <SelectTrigger className="form-select h-[38px] min-w-[140px] text-sm">
+            <SelectTrigger className="form-select h-[38px] w-full text-sm sm:min-w-[140px] sm:w-auto">
               <SelectContent>
                 {statusOptions.map((value) => (
                   <SelectItem key={value} value={value} disabled={value === "returned"}>

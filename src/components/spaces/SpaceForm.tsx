@@ -2,8 +2,9 @@
 
 import { useEffect, useMemo, useState, useRef } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import { supabase } from "@/lib/supabase";
+import Notice from "@/components/common/Notice";
+import ImageUploadField from "@/components/ui/ImageUploadField";
 
 const ownerScopes = [
   { value: "department", label: "부서 소유" },
@@ -431,88 +432,30 @@ export default function SpaceForm({ space }: SpaceFormProps = {}) {
   return (
     <form onSubmit={handleSubmit} className="form-section">
       {!organizationId && (
-        <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
+        <Notice variant="warning" className="p-3 text-left">
           기관 설정이 필요합니다.{" "}
           <Link href="/settings/org" className="underline font-medium">
             기관 설정
           </Link>
           으로 이동해 생성해주세요.
-        </div>
+        </Notice>
       )}
 
-      <div className="space-y-4">
-        <label className="flex flex-col gap-2">
-          <span className="form-label">
-            사진 <span className="form-label-optional">(최대 10개)</span>
-          </span>
-          <div
-            className="image-upload-area"
-            onClick={(e) => {
-              // 파일 입력 자체를 클릭한 경우는 무시
-              if ((e.target as HTMLElement).tagName === 'INPUT') {
-                return;
-              }
-              fileInputRef.current?.click();
-            }}
-            onPaste={handlePaste}
-            tabIndex={0}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                fileInputRef.current?.click();
-              }
-            }}
-          >
-            {previews.length > 0 ? (
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                {previews.map((preview, index) => (
-                  <div key={index} className="relative group">
-                    <Image
-                      src={preview}
-                      alt={`미리보기 ${index + 1}`}
-                      width={400}
-                      height={300}
-                      className="w-full aspect-[4/3] object-cover rounded-lg border border-neutral-200"
-                      unoptimized
-                    />
-                    <button
-                      type="button"
-                      onClick={() => removeImage(index)}
-                      className="absolute top-1 right-1 w-6 h-6 rounded-full bg-rose-500 text-white text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                      aria-label="이미지 삭제"
-                    >
-                      ×
-                    </button>
-                    <div className="absolute bottom-1 left-1 bg-black/50 text-white text-xs px-2 py-0.5 rounded">
-                      {index + 1}/{previews.length}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="image-upload-placeholder">
-                사진을 등록해주세요. (선택사항, 여러 장 선택 가능)
-              </div>
-            )}
-            <input
-              ref={fileInputRef}
-              name="image"
-              type="file"
-              accept="image/*"
-              multiple
-              capture="environment"
-              onChange={handleFileChange}
-              onClick={(e) => e.stopPropagation()} // 클릭 이벤트 전파 방지
-              className="image-upload-input"
-            />
-          </div>
-          <p className="text-xs text-neutral-500">
+      <ImageUploadField
+        previews={previews}
+        inputRef={fileInputRef}
+        onRemove={removeImage}
+        onInputChange={handleFileChange}
+        onPaste={handlePaste}
+        onInputClick={(event) => event.stopPropagation()}
+        helperText={
+          <>
             여러 장의 사진을 선택할 수 있습니다. 공간의 다양한 모습을 등록해주세요.
             <br />
             모바일: 카메라로 직접 촬영 가능 | PC: 이미지 복사 후 붙여넣기(Ctrl+V) 가능
-          </p>
-        </label>
-      </div>
+          </>
+        }
+      />
 
       <div className="form-grid">
         <label className="form-grid-item md:col-span-2">
@@ -633,22 +576,25 @@ export default function SpaceForm({ space }: SpaceFormProps = {}) {
       </div>
 
       {message && (
-        <div className={`rounded-xl px-4 py-3 text-sm ${
-          message.includes("오류") || message.includes("실패")
-            ? "bg-rose-50 text-rose-700 border border-rose-200"
-            : "bg-emerald-50 text-emerald-700 border border-emerald-200"
-        }`} role="status">
-          {message}
+        <div role="status">
+          <Notice
+            variant={message.includes("오류") || message.includes("실패") ? "error" : "success"}
+            className="p-3 text-left"
+          >
+            {message}
+          </Notice>
         </div>
       )}
 
-      <button
-        type="submit"
-        disabled={isSubmitting || !organizationId}
-        className="btn-primary w-full"
-      >
-        {isSubmitting ? (isEditMode ? "수정 중..." : "등록 중...") : (isEditMode ? "공간 수정" : "공간 등록")}
-      </button>
+      <div className="flex justify-end">
+        <button
+          type="submit"
+          disabled={isSubmitting || !organizationId}
+          className="btn-primary w-full sm:w-auto sm:min-w-[140px]"
+        >
+          {isSubmitting ? (isEditMode ? "수정 중..." : "등록 중...") : (isEditMode ? "공간 수정" : "공간 등록")}
+        </button>
+      </div>
     </form>
   );
 }

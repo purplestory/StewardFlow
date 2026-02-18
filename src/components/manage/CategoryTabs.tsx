@@ -104,20 +104,22 @@ export default function CategoryTabs() {
 
   return (
     <div className="tab-shell">
-      <nav className="flex min-w-max items-center gap-2 overflow-x-auto px-1 pb-1" aria-label="카테고리 탭">
-        {tabs.map((tab) => {
-          const isActive = pathname.startsWith(tab.href);
-          return (
-            <Link
-              key={tab.key}
-              href={tab.href}
-              className={`tab-chip ${isActive ? "tab-chip-active" : ""}`}
-            >
-              {tab.label}
-            </Link>
-          );
-        })}
-      </nav>
+      <div className="tab-scroll">
+        <nav className="tab-nav" aria-label="카테고리 탭">
+          {tabs.map((tab) => {
+            const isActive = pathname.startsWith(tab.href);
+            return (
+              <Link
+                key={tab.key}
+                href={tab.href}
+                className={`tab-chip ${isActive ? "tab-chip-active" : ""}`}
+              >
+                {tab.label}
+              </Link>
+            );
+          })}
+        </nav>
+      </div>
     </div>
   );
 }

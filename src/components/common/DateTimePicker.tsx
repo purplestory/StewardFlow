@@ -79,17 +79,17 @@ export default function DateTimePicker({
     return `${year}. ${month}. ${day}. ${period} ${displayHour}:${minute}`;
   };
 
-  const formatShortWeekday = (locale: string | undefined, date: Date) => {
+  const formatShortWeekday = (_locale: string | undefined, date: Date) => {
     const day = date.getDay();
     const weekdays = ["주일", "월", "화", "수", "목", "금", "토"];
     return weekdays[day];
   };
 
-  const formatDay = (locale: string | undefined, date: Date) => {
+  const formatDay = (_locale: string | undefined, date: Date) => {
     return date.getDate().toString();
   };
 
-  const formatMonthYear = (locale: string | undefined, date: Date) => {
+  const formatMonthYear = (_locale: string | undefined, date: Date) => {
     const year = date.getFullYear();
     const month = date.getMonth() + 1;
     const monthNames = [
@@ -118,7 +118,7 @@ export default function DateTimePicker({
       </label>
 
       {isOpen && (
-        <div className="absolute left-0 top-full z-50 mt-2 w-full min-w-[380px] rounded-xl border border-neutral-200 bg-white p-6 shadow-xl">
+        <div className="absolute left-0 right-0 top-full z-50 mt-2 min-w-0 rounded-xl border border-neutral-200 bg-white p-4 shadow-xl sm:right-auto sm:w-full sm:min-w-[380px] sm:p-6">
           <div className="space-y-6">
             {/* 달력 */}
             <div className="w-full">
@@ -140,15 +140,15 @@ export default function DateTimePicker({
             </div>
 
             {/* 시간 선택 */}
-            <div className="flex items-center gap-4 border-t border-neutral-200 pt-4">
+            <div className="flex flex-wrap items-center gap-3 border-t border-neutral-200 pt-4">
               <span className="text-sm font-medium text-neutral-700">시간</span>
-              <div className="flex items-center gap-2">
+              <div className="flex w-full items-center gap-2 sm:w-auto">
                 <select
                   value={selectedTime.hour}
                   onChange={(e) =>
-                    handleTimeChange("hour", parseInt(e.target.value))
+                    handleTimeChange("hour", Number.parseInt(e.target.value, 10))
                   }
-                  className="form-select w-20"
+                  className="form-select w-full sm:w-20"
                 >
                   {Array.from({ length: 24 }, (_, i) => (
                     <option key={i} value={i}>
@@ -160,9 +160,9 @@ export default function DateTimePicker({
                 <select
                   value={selectedTime.minute}
                   onChange={(e) =>
-                    handleTimeChange("minute", parseInt(e.target.value))
+                    handleTimeChange("minute", Number.parseInt(e.target.value, 10))
                   }
-                  className="form-select w-20"
+                  className="form-select w-full sm:w-20"
                 >
                   {[0, 15, 30, 45].map((m) => (
                     <option key={m} value={m}>

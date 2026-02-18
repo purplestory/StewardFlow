@@ -499,26 +499,26 @@ export default function ProfileEditor() {
       {/* 프로필 정보 표시 섹션 */}
       <div className="rounded-xl border border-neutral-200 bg-white p-6">
         <div className="space-y-3">
-          <div className="flex items-center gap-3">
-            <label className="text-sm font-medium text-neutral-700 min-w-[80px]">이름</label>
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+            <label className="text-sm font-medium text-neutral-700 sm:min-w-[80px]">이름</label>
             <input
               type="text"
               value={profile.name || ""}
               disabled
-              className="form-input bg-neutral-50 text-neutral-600 flex-1"
+              className="form-input bg-neutral-50 text-neutral-600 flex-1 min-w-0"
             />
           </div>
 
-          <div className="flex items-center gap-3">
-            <label className="text-sm font-medium text-neutral-700 min-w-[80px]">전화번호</label>
-            <div className="flex items-center gap-2 flex-1">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+            <label className="text-sm font-medium text-neutral-700 sm:min-w-[80px]">전화번호</label>
+            <div className="flex flex-1 min-w-0 flex-col gap-2 sm:flex-row sm:items-center">
               {editingPhone ? (
                 <>
                   <input
                     type="tel"
                     value={phoneValue}
                     onChange={(e) => setPhoneValue(e.target.value)}
-                    className="form-input flex-1"
+                    className="form-input flex-1 min-w-0"
                     placeholder="010-0000-0000"
                     autoFocus
                   />
@@ -526,7 +526,7 @@ export default function ProfileEditor() {
                     type="button"
                     onClick={handleSavePhone}
                     disabled={savingPhone}
-                    className="flex-shrink-0 h-[38px] px-3 rounded-lg text-sm font-medium bg-neutral-900 text-white hover:bg-neutral-800 disabled:opacity-50"
+                    className="h-[38px] w-full px-3 rounded-lg text-sm font-medium bg-neutral-900 text-white hover:bg-neutral-800 disabled:opacity-50 sm:w-auto sm:flex-shrink-0"
                   >
                     {savingPhone ? "저장 중..." : "저장"}
                   </button>
@@ -534,7 +534,7 @@ export default function ProfileEditor() {
                     type="button"
                     onClick={handleCancelPhone}
                     disabled={savingPhone}
-                    className="flex-shrink-0 h-[38px] px-3 rounded-lg text-sm font-medium border border-neutral-300 bg-white text-neutral-700 hover:bg-neutral-50 disabled:opacity-50"
+                    className="h-[38px] w-full px-3 rounded-lg text-sm font-medium border border-neutral-300 bg-white text-neutral-700 hover:bg-neutral-50 disabled:opacity-50 sm:w-auto sm:flex-shrink-0"
                   >
                     취소
                   </button>
@@ -545,7 +545,7 @@ export default function ProfileEditor() {
                     type="tel"
                     value={profile.phone || ""}
                     disabled
-                    className="form-input bg-neutral-50 text-neutral-600 flex-1"
+                    className="form-input bg-neutral-50 text-neutral-600 flex-1 min-w-0"
                   />
                   <button
                     type="button"
@@ -576,35 +576,35 @@ export default function ProfileEditor() {
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
-            <label className="text-sm font-medium text-neutral-700 min-w-[80px]">이메일</label>
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+            <label className="text-sm font-medium text-neutral-700 sm:min-w-[80px]">이메일</label>
             <input
               type="email"
               value={profile.email}
               disabled
-              className="form-input bg-neutral-50 text-neutral-600 flex-1"
+              className="form-input bg-neutral-50 text-neutral-600 flex-1 min-w-0"
             />
           </div>
 
-          <div className="flex items-center gap-3">
-            <label className="text-sm font-medium text-neutral-700 min-w-[80px]">기관</label>
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+            <label className="text-sm font-medium text-neutral-700 sm:min-w-[80px]">기관</label>
             <input
               type="text"
               value={organization?.name || "기관 정보 없음"}
               disabled
-              className="form-input bg-neutral-50 text-neutral-600 flex-1"
+              className="form-input bg-neutral-50 text-neutral-600 flex-1 min-w-0"
             />
           </div>
 
-          <div className="flex items-center gap-3">
-            <label className="text-sm font-medium text-neutral-700 min-w-[80px]">소속 부서</label>
-            <div className="flex items-center gap-2 flex-1">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+            <label className="text-sm font-medium text-neutral-700 sm:min-w-[80px]">소속 부서</label>
+            <div className="flex flex-1 min-w-0 flex-col gap-2 sm:flex-row sm:items-center">
               {editingDepartment ? (
                 <>
                   <select
                     value={requestedDepartment}
                     onChange={(e) => setRequestedDepartment(e.target.value)}
-                    className="form-select flex-1 h-[38px]"
+                    className="form-select h-[38px] flex-1 min-w-0"
                   >
                     <option value="">부서 선택</option>
                     {availableDepartments
@@ -628,7 +628,7 @@ export default function ProfileEditor() {
                       setEditingDepartment(false);
                     }}
                     disabled={requesting || !requestedDepartment}
-                    className="flex-shrink-0 h-[38px] px-3 rounded-lg text-sm font-medium bg-neutral-900 text-white hover:bg-neutral-800 disabled:opacity-50"
+                    className="h-[38px] w-full px-3 rounded-lg text-sm font-medium bg-neutral-900 text-white hover:bg-neutral-800 disabled:opacity-50 sm:w-auto sm:flex-shrink-0"
                   >
                     {requesting ? "요청 중..." : "요청"}
                   </button>
@@ -640,7 +640,7 @@ export default function ProfileEditor() {
                       setRequestNote("");
                     }}
                     disabled={requesting}
-                    className="flex-shrink-0 h-[38px] px-3 rounded-lg text-sm font-medium border border-neutral-300 bg-white text-neutral-700 hover:bg-neutral-50 disabled:opacity-50"
+                    className="h-[38px] w-full px-3 rounded-lg text-sm font-medium border border-neutral-300 bg-white text-neutral-700 hover:bg-neutral-50 disabled:opacity-50 sm:w-auto sm:flex-shrink-0"
                   >
                     취소
                   </button>
@@ -651,7 +651,7 @@ export default function ProfileEditor() {
                     type="text"
                     value={profile.department || "부서 미등록"}
                     disabled
-                    className="form-input bg-neutral-50 text-neutral-600 flex-1"
+                    className="form-input bg-neutral-50 text-neutral-600 flex-1 min-w-0"
                   />
                   {!pendingRequest && (
                     <button
@@ -685,7 +685,7 @@ export default function ProfileEditor() {
             </div>
           </div>
           {pendingRequest && (
-            <div className="ml-[92px] mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+            <div className="mt-2 rounded-lg border border-blue-200 bg-blue-50 p-3 sm:ml-[92px]">
               <p className="text-sm text-blue-900 font-medium">부서 변경 요청 대기 중</p>
               <p className="text-xs text-blue-700 mt-1">
                 {profile.department || "(없음)"} → {pendingRequest.to_department}
@@ -704,7 +704,7 @@ export default function ProfileEditor() {
             </div>
           )}
           {editingDepartment && (
-            <div className="ml-[92px] mt-2">
+            <div className="mt-2 sm:ml-[92px]">
               <label className="text-xs text-neutral-600 mb-1 block">변경 사유 (선택)</label>
               <textarea
                 value={requestNote}
@@ -715,13 +715,13 @@ export default function ProfileEditor() {
             </div>
           )}
 
-          <div className="flex items-center gap-3">
-            <label className="text-sm font-medium text-neutral-700 min-w-[80px]">역할</label>
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+            <label className="text-sm font-medium text-neutral-700 sm:min-w-[80px]">역할</label>
             <input
               type="text"
               value={roleLabel[profile.role || "user"] || profile.role || "일반 사용자"}
               disabled
-              className="form-input bg-neutral-50 text-neutral-600 flex-1"
+              className="form-input bg-neutral-50 text-neutral-600 flex-1 min-w-0"
             />
           </div>
         </div>

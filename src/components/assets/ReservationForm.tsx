@@ -156,13 +156,13 @@ export default function ReservationForm({
           <div className="grid w-full grid-cols-1 gap-4 md:grid-cols-3">
             <div className="min-w-0 space-y-2">
               <label className="form-label">시작일시</label>
-              <div className="grid grid-cols-[1fr_120px] gap-2">
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_112px]">
                 <input
                   type="date"
                   value={startDate}
                   onChange={(e) => setStartDate(e.target.value)}
                   max={endDate || undefined}
-                  className="form-input text-base md:text-sm"
+                  className="form-input min-w-0 text-base md:text-sm"
                   required
                   disabled={formDisabled}
                 />
@@ -170,7 +170,7 @@ export default function ReservationForm({
                   type="time"
                   value={startTime}
                   onChange={(e) => setStartTime(e.target.value)}
-                  className="form-input text-base md:text-sm"
+                  className="form-input min-w-0 text-base md:text-sm"
                   required
                   disabled={formDisabled}
                 />
@@ -178,13 +178,13 @@ export default function ReservationForm({
             </div>
             <div className="min-w-0 space-y-2">
               <label className="form-label">종료일시</label>
-              <div className="grid grid-cols-[1fr_120px] gap-2">
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_112px]">
                 <input
                   type="date"
                   value={endDate}
                   onChange={(e) => setEndDate(e.target.value)}
                   min={startDate || undefined}
-                  className="form-input text-base md:text-sm"
+                  className="form-input min-w-0 text-base md:text-sm"
                   required
                   disabled={formDisabled}
                 />
@@ -192,7 +192,7 @@ export default function ReservationForm({
                   type="time"
                   value={endTime}
                   onChange={(e) => setEndTime(e.target.value)}
-                  className="form-input text-base md:text-sm"
+                  className="form-input min-w-0 text-base md:text-sm"
                   required
                   disabled={formDisabled}
                 />

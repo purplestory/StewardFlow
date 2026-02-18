@@ -3,10 +3,11 @@
 import { useEffect, useMemo, useState, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
-import Image from "next/image";
 import { supabase } from "@/lib/supabase";
 import { generateShortId } from "@/lib/short-id";
 import { isUUID } from "@/lib/short-id";
+import Notice from "@/components/common/Notice";
+import ImageUploadField from "@/components/ui/ImageUploadField";
 import {
   Dialog,
   DialogContent,
@@ -656,111 +657,61 @@ export default function AssetForm({ asset }: AssetFormProps = {}) {
   return (
     <form onSubmit={handleSubmit} className="form-section">
       {!isLoadingOrg && !organizationId && (
-        <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
+        <Notice variant="warning" className="p-3 text-left">
           기관 설정이 필요합니다.{" "}
           <Link href="/settings/org" className="underline font-medium">
             기관 설정
           </Link>
           으로 이동해 생성해주세요.
-        </div>
+        </Notice>
       )}
 
-      <div className="space-y-4">
-        <label className="flex flex-col gap-2">
-          <span className="form-label">
-            사진 <span className="form-label-optional">(최대 10개)</span>
-          </span>
-          <div
-            className="image-upload-area"
-            onClick={(e) => {
-              // 파일 입력 자체를 클릭한 경우는 무시
-              if ((e.target as HTMLElement).tagName === 'INPUT') {
-                return;
-              }
-              // 이미 다이얼로그가 열려있으면 무시
-              if (isFileDialogOpenRef.current) {
-                return;
-              }
-              // input이 존재하고 다이얼로그가 열려있지 않을 때만 클릭
-              if (fileInputRef.current && !isFileDialogOpenRef.current) {
-                isFileDialogOpenRef.current = true;
-                fileInputRef.current.click();
-              }
-            }}
-            onPaste={handlePaste}
-            tabIndex={0}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                if (!isFileDialogOpenRef.current && fileInputRef.current) {
-                  isFileDialogOpenRef.current = true;
-                  fileInputRef.current.click();
-                }
-              }
-            }}
-          >
-            {previews.length > 0 ? (
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                {previews.map((preview, index) => (
-                  <div key={index} className="relative group">
-                    <Image
-                      src={preview}
-                      alt={`미리보기 ${index + 1}`}
-                      width={400}
-                      height={300}
-                      className="w-full aspect-[4/3] object-cover rounded-lg border border-neutral-200"
-                      unoptimized
-                    />
-                    <button
-                      type="button"
-                      onClick={() => removeImage(index)}
-                      className="absolute top-1 right-1 w-6 h-6 rounded-full bg-rose-500 text-white text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                      aria-label="이미지 삭제"
-                    >
-                      ×
-                    </button>
-                    <div className="absolute bottom-1 left-1 bg-black/50 text-white text-xs px-2 py-0.5 rounded">
-                      {index + 1}/{previews.length}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="image-upload-placeholder">
-                사진을 등록해주세요. (선택사항, 여러 장 선택 가능)
-              </div>
-            )}
-            <input
-              ref={fileInputRef}
-              name="image"
-              type="file"
-              accept="image/*"
-              multiple
-              capture="environment"
-              onChange={handleFileChange}
-              onClick={(e) => {
-                e.stopPropagation(); // 클릭 이벤트 전파 방지
-                // input을 직접 클릭한 경우에도 다이얼로그 열림 상태로 설정
-                if (!isFileDialogOpenRef.current) {
-                  isFileDialogOpenRef.current = true;
-                }
-              }}
-              onFocus={() => {
-                // 포커스가 input에 갈 때 다이얼로그가 열릴 수 있으므로 상태 업데이트
-                if (!isFileDialogOpenRef.current) {
-                  isFileDialogOpenRef.current = true;
-                }
-              }}
-              className="image-upload-input"
-            />
-          </div>
-          <p className="text-xs text-neutral-500">
+      <ImageUploadField
+        previews={previews}
+        inputRef={fileInputRef}
+        onRemove={removeImage}
+        onInputChange={handleFileChange}
+        onPaste={handlePaste}
+        onContainerClick={(event) => {
+          if ((event.target as HTMLElement).tagName === "INPUT") {
+            return;
+          }
+          if (isFileDialogOpenRef.current) {
+            return;
+          }
+          if (fileInputRef.current && !isFileDialogOpenRef.current) {
+            isFileDialogOpenRef.current = true;
+            fileInputRef.current.click();
+          }
+        }}
+        onContainerKeyDown={(event) => {
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            if (!isFileDialogOpenRef.current && fileInputRef.current) {
+              isFileDialogOpenRef.current = true;
+              fileInputRef.current.click();
+            }
+          }
+        }}
+        onInputClick={(event) => {
+          event.stopPropagation();
+          if (!isFileDialogOpenRef.current) {
+            isFileDialogOpenRef.current = true;
+          }
+        }}
+        onInputFocus={() => {
+          if (!isFileDialogOpenRef.current) {
+            isFileDialogOpenRef.current = true;
+          }
+        }}
+        helperText={
+          <>
             여러 장의 사진을 선택할 수 있습니다. 설치된 모습이나 세부 사진도 등록해주세요.
             <br />
             모바일: 카메라로 직접 촬영 가능 | PC: 이미지 복사 후 붙여넣기(Ctrl+V) 가능
-          </p>
-        </label>
-      </div>
+          </>
+        }
+      />
 
       <div className="form-grid">
         <label className="form-grid-item">
@@ -1029,20 +980,21 @@ export default function AssetForm({ asset }: AssetFormProps = {}) {
       </div>
 
       {message && (
-        <div className={`rounded-xl px-4 py-3 text-sm ${
-          message.includes("오류") || message.includes("실패")
-            ? "bg-rose-50 text-rose-700 border border-rose-200"
-            : "bg-emerald-50 text-emerald-700 border border-emerald-200"
-        }`} role="status">
-          {message}
+        <div role="status">
+          <Notice
+            variant={message.includes("오류") || message.includes("실패") ? "error" : "success"}
+            className="p-3 text-left"
+          >
+            {message}
+          </Notice>
         </div>
       )}
 
-      <div className="flex gap-3">
+      <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
         <button
           type="submit"
           disabled={isSubmitting || !organizationId}
-          className="btn-primary flex-1"
+          className="btn-primary w-full sm:w-auto sm:min-w-[140px]"
         >
           {isSubmitting ? (isEditMode ? "수정 중..." : "등록 중...") : (isEditMode ? "물품 수정" : "물품 등록")}
         </button>
@@ -1051,7 +1003,7 @@ export default function AssetForm({ asset }: AssetFormProps = {}) {
             type="button"
             onClick={() => setShowDeleteConfirm(true)}
             disabled={isSubmitting || isDeleting}
-            className="btn-ghost text-sm"
+            className="btn-secondary w-full sm:w-auto"
           >
             삭제
           </button>
@@ -1121,13 +1073,12 @@ export default function AssetForm({ asset }: AssetFormProps = {}) {
             )}
 
             {message && message.includes("삭제") && (
-              <div className={`rounded-xl px-4 py-3 text-sm ${
-                message.includes("오류") || message.includes("실패")
-                  ? "bg-rose-50 text-rose-700 border border-rose-200"
-                  : "bg-emerald-50 text-emerald-700 border border-emerald-200"
-              }`}>
+              <Notice
+                variant={message.includes("오류") || message.includes("실패") ? "error" : "success"}
+                className="p-3 text-left"
+              >
                 {message}
-              </div>
+              </Notice>
             )}
           </div>
 

@@ -1,46 +1,21 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import ReservationManager from "@/components/manage/VehicleReservationManager";
 import OrganizationGate from "@/components/settings/OrganizationGate";
 import VehicleAdminPanel from "@/components/manage/VehicleAdminPanel";
 import CategoryTabs from "@/components/manage/CategoryTabs";
 import ManageLayout from "@/components/manage/ManageLayout";
-import { supabase } from "@/lib/supabase";
 import Notice from "@/components/common/Notice";
 import PageHero from "@/components/ui/PageHero";
 import SectionCard from "@/components/ui/SectionCard";
+import { useUserProfile } from "@/hooks/useAssets";
 
 export default function VehicleManagePage() {
-  const [loading, setLoading] = useState(true);
-  const [hasPermission, setHasPermission] = useState(false);
+  const { data: userProfile, isLoading } = useUserProfile();
+  const role = userProfile?.profile?.role ?? null;
+  const hasPermission = role === "admin" || role === "manager";
 
-  useEffect(() => {
-    const checkPermission = async () => {
-      const { data: sessionData } = await supabase.auth.getSession();
-      const user = sessionData.session?.user;
-      
-      if (!user) {
-        setLoading(false);
-        return;
-      }
-
-      const { data: profileData } = await supabase
-        .from("profiles")
-        .select("role")
-        .eq("id", user.id)
-        .maybeSingle();
-
-      // 관리자 또는 부서 관리자만 접근 가능
-      const isAuthorized = profileData?.role === "admin" || profileData?.role === "manager";
-      setHasPermission(isAuthorized);
-      setLoading(false);
-    };
-
-    checkPermission();
-  }, []);
-
-  if (loading) {
+  if (isLoading && !userProfile) {
     return (
       <ManageLayout>
         <Notice>권한을 확인하는 중입니다.</Notice>

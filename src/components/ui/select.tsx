@@ -80,10 +80,14 @@ export function SelectContent({ children }: { children: ReactNode }) {
 
 type SelectItemProps = {
   value: string;
+  disabled?: boolean;
   children: ReactNode;
 };
 
-export function SelectItem({ value, children }: SelectItemProps) {
-  return <option value={value}>{children}</option>;
+export function SelectItem({ value, disabled = false, children }: SelectItemProps) {
+  return (
+    <option value={value} disabled={disabled}>
+      {children}
+    </option>
+  );
 }
-

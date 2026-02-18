@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import StatusFilterPills from "@/components/ui/StatusFilterPills";
 
 type Reservation = {
   id: string;
@@ -45,6 +46,11 @@ export default function ReservationCalendarView({
   onReservationClick,
 }: ReservationCalendarViewProps) {
   const [hoveredReservation, setHoveredReservation] = useState<string | null>(null);
+  const calendarModeOptions = [
+    { value: "month", label: "월간" },
+    { value: "week", label: "주간" },
+    { value: "day", label: "일간" },
+  ] as const;
 
   // 주간 뷰: 현재 날짜가 포함된 주의 시작일과 종료일
   const weekRange = useMemo(() => {
@@ -371,21 +377,21 @@ export default function ReservationCalendarView({
           <button
             type="button"
             onClick={() => navigateDate("prev")}
-            className="h-[38px] rounded-lg border border-neutral-200 bg-white px-3 text-sm font-medium text-neutral-700 hover:bg-neutral-50"
+            className="btn-ghost h-[38px] px-3"
           >
             ←
           </button>
           <button
             type="button"
             onClick={goToToday}
-            className="h-[38px] rounded-lg border border-neutral-200 bg-white px-4 text-sm font-medium text-neutral-700 hover:bg-neutral-50"
+            className="btn-ghost h-[38px]"
           >
             오늘
           </button>
           <button
             type="button"
             onClick={() => navigateDate("next")}
-            className="h-[38px] rounded-lg border border-neutral-200 bg-white px-3 text-sm font-medium text-neutral-700 hover:bg-neutral-50"
+            className="btn-ghost h-[38px] px-3"
           >
             →
           </button>
@@ -401,45 +407,15 @@ export default function ReservationCalendarView({
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => onViewModeChange("month")}
-            className={`h-[38px] rounded-lg px-4 text-sm font-medium transition-all ${
-              viewMode === "month"
-                ? "bg-slate-900 text-white"
-                : "bg-white border border-neutral-200 text-neutral-700 hover:bg-neutral-50"
-            }`}
-          >
-            월간
-          </button>
-          <button
-            type="button"
-            onClick={() => onViewModeChange("week")}
-            className={`h-[38px] rounded-lg px-4 text-sm font-medium transition-all ${
-              viewMode === "week"
-                ? "bg-slate-900 text-white"
-                : "bg-white border border-neutral-200 text-neutral-700 hover:bg-neutral-50"
-            }`}
-          >
-            주간
-          </button>
-          <button
-            type="button"
-            onClick={() => onViewModeChange("day")}
-            className={`h-[38px] rounded-lg px-4 text-sm font-medium transition-all ${
-              viewMode === "day"
-                ? "bg-slate-900 text-white"
-                : "bg-white border border-neutral-200 text-neutral-700 hover:bg-neutral-50"
-            }`}
-          >
-            일간
-          </button>
-        </div>
+        <StatusFilterPills
+          options={calendarModeOptions}
+          value={viewMode}
+          onChange={(next) => onViewModeChange(next as ViewMode)}
+        />
       </div>
 
       {/* 달력 뷰 */}
-      <div className="rounded-lg border border-neutral-200 bg-white p-4">
+      <div className="surface-card p-4">
         {viewMode === "month" && renderMonthView()}
         {viewMode === "week" && renderWeekView()}
         {viewMode === "day" && renderDayView()}

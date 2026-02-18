@@ -1,5 +1,20 @@
 "use client";
 
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+} from "@/components/ui/select";
+
 type ReservationStatus = "pending" | "approved" | "returned" | "rejected";
 
 type ReservationDetailModalProps = {
@@ -35,21 +50,20 @@ export default function ReservationDetailModal({
   onStatusChange,
   onClose,
 }: ReservationDetailModalProps) {
-  if (!isOpen) return null;
-
   return (
-    <div className="modal-backdrop">
-      <div className="modal-surface">
-        <div className="flex items-start justify-between gap-3">
-          <h3 className="text-xl font-semibold tracking-tight text-slate-900">{title}</h3>
-          <button
-            type="button"
-            className="rounded-lg border border-neutral-200 px-2 py-1 text-xs text-neutral-600 hover:bg-neutral-50"
-            onClick={onClose}
-          >
-            닫기
-          </button>
-        </div>
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent>
+        <DialogHeader className="flex flex-row items-start justify-between gap-3">
+          <DialogTitle className="text-xl tracking-tight">{title}</DialogTitle>
+          <DialogClose asChild>
+            <button
+              type="button"
+              className="rounded-lg border border-neutral-200 px-2 py-1 text-xs text-neutral-600 hover:bg-neutral-50"
+            >
+              닫기
+            </button>
+          </DialogClose>
+        </DialogHeader>
         <dl className="mt-4 space-y-2 rounded-xl border border-neutral-200 bg-neutral-50/80 p-4 text-sm text-neutral-700">
           <div className="grid grid-cols-[88px_1fr] gap-2">
             <dt className="text-neutral-500">{resourceLabel}</dt>
@@ -77,27 +91,30 @@ export default function ReservationDetailModal({
           )}
         </dl>
 
-        <div className="mt-5 flex flex-wrap items-center justify-end gap-2">
+        <DialogFooter className="mt-5 flex-wrap items-center gap-2">
           <span className="chip-muted">상태 변경</span>
-          <select
+          <Select
             value={status}
-            onChange={(event) =>
-              onStatusChange(event.target.value as ReservationStatus)
-            }
-            className="form-select h-[38px] min-w-[140px] text-sm"
+            onValueChange={(nextStatus) => onStatusChange(nextStatus as ReservationStatus)}
             disabled={disableStatusChange}
           >
-            {statusOptions.map((value) => (
-              <option key={value} value={value} disabled={value === "returned"}>
-                {statusLabel[value]}
-              </option>
-            ))}
-          </select>
-          <button type="button" className="btn-ghost" onClick={onClose}>
-            창 닫기
-          </button>
-        </div>
-      </div>
-    </div>
+            <SelectTrigger className="form-select h-[38px] min-w-[140px] text-sm">
+              <SelectContent>
+                {statusOptions.map((value) => (
+                  <SelectItem key={value} value={value} disabled={value === "returned"}>
+                    {statusLabel[value]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </SelectTrigger>
+          </Select>
+          <DialogClose asChild>
+            <button type="button" className="btn-ghost">
+              창 닫기
+            </button>
+          </DialogClose>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

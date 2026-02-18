@@ -438,7 +438,7 @@ export default function SpaceReservationManager() {
                 >
                   <SelectContent>
                     {statusOptions.map((status) => (
-                      <SelectItem key={status} value={status}>
+                      <SelectItem key={status} value={status} disabled={status === "returned"}>
                         {statusLabel[status]}
                       </SelectItem>
                     ))}

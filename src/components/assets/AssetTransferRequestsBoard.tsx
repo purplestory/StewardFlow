@@ -70,6 +70,74 @@ export default function AssetTransferRequestsBoard() {
   const [lastLoadedAt, setLastLoadedAt] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
 
+  async function enrichTransferRequests(
+    nextRequests: Omit<TransferRequestRow, "assets">[]
+  ) {
+    const assetIds = nextRequests
+      .map((request) => request.asset_id)
+      .filter((id): id is string => Boolean(id));
+
+    const assetsMap: Record<
+      string,
+      NonNullable<TransferRequestRow["assets"]>
+    > = {};
+
+    if (assetIds.length > 0) {
+      const { data: assetsData } = await supabase
+        .from("assets")
+        .select("id,name,owner_department,owner_scope")
+        .in("id", assetIds);
+
+      (assetsData ?? []).forEach((asset) => {
+        assetsMap[asset.id] = {
+          name: asset.name,
+          owner_department: asset.owner_department,
+          owner_scope: asset.owner_scope,
+        };
+      });
+    }
+
+    const requestsWithAssets: TransferRequestRow[] = nextRequests.map(
+      (request) => ({
+        ...request,
+        assets: request.asset_id ? assetsMap[request.asset_id] ?? null : null,
+      })
+    );
+
+    const departmentSet = new Set<string>();
+    nextRequests.forEach((request) => {
+      if (request.from_department) departmentSet.add(request.from_department);
+      if (request.to_department) departmentSet.add(request.to_department);
+    });
+
+    const requesterIds = Array.from(
+      new Set(
+        nextRequests
+          .map((request) => request.requester_id)
+          .filter((id): id is string => Boolean(id))
+      )
+    );
+
+    let requesterNameMap: Record<string, string> = {};
+    if (requesterIds.length > 0) {
+      const { data: requesterData } = await supabase
+        .from("profiles")
+        .select("id,name,email")
+        .in("id", requesterIds);
+
+      requesterNameMap = {};
+      (requesterData ?? []).forEach((row) => {
+        requesterNameMap[row.id] = row.name ?? row.email ?? row.id;
+      });
+    }
+
+    return {
+      requestsWithAssets,
+      departments: Array.from(departmentSet).sort(),
+      requesterNameMap,
+    };
+  }
+
   useEffect(() => {
     const safeDepartmentFilter =
       departmentFilter === "all" || availableDepartments.includes(departmentFilter)
@@ -121,68 +189,17 @@ export default function AssetTransferRequestsBoard() {
         setAvailableDepartments([]);
         setRequesterMap({});
       } else {
-        const nextRequests = (requestData ?? []) as Omit<TransferRequestRow, 'assets'>[];
-        
-        // assets 정보를 별도로 조회
-        const assetIds = nextRequests
-          .map((r) => r.asset_id)
-          .filter((id): id is string => Boolean(id));
-        
-        const assetsMap: Record<string, { name: string; owner_department: string; owner_scope: string }> = {};
-        
-        if (assetIds.length > 0) {
-          const { data: assetsData } = await supabase
-            .from("assets")
-            .select("id,name,owner_department,owner_scope")
-            .in("id", assetIds);
-          
-          if (assetsData) {
-            assetsData.forEach((asset) => {
-              assetsMap[asset.id] = {
-                name: asset.name,
-                owner_department: asset.owner_department,
-                owner_scope: asset.owner_scope,
-              };
-            });
-          }
-        }
-        
-        // requests에 assets 정보 추가
-        const requestsWithAssets: TransferRequestRow[] = nextRequests.map((request) => ({
-          ...request,
-          assets: request.asset_id ? assetsMap[request.asset_id] || null : null,
-        }));
-        
+        const nextRequests = (requestData ?? []) as Omit<
+          TransferRequestRow,
+          "assets"
+        >[];
+        const { requestsWithAssets, departments, requesterNameMap } =
+          await enrichTransferRequests(nextRequests);
+
+        if (!isMounted) return;
         setRequests(requestsWithAssets);
-        const departmentSet = new Set<string>();
-        nextRequests.forEach((request) => {
-          if (request.from_department) departmentSet.add(request.from_department);
-          if (request.to_department) departmentSet.add(request.to_department);
-        });
-        setAvailableDepartments(Array.from(departmentSet).sort());
-
-        const requesterIds = Array.from(
-          new Set(
-            nextRequests
-              .map((request) => request.requester_id)
-              .filter((id): id is string => Boolean(id))
-          )
-        );
-
-        if (requesterIds.length > 0) {
-          const { data: requesterData } = await supabase
-            .from("profiles")
-            .select("id,name,email")
-            .in("id", requesterIds);
-
-          const map: Record<string, string> = {};
-          (requesterData ?? []).forEach((row) => {
-            map[row.id] = row.name ?? row.email ?? row.id;
-          });
-          setRequesterMap(map);
-        } else {
-          setRequesterMap({});
-        }
+        setAvailableDepartments(departments);
+        setRequesterMap(requesterNameMap);
       }
 
       setOrganizationId(profileData?.organization_id ?? null);
@@ -331,68 +348,15 @@ export default function AssetTransferRequestsBoard() {
       setAvailableDepartments([]);
       setRequesterMap({});
     } else {
-      const nextRequests = (requestData ?? []) as Omit<TransferRequestRow, 'assets'>[];
-      
-      // assets 정보를 별도로 조회
-      const assetIds = nextRequests
-        .map((r) => r.asset_id)
-        .filter((id): id is string => Boolean(id));
-      
-      const assetsMap: Record<string, { name: string; owner_department: string; owner_scope: string }> = {};
-      
-      if (assetIds.length > 0) {
-        const { data: assetsData } = await supabase
-          .from("assets")
-          .select("id,name,owner_department,owner_scope")
-          .in("id", assetIds);
-        
-        if (assetsData) {
-          assetsData.forEach((asset) => {
-            assetsMap[asset.id] = {
-              name: asset.name,
-              owner_department: asset.owner_department,
-              owner_scope: asset.owner_scope,
-            };
-          });
-        }
-      }
-      
-      // requests에 assets 정보 추가
-      const requestsWithAssets: TransferRequestRow[] = nextRequests.map((request) => ({
-        ...request,
-        assets: request.asset_id ? assetsMap[request.asset_id] || null : null,
-      }));
-      
+      const nextRequests = (requestData ?? []) as Omit<
+        TransferRequestRow,
+        "assets"
+      >[];
+      const { requestsWithAssets, departments, requesterNameMap } =
+        await enrichTransferRequests(nextRequests);
       setRequests(requestsWithAssets);
-      const departmentSet = new Set<string>();
-      nextRequests.forEach((request) => {
-        if (request.from_department) departmentSet.add(request.from_department);
-        if (request.to_department) departmentSet.add(request.to_department);
-      });
-      setAvailableDepartments(Array.from(departmentSet).sort());
-
-      const requesterIds = Array.from(
-        new Set(
-          nextRequests
-            .map((request) => request.requester_id)
-            .filter((id): id is string => Boolean(id))
-        )
-      );
-
-      if (requesterIds.length > 0) {
-        const { data: requesterData } = await supabase
-          .from("profiles")
-          .select("id,name,email")
-          .in("id", requesterIds);
-
-        const map: Record<string, string> = {};
-        (requesterData ?? []).forEach((row) => {
-          map[row.id] = row.name ?? row.email ?? row.id;
-        });
-        setRequesterMap(map);
-      } else {
-        setRequesterMap({});
-      }
+      setAvailableDepartments(departments);
+      setRequesterMap(requesterNameMap);
 
       setOrganizationId(profileData?.organization_id ?? null);
       setRole((profileData?.role as "admin" | "manager" | "user") ?? "user");

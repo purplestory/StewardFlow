@@ -138,6 +138,42 @@ export default function AssetTransferRequestsBoard() {
     };
   }
 
+  async function fetchTransferBoardData() {
+    const { data: sessionData } = await supabase.auth.getSession();
+    const user = sessionData.session?.user ?? null;
+
+    if (!user) {
+      return {
+        user: null,
+        profileData: null,
+        requestData: [] as Omit<TransferRequestRow, "assets">[],
+        requestError: null as string | null,
+      };
+    }
+
+    const [{ data: profileData }, { data: requestData, error: requestError }] =
+      await Promise.all([
+        supabase
+          .from("profiles")
+          .select("organization_id,role,department")
+          .eq("id", user.id)
+          .maybeSingle(),
+        supabase
+          .from("asset_transfer_requests")
+          .select(
+            "id,asset_id,requester_id,from_department,to_department,status,note,created_at,resolved_at"
+          )
+          .order("created_at", { ascending: false }),
+      ]);
+
+    return {
+      user,
+      profileData,
+      requestData: (requestData ?? []) as Omit<TransferRequestRow, "assets">[],
+      requestError: requestError?.message ?? null,
+    };
+  }
+
   useEffect(() => {
     const safeDepartmentFilter =
       departmentFilter === "all" || availableDepartments.includes(departmentFilter)
@@ -157,46 +193,38 @@ export default function AssetTransferRequestsBoard() {
   useEffect(() => {
     let isMounted = true;
     const load = async () => {
-      const { data: sessionData } = await supabase.auth.getSession();
-      const user = sessionData.session?.user ?? null;
+      const { user, profileData, requestData, requestError } =
+        await fetchTransferBoardData();
 
       if (!user) {
         if (isMounted) {
+          setMessage(null);
+          setRequests([]);
+          setAvailableDepartments([]);
+          setRequesterMap({});
+          setOrganizationId(null);
+          setRole(null);
+          setDepartment(null);
+          setUserId(null);
           setLoading(false);
         }
         return;
       }
 
-      const { data: profileData } = await supabase
-        .from("profiles")
-        .select("organization_id,role,department")
-        .eq("id", user.id)
-        .maybeSingle();
-
-      const { data: requestData, error } = await supabase
-        .from("asset_transfer_requests")
-        .select(
-          "id,asset_id,requester_id,from_department,to_department,status,note,created_at,resolved_at"
-        )
-        .order("created_at", { ascending: false });
-
       if (!isMounted) return;
 
-      if (error) {
-        console.error("Error loading transfer requests:", error);
-        setMessage(error.message);
+      if (requestError) {
+        console.error("Error loading transfer requests:", requestError);
+        setMessage(requestError);
         setRequests([]);
         setAvailableDepartments([]);
         setRequesterMap({});
       } else {
-        const nextRequests = (requestData ?? []) as Omit<
-          TransferRequestRow,
-          "assets"
-        >[];
         const { requestsWithAssets, departments, requesterNameMap } =
-          await enrichTransferRequests(nextRequests);
+          await enrichTransferRequests(requestData);
 
         if (!isMounted) return;
+        setMessage(null);
         setRequests(requestsWithAssets);
         setAvailableDepartments(departments);
         setRequesterMap(requesterNameMap);
@@ -310,50 +338,44 @@ export default function AssetTransferRequestsBoard() {
     );
   }, [filteredRequests]);
 
-  const canManage =
-    role === "admin" ||
-    role === "manager" ||
-    (department &&
-      filteredRequests.some(
-        (request) => request.from_department === department
-      ));
+  const canResolveRequest = (request: TransferRequestRow) => {
+    if (role === "admin") {
+      return true;
+    }
+    if (!department) {
+      return false;
+    }
+    return request.from_department === department;
+  };
 
   const reload = async () => {
     setLoading(true);
-    const { data: sessionData } = await supabase.auth.getSession();
-    const user = sessionData.session?.user ?? null;
+    const { user, profileData, requestData, requestError } =
+      await fetchTransferBoardData();
 
     if (!user) {
+      setMessage(null);
+      setRequests([]);
+      setAvailableDepartments([]);
+      setRequesterMap({});
+      setOrganizationId(null);
+      setRole(null);
+      setDepartment(null);
+      setUserId(null);
       setLoading(false);
       return;
     }
 
-    const { data: profileData } = await supabase
-      .from("profiles")
-      .select("organization_id,role,department")
-      .eq("id", user.id)
-      .maybeSingle();
-
-    const { data: requestData, error } = await supabase
-      .from("asset_transfer_requests")
-      .select(
-        "id,asset_id,requester_id,from_department,to_department,status,note,created_at,resolved_at"
-      )
-      .order("created_at", { ascending: false });
-
-    if (error) {
-      console.error("Error loading transfer requests:", error);
-      setMessage(error.message);
+    if (requestError) {
+      console.error("Error loading transfer requests:", requestError);
+      setMessage(requestError);
       setRequests([]);
       setAvailableDepartments([]);
       setRequesterMap({});
     } else {
-      const nextRequests = (requestData ?? []) as Omit<
-        TransferRequestRow,
-        "assets"
-      >[];
       const { requestsWithAssets, departments, requesterNameMap } =
-        await enrichTransferRequests(nextRequests);
+        await enrichTransferRequests(requestData);
+      setMessage(null);
       setRequests(requestsWithAssets);
       setAvailableDepartments(departments);
       setRequesterMap(requesterNameMap);
@@ -376,7 +398,7 @@ export default function AssetTransferRequestsBoard() {
       return;
     }
 
-    if (role === "user" && request.from_department !== department) {
+    if (!canResolveRequest(request)) {
       setMessage("요청 처리는 관리자/소유 부서만 가능합니다.");
       return;
     }
@@ -582,7 +604,7 @@ export default function AssetTransferRequestsBoard() {
         )}
         {/* 탭 메뉴 */}
         <div className="mt-4 border-b border-neutral-200">
-          <nav className="-mb-px flex space-x-1" aria-label="요청 탭">
+          <nav className="-mb-px flex w-full gap-1 overflow-x-auto pb-1" aria-label="요청 탭">
             <button
               type="button"
               onClick={() => setFilter("mine")}
@@ -631,62 +653,64 @@ export default function AssetTransferRequestsBoard() {
         </div>
         
         {/* 상태 필터 버튼 */}
-        <div className="mt-4 flex flex-wrap items-center gap-2">
-          <button
-            type="button"
-            onClick={() => setStatusFilter("all")}
-            className={`h-[38px] px-4 rounded-lg text-sm font-medium transition-all whitespace-nowrap flex items-center justify-center ${
-              statusFilter === "all"
-                ? "bg-neutral-900 text-white"
-                : "bg-white text-neutral-700 border border-neutral-200 hover:bg-neutral-50"
-            }`}
-          >
-            전체 {statusCounts.total}건
-          </button>
-          <button
-            type="button"
-            onClick={() => setStatusFilter("pending")}
-            className={`h-[38px] px-4 rounded-lg text-sm font-medium transition-all whitespace-nowrap flex items-center justify-center ${
-              statusFilter === "pending"
-                ? "bg-amber-600 text-white"
-                : "bg-white text-amber-700 border border-amber-200 hover:bg-amber-50"
-            }`}
-          >
-            대기 {statusCounts.pending}
-          </button>
-          <button
-            type="button"
-            onClick={() => setStatusFilter("approved")}
-            className={`h-[38px] px-4 rounded-lg text-sm font-medium transition-all whitespace-nowrap flex items-center justify-center ${
-              statusFilter === "approved"
-                ? "bg-emerald-600 text-white"
-                : "bg-white text-emerald-700 border border-emerald-200 hover:bg-emerald-50"
-            }`}
-          >
-            승인 {statusCounts.approved}
-          </button>
-          <button
-            type="button"
-            onClick={() => setStatusFilter("rejected")}
-            className={`h-[38px] px-4 rounded-lg text-sm font-medium transition-all whitespace-nowrap flex items-center justify-center ${
-              statusFilter === "rejected"
-                ? "bg-rose-600 text-white"
-                : "bg-white text-rose-700 border border-rose-200 hover:bg-rose-50"
-            }`}
-          >
-            거절 {statusCounts.rejected}
-          </button>
-          <button
-            type="button"
-            onClick={() => setStatusFilter("cancelled")}
-            className={`h-[38px] px-4 rounded-lg text-sm font-medium transition-all whitespace-nowrap flex items-center justify-center ${
-              statusFilter === "cancelled"
-                ? "bg-neutral-700 text-white"
-                : "bg-white text-neutral-700 border border-neutral-200 hover:bg-neutral-50"
-            }`}
-          >
-            취소 {statusCounts.cancelled}
-          </button>
+        <div className="mt-4 -mx-6 overflow-x-auto px-6 sm:mx-0 sm:px-0">
+          <div className="flex min-w-max items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setStatusFilter("all")}
+              className={`h-[38px] px-4 rounded-lg text-sm font-medium transition-all whitespace-nowrap flex items-center justify-center ${
+                statusFilter === "all"
+                  ? "bg-neutral-900 text-white"
+                  : "bg-white text-neutral-700 border border-neutral-200 hover:bg-neutral-50"
+              }`}
+            >
+              전체 {statusCounts.total}건
+            </button>
+            <button
+              type="button"
+              onClick={() => setStatusFilter("pending")}
+              className={`h-[38px] px-4 rounded-lg text-sm font-medium transition-all whitespace-nowrap flex items-center justify-center ${
+                statusFilter === "pending"
+                  ? "bg-amber-600 text-white"
+                  : "bg-white text-amber-700 border border-amber-200 hover:bg-amber-50"
+              }`}
+            >
+              대기 {statusCounts.pending}
+            </button>
+            <button
+              type="button"
+              onClick={() => setStatusFilter("approved")}
+              className={`h-[38px] px-4 rounded-lg text-sm font-medium transition-all whitespace-nowrap flex items-center justify-center ${
+                statusFilter === "approved"
+                  ? "bg-emerald-600 text-white"
+                  : "bg-white text-emerald-700 border border-emerald-200 hover:bg-emerald-50"
+              }`}
+            >
+              승인 {statusCounts.approved}
+            </button>
+            <button
+              type="button"
+              onClick={() => setStatusFilter("rejected")}
+              className={`h-[38px] px-4 rounded-lg text-sm font-medium transition-all whitespace-nowrap flex items-center justify-center ${
+                statusFilter === "rejected"
+                  ? "bg-rose-600 text-white"
+                  : "bg-white text-rose-700 border border-rose-200 hover:bg-rose-50"
+              }`}
+            >
+              거절 {statusCounts.rejected}
+            </button>
+            <button
+              type="button"
+              onClick={() => setStatusFilter("cancelled")}
+              className={`h-[38px] px-4 rounded-lg text-sm font-medium transition-all whitespace-nowrap flex items-center justify-center ${
+                statusFilter === "cancelled"
+                  ? "bg-neutral-700 text-white"
+                  : "bg-white text-neutral-700 border border-neutral-200 hover:bg-neutral-50"
+              }`}
+            >
+              취소 {statusCounts.cancelled}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -694,9 +718,9 @@ export default function AssetTransferRequestsBoard() {
       {toast && <Notice variant="success">{toast}</Notice>}
 
       <div className="rounded-xl border border-neutral-200 bg-white p-4">
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-4">
           <select
-            className="form-select"
+            className="form-select w-full"
             value={sortOrder}
             onChange={(event) =>
               setSortOrder(event.target.value as "latest" | "status")
@@ -706,7 +730,7 @@ export default function AssetTransferRequestsBoard() {
             <option value="status">상태순</option>
           </select>
           <select
-            className="form-select"
+            className="form-select w-full"
             value={effectiveDepartmentFilter}
             onChange={(event) => setDepartmentFilter(event.target.value)}
           >
@@ -718,13 +742,13 @@ export default function AssetTransferRequestsBoard() {
             ))}
           </select>
           <input
-            className="form-input"
+            className="form-input w-full"
             placeholder="자산/부서 검색"
             value={search}
             onChange={(event) => setSearch(event.target.value)}
           />
           <input
-            className="form-input"
+            className="form-input w-full"
             placeholder="요청자 이름/이메일 검색"
             value={requesterQuery}
             onChange={(event) => setRequesterQuery(event.target.value)}
@@ -774,7 +798,7 @@ export default function AssetTransferRequestsBoard() {
                         취소
                       </button>
                     )}
-                    {canManage && request.from_department === department && (
+                    {canResolveRequest(request) && (
                       <>
                         <button
                           type="button"

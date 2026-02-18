@@ -8,6 +8,8 @@ import CategoryTabs from "@/components/manage/CategoryTabs";
 import ManageLayout from "@/components/manage/ManageLayout";
 import { supabase } from "@/lib/supabase";
 import Notice from "@/components/common/Notice";
+import PageHero from "@/components/ui/PageHero";
+import SectionCard from "@/components/ui/SectionCard";
 
 export default function VehicleManagePage() {
   const [loading, setLoading] = useState(true);
@@ -58,21 +60,20 @@ export default function VehicleManagePage() {
 
   return (
     <ManageLayout>
-      <div className="surface-panel mb-6">
-        <h2 className="text-lg font-semibold">자원 관리</h2>
-        <p className="mt-1 text-sm text-neutral-600">
-          차량 상태 관리와 예약 승인 처리를 함께 수행합니다.
-        </p>
-      </div>
+      <PageHero
+        className="mb-6"
+        title="자원 관리"
+        description="차량 상태 관리와 예약 승인 처리를 함께 수행합니다."
+      />
       <CategoryTabs />
       <OrganizationGate>
         <div className="space-y-6">
-          <div className="surface-card p-6">
+          <SectionCard bodyClassName="p-0">
             <VehicleAdminPanel />
-          </div>
-          <div className="surface-card p-6">
+          </SectionCard>
+          <SectionCard bodyClassName="p-0">
             <ReservationManager />
-          </div>
+          </SectionCard>
         </div>
       </OrganizationGate>
     </ManageLayout>

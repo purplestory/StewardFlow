@@ -10,6 +10,8 @@ import AssetTransferRequestsBoard from "@/components/assets/AssetTransferRequest
 import SampleDataGenerator from "@/components/settings/SampleDataGenerator";
 import { supabase } from "@/lib/supabase";
 import Notice from "@/components/common/Notice";
+import PageHero from "@/components/ui/PageHero";
+import SectionCard from "@/components/ui/SectionCard";
 
 export default function AssetManagePage() {
   const [organizationId, setOrganizationId] = useState<string | null>(null);
@@ -66,31 +68,30 @@ export default function AssetManagePage() {
 
   return (
     <ManageLayout>
-      <div className="surface-panel mb-6">
-        <h2 className="text-lg font-semibold">자원 관리</h2>
-        <p className="mt-1 text-sm text-neutral-600">
-          물품 상태 관리와 예약 승인 처리를 함께 수행합니다.
-        </p>
-      </div>
+      <PageHero
+        className="mb-6"
+        title="자원 관리"
+        description="물품 상태 관리와 예약 승인 처리를 함께 수행합니다."
+      />
       <CategoryTabs />
       <OrganizationGate>
         <div className="space-y-6">
-          <div className="surface-card p-6">
+          <SectionCard bodyClassName="p-0">
             <AssetAdminPanel />
-          </div>
-          <div className="surface-card p-6">
+          </SectionCard>
+          <SectionCard bodyClassName="p-0">
             <ReservationManager />
-          </div>
-          <div className="surface-card p-6">
+          </SectionCard>
+          <SectionCard bodyClassName="p-0">
             <AssetTransferRequestsBoard />
-          </div>
+          </SectionCard>
           {organizationId && currentUserId && (
-            <div className="surface-card p-6">
+            <SectionCard bodyClassName="p-0">
               <SampleDataGenerator
                 organizationId={organizationId}
                 userId={currentUserId}
               />
-            </div>
+            </SectionCard>
           )}
         </div>
       </OrganizationGate>

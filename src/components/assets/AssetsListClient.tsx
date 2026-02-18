@@ -7,6 +7,8 @@ import type { Asset } from "@/types/database";
 import AssetCard from "@/components/assets/AssetCard";
 import AssetForm from "@/components/assets/AssetForm";
 import { useAssets, useUserProfile, useApprovalPolicies } from "@/hooks/useAssets";
+import PageHero from "@/components/ui/PageHero";
+import SectionCard from "@/components/ui/SectionCard";
 
 const categoryOptions = [
   { value: "", label: "전체" },
@@ -106,15 +108,11 @@ export default function AssetsListClient() {
 
   return (
     <div className="space-y-6">
-      <div className="surface-panel">
-        <div className="flex items-start justify-between">
-          <div>
-            <h1 className="text-2xl font-semibold">물품</h1>
-            <p className="mt-2 text-sm text-neutral-600">
-              부서별 물품을 검색하고 대여를 신청할 수 있습니다.
-            </p>
-          </div>
-          {isManager && hasOrganization === true && (
+      <PageHero
+        title="물품"
+        description="부서별 물품을 검색하고 대여를 신청할 수 있습니다."
+        actions={
+          isManager && hasOrganization === true ? (
             <button
               type="button"
               onClick={() => setShowRegisterForm(!showRegisterForm)}
@@ -122,9 +120,10 @@ export default function AssetsListClient() {
             >
               {showRegisterForm ? "목록 보기" : "물품 등록"}
             </button>
-          )}
-        </div>
-        <div className="mt-6 space-y-4">
+          ) : null
+        }
+      >
+        <div className="space-y-4">
           <div className="grid gap-3 lg:grid-cols-[1.5fr_1fr]">
             <input
               className="form-input"
@@ -168,13 +167,12 @@ export default function AssetsListClient() {
             ))}
           </div>
         </div>
-      </div>
+      </PageHero>
 
       {showRegisterForm && isManager && hasOrganization === true && (
-        <div className="surface-card p-6">
-          <h2 className="mb-4 text-lg font-semibold">물품 등록</h2>
+        <SectionCard title="물품 등록">
           <AssetForm />
-        </div>
+        </SectionCard>
       )}
 
       {loading || hasOrganization === null ? (

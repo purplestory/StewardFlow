@@ -12,6 +12,8 @@
 - Empty/loading/error states always use `Notice` component.
 
 ## Class Tokens (Current Project)
+- Template component: `src/components/ui/PageHero.tsx`
+- Template component: `src/components/ui/SectionCard.tsx`
 - Page hero: `surface-panel`
 - Section card: `surface-card`
 - Manage tabs wrapper: `tab-shell`

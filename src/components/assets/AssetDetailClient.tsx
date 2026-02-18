@@ -8,6 +8,9 @@ import AssetReservationSection from "@/components/assets/AssetReservationSection
 import AssetAdminActions from "@/components/assets/AssetAdminActions";
 import AssetTransferRequest from "@/components/assets/AssetTransferRequest";
 import { useAsset, useAssetReservations, useUserRole, useApprovalPolicies } from "@/hooks/useAssets";
+import Notice from "@/components/common/Notice";
+import PageHero from "@/components/ui/PageHero";
+import SectionCard from "@/components/ui/SectionCard";
 
 const assetStatusLabel: Record<
   "available" | "rented" | "repair" | "lost" | "retired",
@@ -85,9 +88,9 @@ export default function AssetDetailClient() {
   if (loading) {
     return (
       <section className="space-y-6">
-        <div className="rounded-2xl border border-neutral-200 bg-white p-6">
+        <SectionCard>
           <p className="text-center text-neutral-500">로딩 중...</p>
-        </div>
+        </SectionCard>
       </section>
     );
   }
@@ -96,12 +99,12 @@ export default function AssetDetailClient() {
     console.error("Asset detail error:", assetError);
     return (
       <section className="space-y-6">
-        <div className="rounded-2xl border border-red-200 bg-red-50 p-6">
+        <Notice variant="error">
           <p className="text-center text-red-600">
             물품 정보를 불러오는 중 오류가 발생했습니다.
             {assetError instanceof Error && ` (${assetError.message})`}
           </p>
-        </div>
+        </Notice>
       </section>
     );
   }
@@ -129,7 +132,13 @@ export default function AssetDetailClient() {
 
   return (
     <section className="space-y-6">
-      <div className="flex flex-col gap-6 rounded-2xl border border-neutral-200 bg-white p-6 md:flex-row">
+      <PageHero
+        title="물품 상세"
+        description="물품의 상태, 소유 정보, 예약 현황을 확인할 수 있습니다."
+      />
+
+      <SectionCard bodyClassName="p-6">
+      <div className="flex flex-col gap-6 md:flex-row">
         {/* 이미지 섹션 - 모바일에서는 위에, 데스크톱에서는 왼쪽 */}
         <div className="w-full md:w-1/2">
           <ImageSlider
@@ -187,7 +196,7 @@ export default function AssetDetailClient() {
                   return (
                     <Link
                       href={`/assets/${asset.short_id || asset.id}/edit`}
-                      className="flex-shrink-0 p-2 rounded-lg border border-neutral-200 bg-white text-neutral-700 hover:bg-neutral-50 transition-colors"
+                      className="icon-button"
                       title="수정"
                     >
                       <svg
@@ -216,7 +225,7 @@ export default function AssetDetailClient() {
                     return (
                       <Link
                         href={`/assets/${asset.short_id || asset.id}/edit`}
-                        className="flex-shrink-0 p-2 rounded-lg border border-neutral-200 bg-white text-neutral-700 hover:bg-neutral-50 transition-colors"
+                        className="icon-button"
                         title="수정"
                       >
                         <svg
@@ -341,6 +350,7 @@ export default function AssetDetailClient() {
           )}
         </div>
       </div>
+      </SectionCard>
 
       <AssetReservationSection
         assetId={asset.id}

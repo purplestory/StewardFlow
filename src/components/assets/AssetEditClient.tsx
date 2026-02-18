@@ -4,6 +4,8 @@ import { useParams, notFound } from "next/navigation";
 import AssetEditForm from "./AssetEditForm";
 import OrganizationGate from "@/components/settings/OrganizationGate";
 import { useAsset } from "@/hooks/useAssets";
+import PageHero from "@/components/ui/PageHero";
+import SectionCard from "@/components/ui/SectionCard";
 
 export default function AssetEditClient() {
   const params = useParams();
@@ -15,9 +17,9 @@ export default function AssetEditClient() {
   if (loading) {
     return (
       <section className="space-y-6">
-        <div className="surface-panel">
+        <SectionCard>
           <p className="text-center text-neutral-500">로딩 중...</p>
-        </div>
+        </SectionCard>
       </section>
     );
   }
@@ -28,16 +30,14 @@ export default function AssetEditClient() {
 
   return (
     <section className="space-y-6">
-      <div className="surface-panel">
-        <h1 className="text-2xl font-semibold">물품 수정</h1>
-        <p className="mt-2 text-sm text-neutral-600">
-          등록된 물품의 정보를 수정할 수 있습니다.
-        </p>
-      </div>
+      <PageHero
+        title="물품 수정"
+        description="등록된 물품의 정보를 수정할 수 있습니다."
+      />
       <OrganizationGate>
-        <div className="surface-card p-6">
+        <SectionCard>
           <AssetEditForm asset={asset} />
-        </div>
+        </SectionCard>
       </OrganizationGate>
     </section>
   );

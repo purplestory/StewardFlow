@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import ReservationCalendar from "@/components/assets/ReservationCalendar";
 import ReservationForm from "@/components/assets/ReservationForm";
 import type { AssetReservationSummary } from "@/actions/booking-actions";
+import SectionCard from "@/components/ui/SectionCard";
 
 type AssetReservationSectionProps = {
   assetId: string;
@@ -120,12 +121,11 @@ export default function AssetReservationSection({
       {/* 예약 캘린더와 예약 현황 */}
       <div className="grid gap-6 lg:grid-cols-[1fr_1fr]">
         {/* 예약 캘린더 */}
-        <div className="rounded-xl border border-neutral-200 bg-white p-6">
-          <h2 className="text-lg font-semibold">예약 캘린더</h2>
-          <p className="mt-2 text-sm text-neutral-600">
-            날짜를 선택하면 대여 신청 폼에 자동 반영됩니다.
-          </p>
-          <p className="mt-2 text-xs text-neutral-500">
+        <SectionCard
+          title="예약 캘린더"
+          description="날짜를 선택하면 대여 신청 폼에 자동 반영됩니다."
+        >
+          <p className="text-xs text-neutral-500">
             승인 필요 권한: {roleLabel[requiredRole]}
           </p>
           <div className="mt-4">
@@ -135,14 +135,13 @@ export default function AssetReservationSection({
               disabledStatuses={["pending", "approved"]}
             />
           </div>
-        </div>
+        </SectionCard>
 
         {/* 예약 현황 리스트 */}
-        <div className="rounded-xl border border-neutral-200 bg-white p-6">
-          <h2 className="text-lg font-semibold">예약 현황</h2>
-          <p className="mt-2 text-sm text-neutral-600">
-            이 물품의 예약 내역을 확인할 수 있습니다.
-          </p>
+        <SectionCard
+          title="예약 현황"
+          description="이 물품의 예약 내역을 확인할 수 있습니다."
+        >
           <div className="mt-4 space-y-2 max-h-[500px] overflow-y-auto">
             {sortedReservations.length === 0 ? (
               <p className="text-sm text-neutral-500 text-center py-8">
@@ -180,15 +179,14 @@ export default function AssetReservationSection({
               ))
             )}
           </div>
-        </div>
+        </SectionCard>
       </div>
 
       {/* 대여 신청 폼 */}
-      <div className="rounded-xl border border-neutral-200 bg-white p-6">
-        <h2 className="text-lg font-semibold">대여 신청</h2>
-        <p className="mt-2 text-sm text-neutral-600">
-          날짜 선택 및 사유 입력 후 신청합니다.
-        </p>
+      <SectionCard
+        title="대여 신청"
+        description="날짜 선택 및 사유 입력 후 신청합니다."
+      >
         <div className="mt-4">
           <ReservationForm
             assetId={assetId}
@@ -198,7 +196,7 @@ export default function AssetReservationSection({
             disabledReason={disabledReason}
           />
         </div>
-      </div>
+      </SectionCard>
     </div>
   );
 }

@@ -593,31 +593,29 @@ export default function AssetTransferRequestsBoard() {
   return (
     <div className="space-y-4">
       <div className="rounded-2xl border border-neutral-200 bg-white p-6">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex items-start justify-between gap-3">
           <div>
             <h1 className="text-2xl font-semibold">불용품 양도 요청</h1>
             <p className="mt-2 text-sm text-neutral-600">
               내 요청과 내 부서로 들어온 요청을 확인할 수 있습니다.
             </p>
           </div>
-          <div className="flex w-full flex-wrap items-center justify-between gap-2 sm:w-auto sm:flex-nowrap sm:justify-end sm:gap-3">
-            {lastLoadedAt && (
-              <span className="text-[11px] text-neutral-500 sm:text-xs">
-                최근 갱신: {formatDateTime(lastLoadedAt)}
-              </span>
-            )}
-            <button
-              type="button"
-              onClick={reload}
-              className="p-2 text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100 rounded transition-colors"
-              title="새로고침"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-              </svg>
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={reload}
+            className="shrink-0 rounded p-2 text-neutral-600 transition-colors hover:bg-neutral-100 hover:text-neutral-900"
+            title="새로고침"
+          >
+            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+          </button>
         </div>
+        {lastLoadedAt && (
+          <p className="mt-2 text-[11px] text-neutral-500 sm:text-xs">
+            최근 갱신: {formatDateTime(lastLoadedAt)}
+          </p>
+        )}
         {/* 탭 메뉴 */}
         <div className="mt-4 border-b border-neutral-200">
           <nav className="-mb-px flex space-x-1" aria-label="요청 탭">

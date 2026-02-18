@@ -99,48 +99,53 @@ export default function ReservationsClient() {
 
     setUpdating(true);
     setActionMessage(null);
-    const accessToken = await getAccessToken();
+    try {
+      const accessToken = await getAccessToken();
 
-    if (!accessToken) {
-      setActionMessage("로그인이 필요합니다.");
+      if (!accessToken) {
+        setActionMessage("로그인이 필요합니다.");
+        return;
+      }
+
+      const response = await fetch("/api/reservations/my", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          reservationId: selectedReservation.id,
+          startDate: `${draftStartDate}:00`,
+          endDate: `${draftEndDate}:00`,
+          note: draftNote,
+          accessToken,
+        }),
+      });
+      const result = await response.json().catch(() => null);
+      if (!response.ok || !result?.ok) {
+        setActionMessage(result?.message ?? "예약 수정에 실패했습니다.");
+        return;
+      }
+
+      queryClient.setQueryData<UserReservationItem[]>(["userReservations"], (previous) =>
+        (previous ?? []).map((item) =>
+          item.id === selectedReservation.id
+            ? {
+                ...item,
+                start_date: `${draftStartDate}:00`,
+                end_date: `${draftEndDate}:00`,
+                note: draftNote.trim() ? draftNote.trim() : null,
+              }
+            : item
+        )
+      );
+      await queryClient.invalidateQueries({ queryKey: ["userReservations"] });
+      await queryClient.refetchQueries({ queryKey: ["userReservations"], type: "active" });
+      setActionMessage("예약 신청 내용이 수정되었습니다.");
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : "예약 수정 중 오류가 발생했습니다.";
+      setActionMessage(errorMessage);
+    } finally {
       setUpdating(false);
-      return;
     }
-
-    const response = await fetch("/api/reservations/my", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        reservationId: selectedReservation.id,
-        startDate: `${draftStartDate}:00`,
-        endDate: `${draftEndDate}:00`,
-        note: draftNote,
-        accessToken,
-      }),
-    });
-    const result = await response.json();
-    if (!response.ok || !result.ok) {
-      setActionMessage(result.message ?? "예약 수정에 실패했습니다.");
-      setUpdating(false);
-      return;
-    }
-
-    queryClient.setQueryData<UserReservationItem[]>(["userReservations"], (previous) =>
-      (previous ?? []).map((item) =>
-        item.id === selectedReservation.id
-          ? {
-              ...item,
-              start_date: `${draftStartDate}:00`,
-              end_date: `${draftEndDate}:00`,
-              note: draftNote.trim() ? draftNote.trim() : null,
-            }
-          : item
-      )
-    );
-    await queryClient.invalidateQueries({ queryKey: ["userReservations"] });
-    await queryClient.refetchQueries({ queryKey: ["userReservations"], type: "active" });
-    setActionMessage("예약 신청 내용이 수정되었습니다.");
-    setUpdating(false);
   };
 
   const cancelReservation = async (reservationId: string, closeModalAfterCancel = false) => {
@@ -148,52 +153,53 @@ export default function ReservationsClient() {
 
     setUpdating(true);
     setActionMessage(null);
-    const accessToken = await getAccessToken();
+    try {
+      const accessToken = await getAccessToken();
 
-    if (!accessToken) {
-      setActionMessage("로그인이 필요합니다.");
+      if (!accessToken) {
+        setActionMessage("로그인이 필요합니다.");
+        return;
+      }
+
+      const response = await fetch("/api/reservations/my", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          reservationId,
+          accessToken,
+        }),
+      });
+      const result = await response.json().catch(() => null);
+      if (!response.ok || !result?.ok) {
+        setActionMessage(result?.message ?? "예약 취소에 실패했습니다.");
+        return;
+      }
+
+      queryClient.setQueryData<UserReservationItem[]>(["userReservations"], (previous) =>
+        (previous ?? []).filter((item) => item.id !== reservationId)
+      );
+
+      await queryClient.invalidateQueries({ queryKey: ["userReservations"] });
+      await queryClient.refetchQueries({ queryKey: ["userReservations"], type: "active" });
+      const remainingReservation =
+        queryClient
+          .getQueryData<UserReservationItem[]>(["userReservations"])
+          ?.some((item) => item.id === reservationId) ?? false;
+      if (remainingReservation) {
+        setActionMessage("삭제 요청이 완료되지 않았습니다. 다시 시도해 주세요.");
+        return;
+      }
+
+      if (selectedId === reservationId || closeModalAfterCancel) {
+        setSelectedId(null);
+      }
+      setActionMessage("예약 신청이 삭제되었습니다.");
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : "예약 취소 중 오류가 발생했습니다.";
+      setActionMessage(errorMessage);
+    } finally {
       setUpdating(false);
-      return;
-    }
-
-    const response = await fetch("/api/reservations/my", {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        reservationId,
-        accessToken,
-      }),
-    });
-    const result = await response.json();
-    if (!response.ok || !result.ok) {
-      setActionMessage(result.message ?? "예약 취소에 실패했습니다.");
-      setUpdating(false);
-      return;
-    }
-
-    queryClient.setQueryData<UserReservationItem[]>(["userReservations"], (previous) =>
-      (previous ?? []).filter((item) => item.id !== reservationId)
-    );
-
-    await queryClient.invalidateQueries({ queryKey: ["userReservations"] });
-    await queryClient.refetchQueries({ queryKey: ["userReservations"], type: "active" });
-    const remainingReservation =
-      queryClient
-        .getQueryData<UserReservationItem[]>(["userReservations"])
-        ?.some((item) => item.id === reservationId) ?? false;
-    if (remainingReservation) {
-      setActionMessage("삭제 요청이 완료되지 않았습니다. 다시 시도해 주세요.");
-      setUpdating(false);
-      return;
-    }
-
-    if (selectedId === reservationId) {
-      setSelectedId(null);
-    }
-    setActionMessage("예약 신청이 삭제되었습니다.");
-    setUpdating(false);
-    if (closeModalAfterCancel) {
-      closeDetail();
     }
   };
 

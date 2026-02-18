@@ -25,7 +25,7 @@ export default function SectionCard({
   return (
     <section className={cx("surface-card", className)}>
       {title || description || actions ? (
-        <header className="flex flex-wrap items-start justify-between gap-4 border-b border-neutral-200 px-6 py-4">
+        <header className="flex flex-wrap items-start justify-between gap-4 border-b border-neutral-200 px-4 py-4 md:px-6">
           <div>
             {title ? <h2 className="text-lg font-semibold text-slate-900">{title}</h2> : null}
             {description ? (
@@ -35,8 +35,7 @@ export default function SectionCard({
           {actions ? <div className="shrink-0">{actions}</div> : null}
         </header>
       ) : null}
-      <div className={cx("p-6", bodyClassName)}>{children}</div>
+      <div className={cx("p-4 md:p-6", bodyClassName)}>{children}</div>
     </section>
   );
 }
-

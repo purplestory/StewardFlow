@@ -6,6 +6,9 @@ import { listDeletedAssets, restoreAsset, deleteAsset } from "@/actions/asset-ac
 import type { Asset } from "@/types/database";
 import Notice from "@/components/common/Notice";
 import OrganizationGate from "@/components/settings/OrganizationGate";
+import PageHero from "@/components/ui/PageHero";
+import SectionCard from "@/components/ui/SectionCard";
+import ManageLayout from "@/components/manage/ManageLayout";
 
 export default function TrashPage() {
   const [deletedAssets, setDeletedAssets] = useState<Asset[]>([]);
@@ -117,22 +120,20 @@ export default function TrashPage() {
 
   if (userRole !== "admin") {
     return (
-      <section className="space-y-6">
+      <ManageLayout>
         <Notice variant="error">
           최고 관리자만 삭제된 자원을 볼 수 있습니다.
         </Notice>
-      </section>
+      </ManageLayout>
     );
   }
 
   return (
-    <section className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold">휴지통</h1>
-        <p className="text-sm text-neutral-600 mt-2">
-          삭제된 자원을 복원하거나 영구 삭제할 수 있습니다.
-        </p>
-      </div>
+    <ManageLayout>
+      <PageHero
+        title="휴지통"
+        description="삭제된 자원을 복원하거나 영구 삭제할 수 있습니다."
+      />
 
       <OrganizationGate>
         {message && (
@@ -146,7 +147,8 @@ export default function TrashPage() {
         ) : deletedAssets.length === 0 ? (
           <Notice>삭제된 자원이 없습니다.</Notice>
         ) : (
-          <div className="space-y-4">
+          <SectionCard>
+            <div className="space-y-4">
             <div className="flex items-center justify-between">
               <span className="text-sm text-neutral-600">
                 총 {deletedAssets.length}개의 삭제된 자원
@@ -166,7 +168,7 @@ export default function TrashPage() {
               {deletedAssets.map((asset) => (
                 <div
                   key={asset.id}
-                  className="rounded-lg border border-neutral-200 bg-white px-4 py-3 text-sm"
+                  className="rounded-xl border border-neutral-200 bg-white px-4 py-3 text-sm"
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
@@ -215,9 +217,10 @@ export default function TrashPage() {
                 </div>
               ))}
             </div>
-          </div>
+            </div>
+          </SectionCard>
         )}
       </OrganizationGate>
-    </section>
+    </ManageLayout>
   );
 }

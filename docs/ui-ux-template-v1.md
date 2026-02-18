@@ -65,6 +65,13 @@
 4. `notifications`
 5. remaining settings and feedback pages
 
+## Applied Screens (Current)
+- `assets/manage`, `spaces/manage`, `vehicles/manage`
+- `assets`, `assets/new`, `assets/[id]`, `assets/[id]/edit`
+- `notifications`
+- `settings/users`, `settings/org`, `settings/menu`, `settings/audit`, `settings/trash`
+- `my`
+
 ## QA Checklist
 - Desktop and mobile spacing alignment
 - Button and input heights are visually equal

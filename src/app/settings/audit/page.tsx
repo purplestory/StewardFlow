@@ -1,20 +1,21 @@
 import OrganizationGate from "@/components/settings/OrganizationGate";
 import AuditLogList from "@/components/settings/AuditLogList";
+import PageHero from "@/components/ui/PageHero";
+import SectionCard from "@/components/ui/SectionCard";
+import ManageLayout from "@/components/manage/ManageLayout";
 
 export default function AuditSettingsPage() {
   return (
-    <section className="space-y-6">
-      <div className="rounded-2xl border border-neutral-200 bg-white p-6">
-        <h1 className="text-2xl font-semibold">감사 로그</h1>
-        <p className="mt-2 text-sm text-neutral-600">
-          권한 변경 및 초대 기록을 확인합니다.
-        </p>
-      </div>
+    <ManageLayout>
+      <PageHero
+        title="감사 로그"
+        description="권한 변경 및 초대 기록을 확인합니다."
+      />
       <OrganizationGate>
-        <div className="rounded-xl border border-neutral-200 bg-white p-6">
+        <SectionCard bodyClassName="p-0">
           <AuditLogList />
-        </div>
+        </SectionCard>
       </OrganizationGate>
-    </section>
+    </ManageLayout>
   );
 }

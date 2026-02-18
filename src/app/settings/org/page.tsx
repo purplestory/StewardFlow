@@ -10,6 +10,8 @@ import OrganizationGate from "@/components/settings/OrganizationGate";
 import ManageLayout from "@/components/manage/ManageLayout";
 import { supabase } from "@/lib/supabase";
 import Notice from "@/components/common/Notice";
+import PageHero from "@/components/ui/PageHero";
+import SectionCard from "@/components/ui/SectionCard";
 
 export default function OrganizationSettingsPage() {
   const router = useRouter();
@@ -64,23 +66,22 @@ export default function OrganizationSettingsPage() {
 
   return (
     <ManageLayout>
-      <div className="rounded-xl border border-neutral-200 bg-white p-6 mb-6">
-        <h2 className="text-lg font-semibold">기관 관리</h2>
-        <p className="text-sm text-neutral-600 mt-1">
-          기관과 부서를 생성하고, 정책을 관리합니다.
-        </p>
-      </div>
+      <PageHero
+        className="mb-6"
+        title="기관 관리"
+        description="기관과 부서를 생성하고, 정책을 관리합니다."
+      />
       <OrganizationManager />
       <OrganizationGate>
-        <div className="rounded-xl border border-neutral-200 bg-white p-6 mb-6">
+        <SectionCard bodyClassName="p-0" className="mb-6">
           <ApprovalPolicyManager />
-        </div>
-        <div className="rounded-xl border border-neutral-200 bg-white p-6 mb-6">
+        </SectionCard>
+        <SectionCard bodyClassName="p-0" className="mb-6">
           <OwnershipPolicySettings organizationId={organizationId} />
-        </div>
-        <div className="rounded-xl border border-neutral-200 bg-white p-6">
+        </SectionCard>
+        <SectionCard bodyClassName="p-0">
           <ReturnVerificationPolicySettings organizationId={organizationId} />
-        </div>
+        </SectionCard>
       </OrganizationGate>
     </ManageLayout>
   );

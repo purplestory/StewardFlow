@@ -21,7 +21,7 @@ export default function PageHero({
   className,
 }: PageHeroProps) {
   return (
-    <div className={cx("surface-panel", className)}>
+    <div className={cx("surface-panel p-4 md:p-6", className)}>
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight text-slate-900">
@@ -37,4 +37,3 @@ export default function PageHero({
     </div>
   );
 }
-

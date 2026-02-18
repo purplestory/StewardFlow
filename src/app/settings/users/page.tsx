@@ -7,6 +7,8 @@ import UserRoleManager from "@/components/settings/UserRoleManager";
 import ManageLayout from "@/components/manage/ManageLayout";
 import { supabase } from "@/lib/supabase";
 import Notice from "@/components/common/Notice";
+import PageHero from "@/components/ui/PageHero";
+import SectionCard from "@/components/ui/SectionCard";
 
 export default function UsersSettingsPage() {
   const router = useRouter();
@@ -55,16 +57,15 @@ export default function UsersSettingsPage() {
 
   return (
     <ManageLayout>
-      <div className="rounded-xl border border-neutral-200 bg-white p-6 mb-6">
-        <h2 className="text-lg font-semibold">사용자 권한 관리</h2>
-        <p className="text-sm text-neutral-600 mt-1">
-          기관 내 사용자 초대 및 역할을 관리합니다.
-        </p>
-      </div>
+      <PageHero
+        className="mb-6"
+        title="사용자 권한 관리"
+        description="기관 내 사용자 초대 및 역할을 관리합니다."
+      />
       <OrganizationGate>
-        <div className="rounded-xl border border-neutral-200 bg-white p-6">
+        <SectionCard bodyClassName="p-0">
           <UserRoleManager />
-        </div>
+        </SectionCard>
       </OrganizationGate>
     </ManageLayout>
   );

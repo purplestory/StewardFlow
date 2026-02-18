@@ -79,7 +79,7 @@ export default function RootLayout({
           <WebPushRegistrar />
           <div className="min-h-screen text-neutral-900">
             <Header />
-            <main className="mx-auto w-full max-w-6xl px-4 py-8 md:px-6 md:py-10">
+            <main className="mx-auto w-full max-w-6xl px-4 py-6 md:px-6 md:py-10">
               {children}
             </main>
           </div>

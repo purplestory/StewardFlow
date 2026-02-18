@@ -2,7 +2,6 @@
 
 import { useMemo } from "react";
 import { useParams, notFound } from "next/navigation";
-import Link from "next/link";
 import type { Vehicle } from "@/types/database";
 import VehicleReservationSection from "@/components/vehicles/VehicleReservationSection";
 import ImageSlider from "@/components/common/ImageSlider";
@@ -18,25 +17,7 @@ import ResourceStatusBadge from "@/components/ui/ResourceStatusBadge";
 import ResourceInfoGrid, {
   type ResourceInfoItem,
 } from "@/components/ui/ResourceDetailInfo";
-
-function EditIcon() {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      fill="none"
-      viewBox="0 0 24 24"
-      strokeWidth={1.5}
-      stroke="currentColor"
-      className="h-5 w-5"
-    >
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10"
-      />
-    </svg>
-  );
-}
+import ResourceDetailHeader from "@/components/ui/ResourceDetailHeader";
 
 export default function VehicleDetailClient() {
   const params = useParams();
@@ -155,23 +136,16 @@ export default function VehicleDetailClient() {
           </div>
 
           <div className="w-full space-y-4 md:w-1/2">
-            <div className="flex items-center gap-2">
-              <ResourceStatusBadge
-                status={vehicle.status as "available" | "rented" | "repair" | "lost"}
-                label={vehicleStatusLabel[vehicle.status]}
-              />
-            </div>
-
-            <div className="flex items-start gap-2">
-              <div className="flex-1">
-                <h1 className="break-words text-2xl font-bold text-neutral-900">{vehicle.name}</h1>
-              </div>
-              {editHref ? (
-                <Link href={editHref} className="icon-button" title="수정">
-                  <EditIcon />
-                </Link>
-              ) : null}
-            </div>
+            <ResourceDetailHeader
+              status={
+                <ResourceStatusBadge
+                  status={vehicle.status as "available" | "rented" | "repair" | "lost"}
+                  label={vehicleStatusLabel[vehicle.status]}
+                />
+              }
+              title={vehicle.name}
+              editHref={editHref}
+            />
 
             <ResourceInfoGrid items={infoItems} />
           </div>

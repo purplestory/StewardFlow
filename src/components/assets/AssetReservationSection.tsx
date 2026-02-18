@@ -89,7 +89,10 @@ export default function AssetReservationSection({
         <ReservationListCard resourceLabel="물품" reservations={sortedReservations} />
       </div>
 
-      <ReservationRequestCard title="대여 신청">
+      <ReservationRequestCard
+        title="대여 신청"
+        description="날짜 선택 후 대여 목적을 입력해 신청합니다."
+      >
         <ReservationForm
           assetId={assetId}
           presetStartDate={startDate}

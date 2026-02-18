@@ -67,19 +67,19 @@ export default function ReservationCalendar({
 
   // 요일 포맷: '일' 대신 '주일'로 표시
   // en-US locale을 사용하면 일요일부터 시작하므로, date.getDay()는 0=일요일, 1=월요일, ..., 6=토요일
-  const formatShortWeekday = (locale: string | undefined, date: Date) => {
+  const formatShortWeekday = (_locale: string | undefined, date: Date) => {
     const day = date.getDay();
     const weekdays = ["주일", "월", "화", "수", "목", "금", "토"];
     return weekdays[day];
   };
 
   // 날짜 포맷: 한글 '일' 제거, 숫자만 표시
-  const formatDay = (locale: string | undefined, date: Date) => {
+  const formatDay = (_locale: string | undefined, date: Date) => {
     return date.getDate().toString();
   };
 
   // 월/년도 포맷: 한국어로 "년도 월" 형식으로 표시
-  const formatMonthYear = (locale: string | undefined, date: Date) => {
+  const formatMonthYear = (_locale: string | undefined, date: Date) => {
     const year = date.getFullYear();
     const month = date.getMonth() + 1;
     const monthNames = [
@@ -90,10 +90,9 @@ export default function ReservationCalendar({
   };
 
   return (
-    <div className="space-y-3 w-full overflow-x-auto">
-      <div className="flex justify-center w-full max-w-full">
-        <div className="w-full max-w-full overflow-x-auto">
-          <Calendar
+    <div className="space-y-3">
+      <div className="overflow-x-auto">
+        <Calendar
           locale="en-US"
           formatShortWeekday={formatShortWeekday}
           formatDay={formatDay}
@@ -119,52 +118,46 @@ export default function ReservationCalendar({
           }
           tileClassName={({ date }) => {
             const classes: string[] = [];
-            
-            // 공휴일 체크 (동기적으로 확인)
             const year = date.getFullYear();
             const month = date.getMonth() + 1;
             const day = date.getDate();
             const dayOfWeek = date.getDay();
             const dateString = `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-            
-            // 일요일은 공휴일
+
             if (dayOfWeek === 0) {
               classes.push("calendar-holiday");
             }
-            
-            // API에서 가져온 공휴일 목록 확인
-            if (holidays.some((h) => h.date === dateString)) {
+
+            if (holidays.some((holiday) => holiday.date === dateString)) {
               classes.push("calendar-holiday");
             }
-            
-            // 예약 상태 클래스
+
             const matched = normalized.find((reservation) =>
               isWithinRange(date, reservation.start, reservation.end)
             );
             if (matched) {
               classes.push(statusClassName[matched.status]);
             }
-            
+
             return classes.length > 0 ? classes.join(" ") : null;
           }}
           className="w-full max-w-full"
         />
-        </div>
       </div>
-      <div className="flex flex-wrap justify-center gap-3 text-xs text-neutral-600">
-        <span className="flex items-center gap-2">
+      <div className="flex flex-wrap justify-center gap-2 text-xs text-neutral-600">
+        <span className="chip-muted gap-2">
           <span className="h-2 w-2 rounded-full bg-amber-500" />
           승인 대기
         </span>
-        <span className="flex items-center gap-2">
+        <span className="chip-muted gap-2">
           <span className="h-2 w-2 rounded-full bg-emerald-500" />
           승인됨
         </span>
-        <span className="flex items-center gap-2">
+        <span className="chip-muted gap-2">
           <span className="h-2 w-2 rounded-full bg-neutral-400" />
           반납 완료
         </span>
-        <span className="flex items-center gap-2">
+        <span className="chip-muted gap-2">
           <span className="h-2 w-2 rounded-full bg-rose-400" />
           반려
         </span>

@@ -67,7 +67,10 @@ export default function SpaceReservationSection({
         <ReservationListCard resourceLabel="공간" reservations={sortedReservations} />
       </div>
 
-      <ReservationRequestCard title="예약 신청">
+      <ReservationRequestCard
+        title="예약 신청"
+        description="날짜 선택 후 사용 목적을 입력해 예약합니다."
+      >
         <ReservationForm
           assetId={spaceId}
           resourceType="space"

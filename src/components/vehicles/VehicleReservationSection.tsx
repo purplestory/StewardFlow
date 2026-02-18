@@ -66,7 +66,10 @@ export default function VehicleReservationSection({
         <ReservationListCard resourceLabel="차량" reservations={sortedReservations} />
       </div>
 
-      <ReservationRequestCard title="대여 신청">
+      <ReservationRequestCard
+        title="대여 신청"
+        description="날짜 선택 후 운행 목적을 입력해 신청합니다."
+      >
         <ReservationForm
           assetId={vehicleId}
           resourceType="vehicle"

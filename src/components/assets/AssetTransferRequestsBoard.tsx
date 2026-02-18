@@ -174,6 +174,20 @@ export default function AssetTransferRequestsBoard() {
     };
   }
 
+  function applyLoadedBoardState(
+    user: { id: string } | null,
+    profileData: {
+      organization_id: string | null;
+      role: "admin" | "manager" | "user" | null;
+      department: string | null;
+    } | null
+  ) {
+    setOrganizationId(profileData?.organization_id ?? null);
+    setRole((profileData?.role as "admin" | "manager" | "user") ?? null);
+    setDepartment(profileData?.department ?? null);
+    setUserId(user?.id ?? null);
+  }
+
   useEffect(() => {
     const safeDepartmentFilter =
       departmentFilter === "all" || availableDepartments.includes(departmentFilter)
@@ -202,10 +216,7 @@ export default function AssetTransferRequestsBoard() {
           setRequests([]);
           setAvailableDepartments([]);
           setRequesterMap({});
-          setOrganizationId(null);
-          setRole(null);
-          setDepartment(null);
-          setUserId(null);
+          applyLoadedBoardState(null, null);
           setLoading(false);
         }
         return;
@@ -230,10 +241,7 @@ export default function AssetTransferRequestsBoard() {
         setRequesterMap(requesterNameMap);
       }
 
-      setOrganizationId(profileData?.organization_id ?? null);
-      setRole((profileData?.role as "admin" | "manager" | "user") ?? "user");
-      setDepartment(profileData?.department ?? null);
-      setUserId(user.id);
+      applyLoadedBoardState(user, profileData);
       setLoading(false);
       setLastLoadedAt(new Date().toISOString());
     };
@@ -348,6 +356,55 @@ export default function AssetTransferRequestsBoard() {
     return request.from_department === department;
   };
 
+  const statusFilterButtons: Array<{
+    value: TransferRequestRow["status"] | "all";
+    label: string;
+    count: number;
+    activeClassName: string;
+    inactiveClassName: string;
+  }> = [
+    {
+      value: "all",
+      label: "전체",
+      count: statusCounts.total,
+      activeClassName: "bg-neutral-900 text-white",
+      inactiveClassName:
+        "bg-white text-neutral-700 border border-neutral-200 hover:bg-neutral-50",
+    },
+    {
+      value: "pending",
+      label: "대기",
+      count: statusCounts.pending,
+      activeClassName: "bg-amber-600 text-white",
+      inactiveClassName:
+        "bg-white text-amber-700 border border-amber-200 hover:bg-amber-50",
+    },
+    {
+      value: "approved",
+      label: "승인",
+      count: statusCounts.approved,
+      activeClassName: "bg-emerald-600 text-white",
+      inactiveClassName:
+        "bg-white text-emerald-700 border border-emerald-200 hover:bg-emerald-50",
+    },
+    {
+      value: "rejected",
+      label: "거절",
+      count: statusCounts.rejected,
+      activeClassName: "bg-rose-600 text-white",
+      inactiveClassName:
+        "bg-white text-rose-700 border border-rose-200 hover:bg-rose-50",
+    },
+    {
+      value: "cancelled",
+      label: "취소",
+      count: statusCounts.cancelled,
+      activeClassName: "bg-neutral-700 text-white",
+      inactiveClassName:
+        "bg-white text-neutral-700 border border-neutral-200 hover:bg-neutral-50",
+    },
+  ];
+
   const reload = async () => {
     setLoading(true);
     const { user, profileData, requestData, requestError } =
@@ -358,10 +415,7 @@ export default function AssetTransferRequestsBoard() {
       setRequests([]);
       setAvailableDepartments([]);
       setRequesterMap({});
-      setOrganizationId(null);
-      setRole(null);
-      setDepartment(null);
-      setUserId(null);
+      applyLoadedBoardState(null, null);
       setLoading(false);
       return;
     }
@@ -380,11 +434,8 @@ export default function AssetTransferRequestsBoard() {
       setAvailableDepartments(departments);
       setRequesterMap(requesterNameMap);
 
-      setOrganizationId(profileData?.organization_id ?? null);
-      setRole((profileData?.role as "admin" | "manager" | "user") ?? "user");
-      setDepartment(profileData?.department ?? null);
-      setUserId(user.id);
     }
+    applyLoadedBoardState(user, profileData);
     setLastLoadedAt(new Date().toISOString());
     setLoading(false);
   };
@@ -655,61 +706,21 @@ export default function AssetTransferRequestsBoard() {
         {/* 상태 필터 버튼 */}
         <div className="mt-4 -mx-6 overflow-x-auto px-6 sm:mx-0 sm:px-0">
           <div className="flex min-w-max items-center gap-2">
-            <button
-              type="button"
-              onClick={() => setStatusFilter("all")}
-              className={`h-[38px] px-4 rounded-lg text-sm font-medium transition-all whitespace-nowrap flex items-center justify-center ${
-                statusFilter === "all"
-                  ? "bg-neutral-900 text-white"
-                  : "bg-white text-neutral-700 border border-neutral-200 hover:bg-neutral-50"
-              }`}
-            >
-              전체 {statusCounts.total}건
-            </button>
-            <button
-              type="button"
-              onClick={() => setStatusFilter("pending")}
-              className={`h-[38px] px-4 rounded-lg text-sm font-medium transition-all whitespace-nowrap flex items-center justify-center ${
-                statusFilter === "pending"
-                  ? "bg-amber-600 text-white"
-                  : "bg-white text-amber-700 border border-amber-200 hover:bg-amber-50"
-              }`}
-            >
-              대기 {statusCounts.pending}
-            </button>
-            <button
-              type="button"
-              onClick={() => setStatusFilter("approved")}
-              className={`h-[38px] px-4 rounded-lg text-sm font-medium transition-all whitespace-nowrap flex items-center justify-center ${
-                statusFilter === "approved"
-                  ? "bg-emerald-600 text-white"
-                  : "bg-white text-emerald-700 border border-emerald-200 hover:bg-emerald-50"
-              }`}
-            >
-              승인 {statusCounts.approved}
-            </button>
-            <button
-              type="button"
-              onClick={() => setStatusFilter("rejected")}
-              className={`h-[38px] px-4 rounded-lg text-sm font-medium transition-all whitespace-nowrap flex items-center justify-center ${
-                statusFilter === "rejected"
-                  ? "bg-rose-600 text-white"
-                  : "bg-white text-rose-700 border border-rose-200 hover:bg-rose-50"
-              }`}
-            >
-              거절 {statusCounts.rejected}
-            </button>
-            <button
-              type="button"
-              onClick={() => setStatusFilter("cancelled")}
-              className={`h-[38px] px-4 rounded-lg text-sm font-medium transition-all whitespace-nowrap flex items-center justify-center ${
-                statusFilter === "cancelled"
-                  ? "bg-neutral-700 text-white"
-                  : "bg-white text-neutral-700 border border-neutral-200 hover:bg-neutral-50"
-              }`}
-            >
-              취소 {statusCounts.cancelled}
-            </button>
+            {statusFilterButtons.map((button) => (
+              <button
+                key={button.value}
+                type="button"
+                onClick={() => setStatusFilter(button.value)}
+                className={`h-[38px] px-4 rounded-lg text-sm font-medium transition-all whitespace-nowrap flex items-center justify-center ${
+                  statusFilter === button.value
+                    ? button.activeClassName
+                    : button.inactiveClassName
+                }`}
+              >
+                {button.label} {button.count}
+                {button.value === "all" ? "건" : ""}
+              </button>
+            ))}
           </div>
         </div>
       </div>

@@ -45,6 +45,12 @@ const formatDateTime = (value: string) => {
   });
 };
 
+const shortReservationId = (value: string) => {
+  if (!value) return "-";
+  if (value.length <= 8) return value;
+  return value.slice(0, 8);
+};
+
 export default function ReservationsClient() {
   const queryClient = useQueryClient();
   // React Query를 사용한 데이터 페칭
@@ -119,7 +125,20 @@ export default function ReservationsClient() {
       return;
     }
 
+    queryClient.setQueryData<UserReservationItem[]>(["userReservations"], (previous) =>
+      (previous ?? []).map((item) =>
+        item.id === selectedReservation.id
+          ? {
+              ...item,
+              start_date: `${draftStartDate}:00`,
+              end_date: `${draftEndDate}:00`,
+              note: draftNote.trim() ? draftNote.trim() : null,
+            }
+          : item
+      )
+    );
     await queryClient.invalidateQueries({ queryKey: ["userReservations"] });
+    await queryClient.refetchQueries({ queryKey: ["userReservations"], type: "active" });
     setActionMessage("예약 신청 내용이 수정되었습니다.");
     setUpdating(false);
   };
@@ -156,25 +175,21 @@ export default function ReservationsClient() {
       (previous ?? []).filter((item) => item.id !== reservationId)
     );
 
-    const { data: remainingRow, error: verifyError } = await supabase
-      .from("reservations")
-      .select("id")
-      .eq("id", reservationId)
-      .maybeSingle();
-
-    if (verifyError) {
-      setActionMessage(`삭제 확인 중 오류가 발생했습니다: ${verifyError.message}`);
-      setUpdating(false);
-      return;
-    }
-
-    if (remainingRow) {
+    await queryClient.invalidateQueries({ queryKey: ["userReservations"] });
+    await queryClient.refetchQueries({ queryKey: ["userReservations"], type: "active" });
+    const remainingReservation =
+      queryClient
+        .getQueryData<UserReservationItem[]>(["userReservations"])
+        ?.some((item) => item.id === reservationId) ?? false;
+    if (remainingReservation) {
       setActionMessage("삭제 요청이 완료되지 않았습니다. 다시 시도해 주세요.");
       setUpdating(false);
       return;
     }
 
-    await queryClient.invalidateQueries({ queryKey: ["userReservations"] });
+    if (selectedId === reservationId) {
+      setSelectedId(null);
+    }
     setActionMessage("예약 신청이 삭제되었습니다.");
     setUpdating(false);
     if (closeModalAfterCancel) {
@@ -240,6 +255,9 @@ export default function ReservationsClient() {
               <p className="text-base font-semibold text-neutral-900">
                 {reservation.assets?.name ?? "자산"} 대여
               </p>
+              <p className="mt-1 text-xs text-neutral-400">
+                신청번호: {shortReservationId(reservation.id)}
+              </p>
               <p className="mt-1 text-sm text-neutral-600">
                 {formatDateTime(reservation.start_date)} ~ {formatDateTime(reservation.end_date)}
               </p>
@@ -294,6 +312,9 @@ export default function ReservationsClient() {
             <h3 className="text-lg font-semibold text-neutral-900">대여 신청 상세</h3>
             <p className="mt-2 text-sm text-neutral-600">
               자산: {selectedReservation.assets?.name ?? "자산"}
+            </p>
+            <p className="mt-1 text-xs text-neutral-400">
+              신청번호: {shortReservationId(selectedReservation.id)}
             </p>
             <div className="mt-3 flex items-center gap-2">
               <span className="text-sm text-neutral-500">상태</span>

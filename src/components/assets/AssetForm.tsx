@@ -7,6 +7,12 @@ import Image from "next/image";
 import { supabase } from "@/lib/supabase";
 import { generateShortId } from "@/lib/short-id";
 import { isUUID } from "@/lib/short-id";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 // Categories will be loaded dynamically from organization settings
 
@@ -1074,197 +1080,187 @@ export default function AssetForm({ asset }: AssetFormProps = {}) {
         )}
       </div>
 
-      {/* 삭제 확인 모달 */}
-      {showDeleteConfirm && (
-        <div className="modal-backdrop">
-          <div className="modal-surface max-w-md p-0">
-            {/* 모달 헤더 */}
-            <div className="rounded-t-2xl border-b border-neutral-200 px-6 py-4">
-              <h3 className="text-lg font-semibold text-neutral-900">물품 삭제</h3>
+      <Dialog
+        open={showDeleteConfirm}
+        onOpenChange={(open) => {
+          setShowDeleteConfirm(open);
+          if (!open && !isDeleting) {
+            setDeletionReason("");
+            setDeletionReasonOther("");
+          }
+        }}
+      >
+        <DialogContent className="max-w-md p-0">
+          <DialogHeader className="rounded-t-2xl border-b border-neutral-200 px-6 py-4">
+            <DialogTitle>물품 삭제</DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4 px-6 py-4">
+            <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3">
+              <p className="text-sm text-rose-700">
+                정말 이 물품을 삭제하시겠습니까? 삭제된 물품은 휴지통으로 이동하며, 최고 관리자가 영구 삭제할 수 있습니다.
+              </p>
             </div>
 
-            {/* 모달 본문 */}
-            <div className="px-6 py-4 space-y-4">
-              <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3">
-                <p className="text-sm text-rose-700">
-                  정말 이 물품을 삭제하시겠습니까? 삭제된 물품은 휴지통으로 이동하며, 최고 관리자가 영구 삭제할 수 있습니다.
-                </p>
-              </div>
-
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-neutral-900">
-                  삭제 사유 <span className="text-rose-500">*</span>
-                </label>
-                <select
-                  value={deletionReason}
-                  onChange={(e) => {
-                    setDeletionReason(e.target.value);
-                    if (e.target.value !== "기타") {
-                      setDeletionReasonOther("");
-                    }
-                  }}
-                  className="w-full form-select"
-                  autoFocus
-                >
-                  <option value="">선택하세요</option>
-                  <option value="불용품">불용품 (사용 가능한 상태)</option>
-                  <option value="잔존 수명 종료">잔존 수명 종료</option>
-                  <option value="고장">고장</option>
-                  <option value="신제품 등록">신제품 등록</option>
-                  <option value="기타">기타</option>
-                </select>
-              </div>
-
-              {deletionReason === "기타" && (
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-neutral-900">
-                    사유 입력 <span className="text-rose-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={deletionReasonOther}
-                    onChange={(e) => setDeletionReasonOther(e.target.value)}
-                    placeholder="삭제 사유를 입력하세요"
-                    className="w-full form-input"
-                    autoFocus
-                  />
-                </div>
-              )}
-
-              {message && message.includes("삭제") && (
-                <div className={`rounded-xl px-4 py-3 text-sm ${
-                  message.includes("오류") || message.includes("실패")
-                    ? "bg-rose-50 text-rose-700 border border-rose-200"
-                    : "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                }`}>
-                  {message}
-                </div>
-              )}
-            </div>
-
-            {/* 모달 하단 버튼 */}
-            <div className="flex gap-3 rounded-b-2xl border-t border-neutral-200 bg-neutral-50 px-6 py-4">
-              <button
-                type="button"
-                onClick={async () => {
-                  if (!asset) return;
-                  if (!deletionReason) {
-                    setMessage("삭제 사유를 선택해주세요.");
-                    return;
-                  }
-                  if (deletionReason === "기타" && !deletionReasonOther.trim()) {
-                    setMessage("기타 사유를 입력해주세요.");
-                    return;
-                  }
-                  setIsDeleting(true);
-                  setMessage(null);
-                  try {
-                    // 클라이언트에서 직접 삭제 처리
-                    const { data: sessionData } = await supabase.auth.getSession();
-                    if (!sessionData.session) {
-                      throw new Error("인증이 필요합니다. 로그인 후 다시 시도해주세요.");
-                    }
-
-                    const user = sessionData.session.user;
-                    
-                    // 사용자 프로필 확인
-                    const { data: profileData, error: profileError } = await supabase
-                      .from("profiles")
-                      .select("role, organization_id, department")
-                      .eq("id", user.id)
-                      .maybeSingle();
-
-                    if (profileError || !profileData) {
-                      throw new Error("사용자 정보를 가져올 수 없습니다.");
-                    }
-
-                    // 자산 정보 확인
-                    const assetId = asset.short_id || asset.id;
-                    const isUuid = isUUID(assetId);
-                    let assetQuery = supabase
-                      .from("assets")
-                      .select("id, organization_id, owner_scope, owner_department")
-                      .is("deleted_at", null);
-                    
-                    if (isUuid) {
-                      assetQuery = assetQuery.eq("id", assetId);
-                    } else {
-                      assetQuery = assetQuery.eq("short_id", assetId);
-                    }
-                    
-                    const { data: assetData, error: assetError } = await assetQuery.maybeSingle();
-                    
-                    if (assetError || !assetData) {
-                      throw new Error("물품을 찾을 수 없습니다.");
-                    }
-
-                    // 권한 확인
-                    const isAdmin = profileData.role === "admin";
-                    const isManager = profileData.role === "manager" || isAdmin;
-                    const isOwner = assetData.owner_scope === "organization" 
-                      ? assetData.organization_id === profileData.organization_id
-                      : assetData.owner_department === profileData.department;
-
-                    if (!isManager && !isOwner) {
-                      throw new Error("삭제 권한이 없습니다.");
-                    }
-
-                    // Soft delete 실행
-                    const finalReason = deletionReason === "기타" ? deletionReasonOther.trim() : deletionReason;
-                    const { error: updateError } = await supabase
-                      .from("assets")
-                      .update({ 
-                        deleted_at: new Date().toISOString(),
-                        deletion_reason: finalReason || null
-                      })
-                      .eq("id", assetData.id);
-
-                    if (updateError) {
-                      throw new Error(`삭제 실패: ${updateError.message}`);
-                    }
-
-                    setMessage("물품이 삭제되었습니다.");
-                    
-                    // React Query 캐시 무효화하여 목록 갱신
-                    queryClient.invalidateQueries({ queryKey: ["assets"] });
-                    
-                    setShowDeleteConfirm(false);
-                    setDeletionReason("");
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-neutral-900">
+                삭제 사유 <span className="text-rose-500">*</span>
+              </label>
+              <select
+                value={deletionReason}
+                onChange={(e) => {
+                  setDeletionReason(e.target.value);
+                  if (e.target.value !== "기타") {
                     setDeletionReasonOther("");
-                    setIsDeleting(false);
-                    setTimeout(() => {
-                      window.location.replace("/assets/manage");
-                    }, 1000);
-                  } catch (error) {
-                    setMessage(`삭제 실패: ${error instanceof Error ? error.message : "알 수 없는 오류"}`);
-                    setIsDeleting(false);
-                  } finally {
-                    // 에러가 발생해도 모달은 닫기
-                    setShowDeleteConfirm(false);
                   }
                 }}
-                disabled={isDeleting || !deletionReason || (deletionReason === "기타" && !deletionReasonOther.trim())}
-                className="btn-danger flex-1 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full form-select"
+                autoFocus
               >
-                {isDeleting ? "삭제 중..." : "삭제"}
-              </button>
-              <button
-                type="button"
-                onClick={() => {
+                <option value="">선택하세요</option>
+                <option value="불용품">불용품 (사용 가능한 상태)</option>
+                <option value="잔존 수명 종료">잔존 수명 종료</option>
+                <option value="고장">고장</option>
+                <option value="신제품 등록">신제품 등록</option>
+                <option value="기타">기타</option>
+              </select>
+            </div>
+
+            {deletionReason === "기타" && (
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-neutral-900">
+                  사유 입력 <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={deletionReasonOther}
+                  onChange={(e) => setDeletionReasonOther(e.target.value)}
+                  placeholder="삭제 사유를 입력하세요"
+                  className="w-full form-input"
+                  autoFocus
+                />
+              </div>
+            )}
+
+            {message && message.includes("삭제") && (
+              <div className={`rounded-xl px-4 py-3 text-sm ${
+                message.includes("오류") || message.includes("실패")
+                  ? "bg-rose-50 text-rose-700 border border-rose-200"
+                  : "bg-emerald-50 text-emerald-700 border border-emerald-200"
+              }`}>
+                {message}
+              </div>
+            )}
+          </div>
+
+          <div className="flex gap-3 rounded-b-2xl border-t border-neutral-200 bg-neutral-50 px-6 py-4">
+            <button
+              type="button"
+              onClick={async () => {
+                if (!asset) return;
+                if (!deletionReason) {
+                  setMessage("삭제 사유를 선택해주세요.");
+                  return;
+                }
+                if (deletionReason === "기타" && !deletionReasonOther.trim()) {
+                  setMessage("기타 사유를 입력해주세요.");
+                  return;
+                }
+                setIsDeleting(true);
+                setMessage(null);
+                try {
+                  const { data: sessionData } = await supabase.auth.getSession();
+                  if (!sessionData.session) {
+                    throw new Error("인증이 필요합니다. 로그인 후 다시 시도해주세요.");
+                  }
+
+                  const user = sessionData.session.user;
+                  const { data: profileData, error: profileError } = await supabase
+                    .from("profiles")
+                    .select("role, organization_id, department")
+                    .eq("id", user.id)
+                    .maybeSingle();
+
+                  if (profileError || !profileData) {
+                    throw new Error("사용자 정보를 가져올 수 없습니다.");
+                  }
+
+                  const assetId = asset.short_id || asset.id;
+                  const isUuid = isUUID(assetId);
+                  let assetQuery = supabase
+                    .from("assets")
+                    .select("id, organization_id, owner_scope, owner_department")
+                    .is("deleted_at", null);
+
+                  if (isUuid) {
+                    assetQuery = assetQuery.eq("id", assetId);
+                  } else {
+                    assetQuery = assetQuery.eq("short_id", assetId);
+                  }
+
+                  const { data: assetData, error: assetError } = await assetQuery.maybeSingle();
+                  if (assetError || !assetData) {
+                    throw new Error("물품을 찾을 수 없습니다.");
+                  }
+
+                  const isAdmin = profileData.role === "admin";
+                  const isManager = profileData.role === "manager" || isAdmin;
+                  const isOwner = assetData.owner_scope === "organization"
+                    ? assetData.organization_id === profileData.organization_id
+                    : assetData.owner_department === profileData.department;
+
+                  if (!isManager && !isOwner) {
+                    throw new Error("삭제 권한이 없습니다.");
+                  }
+
+                  const finalReason = deletionReason === "기타" ? deletionReasonOther.trim() : deletionReason;
+                  const { error: updateError } = await supabase
+                    .from("assets")
+                    .update({
+                      deleted_at: new Date().toISOString(),
+                      deletion_reason: finalReason || null,
+                    })
+                    .eq("id", assetData.id);
+
+                  if (updateError) {
+                    throw new Error(`삭제 실패: ${updateError.message}`);
+                  }
+
+                  setMessage("물품이 삭제되었습니다.");
+                  queryClient.invalidateQueries({ queryKey: ["assets"] });
                   setShowDeleteConfirm(false);
                   setDeletionReason("");
                   setDeletionReasonOther("");
-                  setMessage(null);
-                }}
-                disabled={isDeleting}
-                className="flex-1 btn-ghost"
-              >
-                취소
-              </button>
-            </div>
+                  setTimeout(() => {
+                    window.location.replace("/assets/manage");
+                  }, 1000);
+                } catch (error) {
+                  setMessage(`삭제 실패: ${error instanceof Error ? error.message : "알 수 없는 오류"}`);
+                } finally {
+                  setIsDeleting(false);
+                }
+              }}
+              disabled={isDeleting || !deletionReason || (deletionReason === "기타" && !deletionReasonOther.trim())}
+              className="btn-danger flex-1 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isDeleting ? "삭제 중..." : "삭제"}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setShowDeleteConfirm(false);
+                setDeletionReason("");
+                setDeletionReasonOther("");
+                setMessage(null);
+              }}
+              disabled={isDeleting}
+              className="flex-1 btn-ghost"
+            >
+              취소
+            </button>
           </div>
-        </div>
-      )}
+        </DialogContent>
+      </Dialog>
     </form>
   );
 }

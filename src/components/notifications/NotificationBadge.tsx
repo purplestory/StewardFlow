@@ -19,33 +19,38 @@ export default function NotificationBadge() {
     let isMounted = true;
 
     const load = async () => {
-      const { data: sessionData } = await supabase.auth.getSession();
-      const user = sessionData.session?.user ?? null;
+      try {
+        const { data: sessionData } = await supabase.auth.getSession();
+        const user = sessionData.session?.user ?? null;
 
-      if (!user) {
-        if (isMounted) {
-          setCount(0);
+        if (!user) {
+          if (isMounted) {
+            setCount(0);
+          }
+          userIdRef.current = null;
+          return;
         }
-        userIdRef.current = null;
-        return;
+
+        userIdRef.current = user.id;
+
+        const { count: unreadCount } = await supabase
+          .from("notifications")
+          .select("id", { count: "exact", head: true })
+          .eq("user_id", user.id)
+          .is("read_at", null);
+
+        if (!isMounted) return;
+        setCount(unreadCount ?? 0);
+      } catch {
+        if (!isMounted) return;
+        setCount(0);
       }
-
-      userIdRef.current = user.id;
-
-      const { count: unreadCount } = await supabase
-        .from("notifications")
-        .select("id", { count: "exact", head: true })
-        .eq("user_id", user.id)
-        .is("read_at", null);
-
-      if (!isMounted) return;
-      setCount(unreadCount ?? 0);
     };
 
-    load();
+    void load();
 
     const { data: subscription } = supabase.auth.onAuthStateChange(() => {
-      load();
+      void load();
     });
 
     const channel = supabase
@@ -74,7 +79,7 @@ export default function NotificationBadge() {
 
     const handleVisibility = () => {
       if (document.visibilityState === "visible") {
-        load();
+        void load();
       }
     };
 

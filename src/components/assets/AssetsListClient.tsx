@@ -9,6 +9,7 @@ import AssetForm from "@/components/assets/AssetForm";
 import { useAssets, useUserProfile, useApprovalPolicies } from "@/hooks/useAssets";
 import PageHero from "@/components/ui/PageHero";
 import SectionCard from "@/components/ui/SectionCard";
+import StatusFilterPills from "@/components/ui/StatusFilterPills";
 
 const categoryOptions = [
   { value: "", label: "전체" },
@@ -144,28 +145,19 @@ export default function AssetsListClient() {
             </select>
           </div>
 
-          {/* 상태 필터 버튼 */}
-          <div className="flex flex-wrap items-center gap-2">
-            {statusOptions.map((option) => (
-              <button
-                key={option.value}
-                type="button"
-                onClick={() => {
-                  if (option.value === "") {
-                    // "전체" 버튼 클릭 시 모든 필터 초기화
-                    setQuery("");
-                    setCategory("");
-                    setStatus("");
-                  } else {
-                    setStatus(option.value as Asset["status"] | "");
-                  }
-                }}
-                className={`filter-pill ${status === option.value ? "filter-pill-active" : ""}`}
-              >
-                {option.label}
-              </button>
-            ))}
-          </div>
+          <StatusFilterPills
+            options={statusOptions}
+            value={status}
+            onChange={(next) => {
+              if (next === "") {
+                setQuery("");
+                setCategory("");
+                setStatus("");
+                return;
+              }
+              setStatus(next);
+            }}
+          />
         </div>
       </PageHero>
 

@@ -5,6 +5,21 @@ import { useQueryClient } from "@tanstack/react-query";
 import { createReservation } from "@/actions/booking-actions";
 import { supabase } from "@/lib/supabase";
 import { formatRecurrenceDescription } from "@/lib/recurrence";
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+} from "@/components/ui/select";
 
 const initialState = { ok: false, message: "" };
 
@@ -130,18 +145,16 @@ export default function ReservationForm({
       )}
       <fieldset disabled={formDisabled} className="space-y-4">
         <div className="space-y-3">
-          {/* 시작일시, 종료일시, 반복유형을 한 줄에 배치 */}
-          <div className="grid gap-3 grid-cols-1 md:grid-cols-3 w-full">
-            <div className="flex flex-col gap-2 w-full min-w-0">
+          <div className="grid w-full grid-cols-1 gap-4 md:grid-cols-3">
+            <div className="min-w-0 space-y-2">
               <label className="form-label">시작일시</label>
-              <div className="flex gap-2 w-full items-stretch">
+              <div className="grid grid-cols-[1fr_120px] gap-2">
                 <input
                   type="date"
                   value={startDate}
                   onChange={(e) => setStartDate(e.target.value)}
                   max={endDate || undefined}
-                  className="form-input text-base md:text-sm h-[38px]"
-                  style={{ flex: '1 1 0', minWidth: '110px' }}
+                  className="form-input text-base md:text-sm"
                   required
                   disabled={formDisabled}
                 />
@@ -149,23 +162,21 @@ export default function ReservationForm({
                   type="time"
                   value={startTime}
                   onChange={(e) => setStartTime(e.target.value)}
-                  className="form-input text-base md:text-sm flex-shrink-0 h-[38px]"
-                  style={{ width: '120px', minWidth: '120px', flexShrink: 0 }}
+                  className="form-input text-base md:text-sm"
                   required
                   disabled={formDisabled}
                 />
               </div>
             </div>
-            <div className="flex flex-col gap-2 w-full min-w-0">
+            <div className="min-w-0 space-y-2">
               <label className="form-label">종료일시</label>
-              <div className="flex gap-2 w-full items-stretch">
+              <div className="grid grid-cols-[1fr_120px] gap-2">
                 <input
                   type="date"
                   value={endDate}
                   onChange={(e) => setEndDate(e.target.value)}
                   min={startDate || undefined}
-                  className="form-input text-base md:text-sm h-[38px]"
-                  style={{ flex: '1 1 0', minWidth: '110px' }}
+                  className="form-input text-base md:text-sm"
                   required
                   disabled={formDisabled}
                 />
@@ -173,37 +184,38 @@ export default function ReservationForm({
                   type="time"
                   value={endTime}
                   onChange={(e) => setEndTime(e.target.value)}
-                  className="form-input text-base md:text-sm flex-shrink-0 h-[38px]"
-                  style={{ width: '120px', minWidth: '120px', flexShrink: 0 }}
+                  className="form-input text-base md:text-sm"
                   required
                   disabled={formDisabled}
                 />
               </div>
             </div>
-            <div className="flex flex-col gap-2 w-full min-w-0">
+            <div className="min-w-0 space-y-2">
               <label className="form-label">반복 유형</label>
-              <select
-                name="recurrence_type"
+              <Select
                 value={recurrenceType}
-                onChange={(e) => {
-                  const newType = e.target.value as "none" | "weekly" | "monthly";
+                onValueChange={(nextValue) => {
+                  const newType = nextValue as "none" | "weekly" | "monthly";
                   setRecurrenceType(newType);
                   setShowRecurrence(newType !== "none");
                   if (newType === "none") {
                     setRecurrenceEndDate("");
                   }
                 }}
-                className="form-select w-full h-[38px]"
+                name="recurrence_type"
                 disabled={formDisabled}
               >
-                <option value="none">반복 없음</option>
-                <option value="weekly">매주 반복</option>
-                <option value="monthly">매월 반복</option>
-              </select>
+                <SelectTrigger className="form-select">
+                  <SelectContent>
+                    <SelectItem value="none">반복 없음</SelectItem>
+                    <SelectItem value="weekly">매주 반복</SelectItem>
+                    <SelectItem value="monthly">매월 반복</SelectItem>
+                  </SelectContent>
+                </SelectTrigger>
+              </Select>
             </div>
           </div>
           
-          {/* hidden inputs for server action (ISO format) */}
           <input
             type="hidden"
             name="start_date"
@@ -215,108 +227,107 @@ export default function ReservationForm({
             value={endDate && endTime ? `${endDate}T${endTime}:00` : ""}
           />
 
-          {/* 반복 일정 설정 (펼쳐지는 부분) */}
           {showRecurrence && recurrenceType !== "none" && (
-            <div className="rounded-lg border border-neutral-200 bg-neutral-50 p-4 space-y-4">
+            <div className="space-y-4 rounded-xl border border-neutral-200 bg-neutral-50 p-4">
               <div className="space-y-3">
-                  <div className="grid gap-3 md:grid-cols-2">
-                    <label className="flex flex-col gap-2">
-                      <span className="form-label">반복 간격</span>
-                      <input
-                        name="recurrence_interval"
-                        type="number"
-                        min="1"
-                        value={recurrenceInterval}
-                        onChange={(e) => setRecurrenceInterval(parseInt(e.target.value) || 1)}
-                        className="form-input"
-                        placeholder="1"
-                        disabled={formDisabled}
-                      />
-                      <p className="text-xs text-neutral-500">
-                        {recurrenceType === "weekly"
-                          ? `${recurrenceInterval}주마다 반복`
-                          : `${recurrenceInterval}달마다 반복`}
-                      </p>
-                    </label>
-                    <label className="flex flex-col gap-2">
-                      <span className="form-label">반복 종료일</span>
-                      <input
-                        name="recurrence_end_date"
-                        type="date"
-                        value={recurrenceEndDate}
-                        onChange={(e) => setRecurrenceEndDate(e.target.value)}
-                        className="form-input"
-                        min={startDate}
-                        required={true}
-                        disabled={formDisabled}
-                      />
-                    </label>
+                <div className="grid gap-3 md:grid-cols-2">
+                  <label className="flex flex-col gap-2">
+                    <span className="form-label">반복 간격</span>
+                    <input
+                      name="recurrence_interval"
+                      type="number"
+                      min="1"
+                      value={recurrenceInterval}
+                      onChange={(e) => setRecurrenceInterval(parseInt(e.target.value) || 1)}
+                      className="form-input"
+                      placeholder="1"
+                      disabled={formDisabled}
+                    />
+                    <p className="text-xs text-neutral-500">
+                      {recurrenceType === "weekly"
+                        ? `${recurrenceInterval}주마다 반복`
+                        : `${recurrenceInterval}달마다 반복`}
+                    </p>
+                  </label>
+                  <label className="flex flex-col gap-2">
+                    <span className="form-label">반복 종료일</span>
+                    <input
+                      name="recurrence_end_date"
+                      type="date"
+                      value={recurrenceEndDate}
+                      onChange={(e) => setRecurrenceEndDate(e.target.value)}
+                      className="form-input"
+                      min={startDate}
+                      required={true}
+                      disabled={formDisabled}
+                    />
+                  </label>
+                </div>
+
+                {recurrenceType === "weekly" && (
+                  <div className="flex flex-col gap-2">
+                    <span className="form-label">반복 요일</span>
+                    <div className="flex flex-wrap gap-2">
+                      {dayNames.map((name, index) => (
+                        <button
+                          key={index}
+                          type="button"
+                          onClick={() => handleDayOfWeekToggle(index)}
+                          disabled={formDisabled}
+                          className={`h-10 w-10 rounded-xl border text-sm transition-colors ${
+                            selectedDaysOfWeek.includes(index)
+                              ? "border-black bg-black text-white"
+                              : "border-neutral-300 bg-white text-neutral-700 hover:border-neutral-400"
+                          } disabled:cursor-not-allowed disabled:opacity-50`}
+                        >
+                          {name}
+                        </button>
+                      ))}
+                    </div>
+                    <input
+                      type="hidden"
+                      name="recurrence_days_of_week"
+                      value={JSON.stringify(selectedDaysOfWeek)}
+                    />
                   </div>
+                )}
 
-                  {recurrenceType === "weekly" && (
-                    <div className="flex flex-col gap-2">
-                      <span className="form-label">반복 요일</span>
-                      <div className="flex flex-wrap gap-2">
-                        {dayNames.map((name, index) => (
-                          <button
-                            key={index}
-                            type="button"
-                            onClick={() => handleDayOfWeekToggle(index)}
-                            disabled={formDisabled}
-                            className={`day-button h-[38px] w-[38px] rounded-lg border text-sm transition-colors ${
-                              selectedDaysOfWeek.includes(index)
-                                ? "border-black bg-black text-white"
-                                : "border-neutral-300 bg-white text-neutral-700 hover:border-neutral-400"
-                            } disabled:opacity-50 disabled:cursor-not-allowed`}
-                          >
-                            {name}
-                          </button>
-                        ))}
-                      </div>
-                      <input
-                        type="hidden"
-                        name="recurrence_days_of_week"
-                        value={JSON.stringify(selectedDaysOfWeek)}
-                      />
-                    </div>
-                  )}
+                {recurrenceType === "monthly" && (
+                  <label className="flex flex-col gap-2">
+                    <span className="form-label">반복 일</span>
+                    <input
+                      name="recurrence_day_of_month"
+                      type="number"
+                      min="1"
+                      max="31"
+                      value={dayOfMonth}
+                      onChange={(e) => setDayOfMonth(parseInt(e.target.value) || 1)}
+                      className="form-input"
+                      disabled={formDisabled}
+                    />
+                    <p className="text-xs text-neutral-500">
+                      매월 {dayOfMonth}일에 반복됩니다
+                    </p>
+                  </label>
+                )}
 
-                  {recurrenceType === "monthly" && (
-                    <label className="flex flex-col gap-2">
-                      <span className="form-label">반복 일</span>
-                      <input
-                        name="recurrence_day_of_month"
-                        type="number"
-                        min="1"
-                        max="31"
-                        value={dayOfMonth}
-                        onChange={(e) => setDayOfMonth(parseInt(e.target.value) || 1)}
-                        className="form-input"
-                        disabled={formDisabled}
-                      />
-                      <p className="text-xs text-neutral-500">
-                        매월 {dayOfMonth}일에 반복됩니다
-                      </p>
-                    </label>
-                  )}
-
-                  {recurrenceEndDate && (
-                    <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
-                      <p className="text-sm font-semibold text-blue-900 mb-2">반복 일정 미리보기</p>
-                      <p className="text-sm text-blue-700">
-                        {formatRecurrenceDescription({
-                          type: recurrenceType,
-                          interval: recurrenceInterval,
-                          endDate: recurrenceEndDate,
-                          daysOfWeek: recurrenceType === "weekly" ? selectedDaysOfWeek : undefined,
-                          dayOfMonth: recurrenceType === "monthly" ? dayOfMonth : undefined,
-                        })}
-                      </p>
-                      <p className="mt-2 text-xs text-blue-600">
-                        종료일: {new Date(recurrenceEndDate).toLocaleDateString("ko-KR")}
-                      </p>
-                    </div>
-                  )}
+                {recurrenceEndDate && (
+                  <div className="rounded-xl border border-blue-200 bg-blue-50 p-4">
+                    <p className="mb-2 text-sm font-semibold text-blue-900">반복 일정 미리보기</p>
+                    <p className="text-sm text-blue-700">
+                      {formatRecurrenceDescription({
+                        type: recurrenceType,
+                        interval: recurrenceInterval,
+                        endDate: recurrenceEndDate,
+                        daysOfWeek: recurrenceType === "weekly" ? selectedDaysOfWeek : undefined,
+                        dayOfMonth: recurrenceType === "monthly" ? dayOfMonth : undefined,
+                      })}
+                    </p>
+                    <p className="mt-2 text-xs text-blue-600">
+                      종료일: {new Date(recurrenceEndDate).toLocaleDateString("ko-KR")}
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -341,7 +352,7 @@ export default function ReservationForm({
           <span className="form-label">사용 목적</span>
           <textarea
             name="note"
-            className="form-textarea"
+            className="form-textarea min-h-[120px]"
             placeholder="예: 주일 예배 음향 지원"
           />
         </label>
@@ -369,26 +380,37 @@ export default function ReservationForm({
         {isPending ? "신청 처리 중..." : "대여 신청"}
       </button>
 
-      {showSuccessModal && state.ok && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-md rounded-xl border border-neutral-200 bg-white p-6 shadow-xl">
-            <h3 className="text-lg font-semibold text-neutral-900">신청 완료</h3>
-            <p className="mt-3 text-sm text-neutral-700">
+      <Dialog
+        open={showSuccessModal && state.ok}
+        onOpenChange={(open) => {
+          if (!open) {
+            setDismissedSuccessMessage(state.message);
+          }
+        }}
+      >
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>신청 완료</DialogTitle>
+            <DialogDescription className="mt-3">
               {state.message || "예약 신청이 완료되었습니다."}
-            </p>
+            </DialogDescription>
             <p className="mt-2 text-xs text-neutral-500">
               예약 현황이 자동으로 갱신되었습니다.
             </p>
-            <button
-              type="button"
-              className="btn-primary mt-5 w-full"
-              onClick={() => setDismissedSuccessMessage(state.message)}
-            >
-              확인
-            </button>
-          </div>
-        </div>
-      )}
+          </DialogHeader>
+          <DialogFooter className="mt-5">
+            <DialogClose asChild>
+              <button
+                type="button"
+                className="btn-primary w-full"
+                onClick={() => setDismissedSuccessMessage(state.message)}
+              >
+                확인
+              </button>
+            </DialogClose>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </form>
   );
 }

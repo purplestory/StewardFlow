@@ -24,9 +24,9 @@ export default function SpaceCard({ space }: SpaceCardProps) {
       : space.image_url;
 
   return (
-    <div className="rounded-xl border border-neutral-200 bg-white p-4">
+    <div className="surface-card p-4">
       <Link href={detailUrl} className="block">
-        <div className="relative aspect-[4/3] w-full overflow-hidden rounded-lg bg-neutral-100 transition-opacity hover:opacity-90 cursor-pointer">
+        <div className="relative aspect-[4/3] w-full overflow-hidden rounded-xl bg-neutral-100 transition-opacity hover:opacity-90 cursor-pointer">
           {firstImage ? (
             <Image
               src={firstImage}
@@ -119,7 +119,7 @@ export default function SpaceCard({ space }: SpaceCardProps) {
 
       <Link
         href={detailUrl}
-        className="mt-4 block w-full rounded-lg border border-neutral-200 px-3 py-2 text-center text-sm"
+        className="btn-ghost mt-4 w-full"
       >
         상세 보기
       </Link>

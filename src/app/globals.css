@@ -279,11 +279,21 @@ input[type="time"] {
 
 /* Unified Button Styles */
 .btn-primary {
-  @apply h-[38px] px-4 rounded-lg text-sm font-medium transition-all bg-neutral-900 text-white;
-  @apply hover:bg-neutral-800;
+  @apply h-[38px] px-4 rounded-lg text-sm font-semibold transition-all text-white;
   @apply focus:outline-none focus:ring-2 focus:ring-neutral-500 focus:ring-offset-2;
-  @apply disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-neutral-900;
+  @apply disabled:opacity-50 disabled:cursor-not-allowed;
   @apply flex items-center justify-center whitespace-nowrap;
+  background: linear-gradient(
+    135deg,
+    var(--brand-primary) 0%,
+    var(--brand-primary-strong) 100%
+  );
+  box-shadow: 0 10px 20px rgba(31, 75, 153, 0.2);
+}
+
+.btn-primary:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.03);
 }
 
 .btn-secondary {
@@ -316,6 +326,40 @@ input[type="time"] {
   @apply focus:outline-none focus:ring-2 focus:ring-neutral-500 focus:ring-offset-2;
   @apply disabled:opacity-50 disabled:cursor-not-allowed;
   @apply flex items-center justify-center whitespace-nowrap;
+}
+
+/* Shared Surface Styles */
+.surface-panel {
+  @apply rounded-3xl border border-neutral-200 bg-white/95 p-6;
+  box-shadow: var(--shadow-card);
+}
+
+.surface-card {
+  @apply rounded-2xl border border-neutral-200 bg-white;
+  box-shadow: var(--shadow-soft);
+}
+
+.surface-card-interactive {
+  @apply cursor-pointer transition-all duration-200;
+}
+
+.surface-card-interactive:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 14px 26px rgba(15, 23, 42, 0.1);
+}
+
+.modal-backdrop {
+  @apply fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-4;
+  backdrop-filter: blur(2px);
+}
+
+.modal-surface {
+  @apply w-full max-w-xl rounded-2xl border border-neutral-200 bg-white p-6;
+  box-shadow: 0 24px 48px rgba(15, 23, 42, 0.22);
+}
+
+.chip-muted {
+  @apply inline-flex items-center rounded-full border border-neutral-200 bg-neutral-50 px-2.5 py-1 text-xs font-medium text-neutral-600;
 }
 
 .form-section {

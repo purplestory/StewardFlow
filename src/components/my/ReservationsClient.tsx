@@ -254,7 +254,7 @@ export default function ReservationsClient() {
       {reservations.map((reservation) => (
         <div
           key={reservation.id}
-          className="rounded-2xl border border-neutral-200 bg-white px-4 py-4 shadow-[0_8px_22px_rgba(15,23,42,0.04)]"
+          className="surface-card px-4 py-4"
         >
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div className="min-w-0 flex-1">

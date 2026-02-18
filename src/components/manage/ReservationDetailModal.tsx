@@ -38,42 +38,53 @@ export default function ReservationDetailModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="w-full max-w-xl rounded-xl border border-neutral-200 bg-white p-6 shadow-xl">
-        <h3 className="text-lg font-semibold text-neutral-900">{title}</h3>
-        <div className="mt-4 space-y-2 text-sm text-neutral-700">
-          <p>
-            <span className="font-medium text-neutral-900">{resourceLabel}:</span>{" "}
-            {resourceName}
-          </p>
-          <p>
-            <span className="font-medium text-neutral-900">기간:</span> {periodText}
-          </p>
-          <p>
-            <span className="font-medium text-neutral-900">신청자:</span>{" "}
-            {borrowerText}
-          </p>
+    <div className="modal-backdrop">
+      <div className="modal-surface">
+        <div className="flex items-start justify-between gap-3">
+          <h3 className="text-xl font-semibold tracking-tight text-slate-900">{title}</h3>
+          <button
+            type="button"
+            className="rounded-lg border border-neutral-200 px-2 py-1 text-xs text-neutral-600 hover:bg-neutral-50"
+            onClick={onClose}
+          >
+            닫기
+          </button>
+        </div>
+        <dl className="mt-4 space-y-2 rounded-xl border border-neutral-200 bg-neutral-50/80 p-4 text-sm text-neutral-700">
+          <div className="grid grid-cols-[88px_1fr] gap-2">
+            <dt className="text-neutral-500">{resourceLabel}</dt>
+            <dd className="font-medium text-neutral-900">{resourceName}</dd>
+          </div>
+          <div className="grid grid-cols-[88px_1fr] gap-2">
+            <dt className="text-neutral-500">기간</dt>
+            <dd>{periodText}</dd>
+          </div>
+          <div className="grid grid-cols-[88px_1fr] gap-2">
+            <dt className="text-neutral-500">신청자</dt>
+            <dd>{borrowerText}</dd>
+          </div>
           {note && (
-            <p>
-              <span className="font-medium text-neutral-900">사유:</span> {note}
-            </p>
+            <div className="grid grid-cols-[88px_1fr] gap-2">
+              <dt className="text-neutral-500">사유</dt>
+              <dd>{note}</dd>
+            </div>
           )}
           {requiredRoleLabel && (
-            <p>
-              <span className="font-medium text-neutral-900">승인 필요 권한:</span>{" "}
-              {requiredRoleLabel}
-            </p>
+            <div className="grid grid-cols-[88px_1fr] gap-2">
+              <dt className="text-neutral-500">승인 권한</dt>
+              <dd className="font-medium text-slate-800">{requiredRoleLabel}</dd>
+            </div>
           )}
-        </div>
+        </dl>
 
         <div className="mt-5 flex flex-wrap items-center justify-end gap-2">
-          <span className="text-sm text-neutral-500">상태</span>
+          <span className="chip-muted">상태 변경</span>
           <select
             value={status}
             onChange={(event) =>
               onStatusChange(event.target.value as ReservationStatus)
             }
-            className="rounded-md border border-neutral-200 px-2 py-1 text-sm"
+            className="form-select h-[38px] min-w-[140px] text-sm"
             disabled={disableStatusChange}
           >
             {statusOptions.map((value) => (
@@ -83,7 +94,7 @@ export default function ReservationDetailModal({
             ))}
           </select>
           <button type="button" className="btn-ghost" onClick={onClose}>
-            닫기
+            창 닫기
           </button>
         </div>
       </div>

@@ -41,10 +41,10 @@ export default function NotificationListItem({
 
   return (
     <div
-      className={`rounded-2xl border px-4 py-3 transition-colors ${
+      className={`surface-card px-4 py-3 transition-all ${
         item.read_at
-          ? "border-neutral-200 bg-white"
-          : "border-amber-200 bg-amber-50/70 shadow-[0_8px_20px_rgba(245,158,11,0.08)]"
+          ? ""
+          : "border-amber-200 bg-amber-50/70 shadow-[0_10px_22px_rgba(245,158,11,0.08)]"
       }`}
     >
       <div className="flex items-start gap-3">
@@ -67,7 +67,7 @@ export default function NotificationListItem({
             type="button"
             onClick={() => onToggle(item.id)}
             aria-expanded={isExpanded}
-            className="flex w-full items-start gap-2 text-left"
+            className="flex w-full items-start gap-2 text-left transition-opacity hover:opacity-95"
           >
             <span className={`mt-[7px] inline-flex h-2 w-2 shrink-0 rounded-full ${getTypeColor(item.type)}`} />
             <span className="min-w-0 flex-1">
@@ -84,7 +84,7 @@ export default function NotificationListItem({
               {formatDateTime(item.created_at)}
             </span>
             {!item.read_at && (
-              <span className="shrink-0 rounded-full bg-rose-500 px-2 py-0.5 text-[10px] font-semibold text-white">
+              <span className="shrink-0 rounded-full bg-rose-500 px-2 py-0.5 text-[10px] font-semibold text-white shadow-sm">
                 NEW
               </span>
             )}
@@ -93,7 +93,7 @@ export default function NotificationListItem({
             </span>
           </button>
           {isExpanded && (
-            <div className="mt-3 rounded-xl border border-neutral-200/80 bg-white/80 p-3">
+            <div className="mt-3 rounded-xl border border-neutral-200/80 bg-white/90 p-3">
               {!compactView && templateText && (
                 <p className="text-sm text-neutral-700">{templateText}</p>
               )}
@@ -118,7 +118,7 @@ export default function NotificationListItem({
                   <Link
                     href={getResourcePath(item)}
                     onClick={() => onMarkAsRead(item.id)}
-                    className="rounded-lg bg-neutral-900 px-3 py-1.5 font-medium text-white"
+                    className="btn-primary h-auto px-3 py-1.5 text-xs"
                   >
                     바로가기
                   </Link>
@@ -128,7 +128,7 @@ export default function NotificationListItem({
                     type="button"
                     onClick={() => onMarkAsRead(item.id)}
                     disabled={updating}
-                    className="rounded-lg border border-neutral-200 bg-white px-3 py-1.5 text-neutral-700 disabled:opacity-60"
+                    className="btn-ghost h-auto px-3 py-1.5 text-xs disabled:opacity-60"
                   >
                     읽음 처리
                   </button>

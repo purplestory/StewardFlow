@@ -48,14 +48,14 @@ export default function NotificationsToolbar({
   setPage,
 }: NotificationsToolbarProps) {
   return (
-    <div className="space-y-3 rounded-2xl border border-neutral-200 bg-white p-4">
+    <div className="surface-card space-y-3 p-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <span className="text-sm font-medium text-neutral-700">미읽음 {unreadCount}건</span>
+        <span className="chip-muted">미읽음 {unreadCount}건</span>
         <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"
             onClick={load}
-            className="rounded-lg border border-neutral-200 bg-white px-4 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-50"
+            className="btn-ghost"
           >
             새로고침
           </button>
@@ -63,7 +63,7 @@ export default function NotificationsToolbar({
             type="button"
             onClick={markAllAsRead}
             disabled={updating || unreadCount === 0}
-            className="rounded-lg border border-neutral-200 bg-white px-4 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-50 disabled:opacity-60"
+            className="btn-ghost disabled:opacity-60"
           >
             모두 읽음 처리
           </button>
@@ -72,7 +72,7 @@ export default function NotificationsToolbar({
 
       <div className="flex items-center gap-2">
         <select
-          className="h-10 rounded-lg border border-neutral-200 bg-white px-3 text-sm"
+          className="form-select h-10 text-sm"
           value={sortOrder}
           onChange={(event) => {
             setSortOrder(event.target.value as "latest" | "unread" | "status");
@@ -86,7 +86,7 @@ export default function NotificationsToolbar({
         <button
           type="button"
           onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
-          className="h-10 rounded-lg border border-neutral-200 px-3 text-sm text-neutral-700 hover:bg-neutral-50 md:hidden"
+          className="btn-ghost md:hidden"
         >
           {showAdvancedFilters ? "필터 접기" : "필터 열기"}
         </button>
@@ -106,7 +106,7 @@ export default function NotificationsToolbar({
       <div
         className={`grid grid-cols-1 gap-2 md:grid-cols-2 lg:grid-cols-5 ${showAdvancedFilters ? "grid" : "hidden"} md:grid`}
       >
-        <label className="flex items-center gap-2 text-xs text-neutral-600">
+        <label className="flex items-center gap-2 text-sm text-neutral-600">
           <input
             type="checkbox"
             checked={compactView}
@@ -115,7 +115,7 @@ export default function NotificationsToolbar({
           컴팩트 보기
         </label>
         <input
-          className="h-10 rounded-lg border border-neutral-200 px-3 text-sm"
+          className="form-input h-10 text-sm"
           placeholder="검색어 입력"
           value={query}
           onChange={(event) => {
@@ -124,7 +124,7 @@ export default function NotificationsToolbar({
           }}
         />
         <select
-          className="h-10 rounded-lg border border-neutral-200 px-3 text-sm"
+          className="form-select h-10 text-sm"
           value={typeFilter}
           onChange={(event) => {
             setTypeFilter(event.target.value);
@@ -142,7 +142,7 @@ export default function NotificationsToolbar({
           <option value="asset_transfer_request_cancelled">불용품 양도 요청 취소</option>
         </select>
         <select
-          className="h-10 rounded-lg border border-neutral-200 px-3 text-sm"
+          className="form-select h-10 text-sm"
           value={statusFilter}
           onChange={(event) => {
             setStatusFilter(event.target.value);
@@ -155,7 +155,7 @@ export default function NotificationsToolbar({
           <option value="failed">실패</option>
         </select>
         <select
-          className="h-10 rounded-lg border border-neutral-200 px-3 text-sm"
+          className="form-select h-10 text-sm"
           value={pageSize}
           onChange={(event) => {
             setPageSize(Number(event.target.value));

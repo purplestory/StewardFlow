@@ -325,7 +325,7 @@ export default function NotificationsList() {
         {[1, 2, 3].map((item) => (
           <div
             key={item}
-            className="rounded-2xl border border-neutral-200 bg-white p-4"
+            className="surface-card p-4"
           >
             <div className="flex items-start gap-3">
               <div className="h-12 w-12 rounded-lg bg-neutral-100" />
@@ -354,7 +354,7 @@ export default function NotificationsList() {
         <button
           type="button"
           onClick={resetFilters}
-          className="mt-3 px-4 py-2 rounded-lg text-sm font-medium transition-all bg-white text-neutral-700 border border-neutral-200 hover:bg-neutral-50"
+          className="btn-ghost mt-3"
         >
           필터 초기화
         </button>
@@ -405,7 +405,7 @@ export default function NotificationsList() {
             type="button"
             onClick={() => setPage((prev) => Math.max(1, prev - 1))}
             disabled={safePage === 1}
-            className="rounded-lg border border-neutral-200 bg-white px-2 py-1 disabled:opacity-50"
+            className="btn-ghost h-auto px-2 py-1 text-xs disabled:opacity-50"
           >
             이전
           </button>
@@ -421,8 +421,8 @@ export default function NotificationsList() {
                 onClick={() => setPage(entry.page)}
                 className={`rounded-lg border px-2 py-1 ${
                   entry.page === safePage
-                    ? "border-neutral-900 bg-neutral-900 text-white"
-                    : "border-neutral-200 bg-white"
+                    ? "border-slate-900 bg-slate-900 text-white"
+                    : "border-neutral-200 bg-white text-neutral-600 hover:bg-neutral-50"
                 }`}
               >
                 {entry.page}
@@ -433,7 +433,7 @@ export default function NotificationsList() {
             type="button"
             onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))}
             disabled={safePage === totalPages}
-            className="rounded-lg border border-neutral-200 bg-white px-2 py-1 disabled:opacity-50"
+            className="btn-ghost h-auto px-2 py-1 text-xs disabled:opacity-50"
           >
             다음
           </button>
@@ -441,7 +441,7 @@ export default function NotificationsList() {
       </div>
       {grouped.map((group) => (
         <div key={group.date} className="space-y-2">
-          <div className="text-xs font-semibold text-neutral-500">
+          <div className="chip-muted w-fit">
             {formatGroupDate(group.date)}
           </div>
           {group.items.map((item) => (

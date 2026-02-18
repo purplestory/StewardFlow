@@ -36,7 +36,7 @@ export default function Header() {
   const navLinkClass = (href: string) => {
     const isActive = pathname === href || pathname.startsWith(`${href}/`);
     if (isActive) {
-      return "rounded-full bg-slate-100 px-3 py-1.5 text-slate-900";
+      return "rounded-full bg-slate-900 px-3 py-1.5 font-medium text-white shadow-sm";
     }
     return "rounded-full px-3 py-1.5 text-neutral-600 hover:bg-slate-50 hover:text-slate-900";
   };
@@ -56,7 +56,7 @@ export default function Header() {
   }, [dropdownOpen]);
 
   return (
-    <header className="sticky top-0 z-40 border-b border-slate-200/80 bg-white/90 backdrop-blur-md">
+    <header className="sticky top-0 z-40 border-b border-slate-200/80 bg-white/92 shadow-[0_6px_18px_rgba(15,23,42,0.06)] backdrop-blur-md">
       <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-4 py-3 md:px-6">
         <Link
           href="/"
@@ -156,7 +156,7 @@ export default function Header() {
           <button
             type="button"
             onClick={() => setMobileMenuOpen((prev) => !prev)}
-            className="rounded-lg p-2 text-neutral-600 hover:bg-slate-100 hover:text-slate-900"
+            className="rounded-lg border border-slate-200 bg-white p-2 text-neutral-600 hover:bg-slate-100 hover:text-slate-900"
             aria-label="메뉴 열기"
           >
             {mobileMenuOpen ? (

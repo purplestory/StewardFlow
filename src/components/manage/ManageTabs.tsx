@@ -30,7 +30,7 @@ export default function ManageTabs() {
     },
     {
       key: "system",
-      label: "기관 및 부서관리",
+      label: "기관 관리",
       href: "/settings/org",
     },
   ];

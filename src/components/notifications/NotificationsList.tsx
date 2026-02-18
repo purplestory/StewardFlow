@@ -57,6 +57,7 @@ export default function NotificationsList() {
   });
   const [totalCount, setTotalCount] = useState(0);
   const [unreadTotal, setUnreadTotal] = useState(0);
+  const [expandedIds, setExpandedIds] = useState<string[]>([]);
   const userIdRef = useRef<string | null>(null);
 
   const resetFilters = () => {
@@ -66,6 +67,17 @@ export default function NotificationsList() {
     setQuery("");
     setSortOrder("latest");
     setPage(1);
+  };
+
+  const toggleExpanded = (id: string) => {
+    setExpandedIds((prev) =>
+      prev.includes(id) ? prev.filter((value) => value !== id) : [...prev, id]
+    );
+  };
+
+  const getAccessToken = async () => {
+    const { data: sessionData } = await supabase.auth.getSession();
+    return sessionData.session?.access_token ?? null;
   };
 
   const load = useCallback(async () => {
@@ -134,9 +146,12 @@ export default function NotificationsList() {
     if (error) {
       setMessage(error.message);
       setNotifications([]);
+      setExpandedIds([]);
     } else {
       setNotifications((data ?? []) as NotificationRow[]);
       setTotalCount(count ?? 0);
+      const loadedIds = new Set((data ?? []).map((item) => (item as NotificationRow).id));
+      setExpandedIds((prev) => prev.filter((id) => loadedIds.has(id)));
     }
 
     const nextUnreadCount = unreadCount ?? 0;
@@ -202,25 +217,45 @@ export default function NotificationsList() {
     setMessage(null);
     const existingNotification = notifications.find((item) => item.id === id);
     const shouldDecreaseUnread = Boolean(existingNotification && !existingNotification.read_at);
-    const readAt = new Date().toISOString();
-
-    const { error } = await supabase
-      .from("notifications")
-      .update({ read_at: readAt })
-      .eq("id", id);
-
-    if (error) {
-      setMessage(error.message);
+    const accessToken = await getAccessToken();
+    if (!accessToken) {
+      setMessage("로그인이 필요합니다.");
       setUpdating(false);
       return;
     }
+
+    const response = await fetch("/api/notifications/read", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        accessToken,
+        notificationId: id,
+      }),
+    });
+    const result = await response.json().catch(() => null);
+    if (!response.ok || !result?.ok) {
+      setMessage(result?.message ?? "읽음 처리에 실패했습니다.");
+      setUpdating(false);
+      return;
+    }
+    if (shouldDecreaseUnread && result.updatedCount === 0) {
+      setMessage("읽음 처리 반영에 실패했습니다. 다시 시도해 주세요.");
+      setUpdating(false);
+      void loadRef.current();
+      return;
+    }
+
+    const readAt = (result.readAt as string | undefined) ?? new Date().toISOString();
 
     setNotifications((prev) =>
       prev.map((item) =>
         item.id === id ? { ...item, read_at: readAt } : item
       )
     );
-    if (shouldDecreaseUnread) {
+    if (typeof result.unreadCount === "number") {
+      setUnreadTotal(result.unreadCount);
+      emitNotificationBadgeSync(result.unreadCount);
+    } else if (shouldDecreaseUnread) {
       setUnreadTotal((prev) => {
         const next = Math.max(0, prev - 1);
         emitNotificationBadgeSync(next);
@@ -228,6 +263,7 @@ export default function NotificationsList() {
       });
     }
     setUpdating(false);
+    void loadRef.current();
   };
 
   const markAllAsRead = async () => {
@@ -235,22 +271,40 @@ export default function NotificationsList() {
     setMessage(null);
 
     const unreadIds = notifications.filter((n) => !n.read_at).map((n) => n.id);
-    const readAt = new Date().toISOString();
     if (unreadIds.length === 0) {
       setUpdating(false);
       return;
     }
 
-    const { error } = await supabase
-      .from("notifications")
-      .update({ read_at: readAt })
-      .in("id", unreadIds);
-
-    if (error) {
-      setMessage(error.message);
+    const accessToken = await getAccessToken();
+    if (!accessToken) {
+      setMessage("로그인이 필요합니다.");
       setUpdating(false);
       return;
     }
+
+    const response = await fetch("/api/notifications/read", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        accessToken,
+        markAll: true,
+      }),
+    });
+    const result = await response.json().catch(() => null);
+    if (!response.ok || !result?.ok) {
+      setMessage(result?.message ?? "전체 읽음 처리에 실패했습니다.");
+      setUpdating(false);
+      return;
+    }
+    if (unreadIds.length > 0 && result.updatedCount === 0) {
+      setMessage("전체 읽음 처리 반영에 실패했습니다. 다시 시도해 주세요.");
+      setUpdating(false);
+      void loadRef.current();
+      return;
+    }
+
+    const readAt = (result.readAt as string | undefined) ?? new Date().toISOString();
 
     setNotifications((prev) =>
       prev.map((item) =>
@@ -259,12 +313,18 @@ export default function NotificationsList() {
           : item
       )
     );
-    setUnreadTotal((prev) => {
-      const next = Math.max(0, prev - unreadIds.length);
-      emitNotificationBadgeSync(next);
-      return next;
-    });
+    if (typeof result.unreadCount === "number") {
+      setUnreadTotal(result.unreadCount);
+      emitNotificationBadgeSync(result.unreadCount);
+    } else {
+      setUnreadTotal((prev) => {
+        const next = Math.max(0, prev - unreadIds.length);
+        emitNotificationBadgeSync(next);
+        return next;
+      });
+    }
     setUpdating(false);
+    void loadRef.current();
   };
 
   if (loading) {
@@ -495,65 +555,78 @@ export default function NotificationsList() {
             >
           <div className="flex items-start gap-3">
             {getThumbnail(item) ? (
-              <Link href={getResourcePath(item)}>
-                <Image
-                  src={getThumbnail(item) ?? ""}
-                  alt=""
-                  width={48}
-                  height={48}
-                  className="h-12 w-12 rounded-lg object-cover"
-                  unoptimized
-                />
-              </Link>
+              <Image
+                src={getThumbnail(item) ?? ""}
+                alt=""
+                width={48}
+                height={48}
+                className="h-12 w-12 rounded-lg object-cover"
+                unoptimized
+              />
             ) : (
               <div className="flex h-12 w-12 items-center justify-center rounded-lg border border-neutral-200 text-xs text-neutral-400">
                 없음
               </div>
             )}
-            <div className="flex-1 space-y-1">
-              <p className="text-sm font-medium flex items-center gap-2">
-                <span
-                  className={`inline-flex h-2 w-2 rounded-full ${getTypeColor(item.type)}`}
-                />
-                <span className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-neutral-200 text-[10px] text-neutral-600">
-                  {getTypeIcon(item.type)}
-                </span>
-                {renderTitle(item)}
-              </p>
-                  {!compactView && renderTemplateMessage(item)}
-                  {!compactView && renderSummary(item)}
-            </div>
-          </div>
-          <p className="text-xs text-neutral-500 flex items-center gap-2">
-            <span>{getItemStatusLabel(item).label}:</span>
-            <span
-              className={`rounded-full px-2 py-0.5 text-[10px] ${getItemStatusLabel(item).badgeClass}`}
-            >
-              {getItemStatusLabel(item).value}
-            </span>
-            <span>· {formatDateTime(item.created_at)}</span>
-          </p>
-              {!compactView && renderNotificationDetail(item)}
-          <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
-            {(item.payload?.resource_id as string | undefined) && (
-              <Link
-                href={getResourcePath(item)}
-                onClick={() => markAsRead(item.id)}
-                className="rounded-md bg-neutral-900 px-3 py-1 text-white"
-              >
-                바로가기
-              </Link>
-            )}
-            {!item.read_at && (
+            <div className="flex-1">
               <button
                 type="button"
-                onClick={() => markAsRead(item.id)}
-                disabled={updating}
-                className="rounded-md border border-neutral-200 px-2 py-1"
+                onClick={() => toggleExpanded(item.id)}
+                className="flex w-full items-start gap-2 text-left"
               >
-                읽음 처리
+                <span
+                  className={`mt-1 inline-flex h-2 w-2 rounded-full ${getTypeColor(item.type)}`}
+                />
+                <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-neutral-200 text-[10px] text-neutral-600">
+                  {getTypeIcon(item.type)}
+                </span>
+                <span className="text-sm font-medium text-neutral-900">
+                  {renderTitle(item)}
+                </span>
+                <span className="ml-auto shrink-0 text-xs text-neutral-500">
+                  {formatDateTime(item.created_at)}
+                </span>
+                <span className="shrink-0 text-xs text-neutral-500">
+                  {expandedIds.includes(item.id) ? "▲" : "▼"}
+                </span>
               </button>
-            )}
+              {expandedIds.includes(item.id) && (
+                <div className="mt-2 space-y-2">
+                  {!compactView && renderTemplateMessage(item)}
+                  {!compactView && renderSummary(item)}
+                  <p className="text-xs text-neutral-500 flex items-center gap-2">
+                    <span>{getItemStatusLabel(item).label}:</span>
+                    <span
+                      className={`rounded-full px-2 py-0.5 text-[10px] ${getItemStatusLabel(item).badgeClass}`}
+                    >
+                      {getItemStatusLabel(item).value}
+                    </span>
+                  </p>
+                  {!compactView && renderNotificationDetail(item)}
+                  <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
+                    {(item.payload?.resource_id as string | undefined) && (
+                      <Link
+                        href={getResourcePath(item)}
+                        onClick={() => markAsRead(item.id)}
+                        className="rounded-md bg-neutral-900 px-3 py-1 text-white"
+                      >
+                        바로가기
+                      </Link>
+                    )}
+                    {!item.read_at && (
+                      <button
+                        type="button"
+                        onClick={() => markAsRead(item.id)}
+                        disabled={updating}
+                        className="rounded-md border border-neutral-200 px-2 py-1"
+                      >
+                        읽음 처리
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
             </div>
           ))}

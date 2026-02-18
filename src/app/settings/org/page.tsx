@@ -65,7 +65,7 @@ export default function OrganizationSettingsPage() {
   return (
     <ManageLayout>
       <div className="rounded-xl border border-neutral-200 bg-white p-6 mb-6">
-        <h2 className="text-lg font-semibold">기관 및 부서관리</h2>
+        <h2 className="text-lg font-semibold">기관 관리</h2>
         <p className="text-sm text-neutral-600 mt-1">
           기관과 부서를 생성하고, 정책을 관리합니다.
         </p>

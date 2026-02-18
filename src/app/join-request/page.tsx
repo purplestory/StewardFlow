@@ -252,12 +252,12 @@ export default function JoinRequestPage() {
             </div>
           </div>
           <h1 className="text-xl md:text-2xl font-semibold text-center mb-2">
-            가입 신청
+            스튜어드플로우
           </h1>
           <p className="text-sm text-neutral-600 text-center">
-            StewardFlow 사용을 위해 가입 신청을 해주세요.
+            스튜어드플로우는 관리자의 초대나 승인 후
             <br />
-            관리자 승인 후 서비스를 이용하실 수 있습니다.
+            서비스를 이용하실 수 있습니다.
           </p>
           
           {/* 안내 정보 */}

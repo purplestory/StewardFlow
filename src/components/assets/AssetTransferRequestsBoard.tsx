@@ -593,16 +593,16 @@ export default function AssetTransferRequestsBoard() {
   return (
     <div className="space-y-4">
       <div className="rounded-2xl border border-neutral-200 bg-white p-6">
-        <div className="flex items-start justify-between gap-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <h1 className="text-2xl font-semibold">불용품 양도 요청</h1>
             <p className="mt-2 text-sm text-neutral-600">
               내 요청과 내 부서로 들어온 요청을 확인할 수 있습니다.
             </p>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex w-full flex-wrap items-center justify-between gap-2 sm:w-auto sm:flex-nowrap sm:justify-end sm:gap-3">
             {lastLoadedAt && (
-              <span className="text-xs text-neutral-500 whitespace-nowrap">
+              <span className="text-[11px] text-neutral-500 sm:text-xs">
                 최근 갱신: {formatDateTime(lastLoadedAt)}
               </span>
             )}

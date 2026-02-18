@@ -247,31 +247,31 @@ export default function ReservationsClient() {
   }
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       {actionMessage && !selectedReservation && (
         <Notice>{actionMessage}</Notice>
       )}
       {reservations.map((reservation) => (
         <div
           key={reservation.id}
-          className="rounded-lg border border-neutral-200 px-4 py-3"
+          className="rounded-2xl border border-neutral-200 bg-white px-4 py-4 shadow-[0_8px_22px_rgba(15,23,42,0.04)]"
         >
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <p className="text-base font-semibold text-neutral-900">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-xl font-semibold tracking-tight text-slate-900">
                 {reservation.assets?.name ?? "자산"} 대여
               </p>
               <p className="mt-1 text-xs text-neutral-400">
                 신청번호: {shortReservationId(reservation.id)}
               </p>
-              <p className="mt-1 text-sm text-neutral-600">
+              <p className="mt-2 text-sm text-neutral-700">
                 {formatDateTime(reservation.start_date)} ~ {formatDateTime(reservation.end_date)}
               </p>
               {reservation.note && (
-                <p className="mt-1 text-xs text-neutral-500">메모: {reservation.note}</p>
+                <p className="mt-2 text-sm text-neutral-600">메모: {reservation.note}</p>
               )}
             </div>
-            <div className="flex flex-col items-end gap-2">
+            <div className="flex shrink-0 flex-col items-end gap-2">
               <span
                 className={`rounded-full px-2 py-1 text-xs font-medium ${
                   statusBadgeClass[reservation.status]
@@ -283,7 +283,7 @@ export default function ReservationsClient() {
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
-                    className="rounded-md border border-neutral-200 px-2 py-1 text-xs text-neutral-700 hover:bg-neutral-50"
+                    className="rounded-lg border border-neutral-200 bg-white px-3 py-1.5 text-xs font-medium text-neutral-700 hover:bg-neutral-50"
                     onClick={() => openDetail(reservation.id)}
                     disabled={updating}
                   >
@@ -291,7 +291,7 @@ export default function ReservationsClient() {
                   </button>
                   <button
                     type="button"
-                    className="rounded-md border border-rose-200 px-2 py-1 text-xs text-rose-700 hover:bg-rose-50 disabled:opacity-60"
+                    className="rounded-lg border border-rose-200 bg-white px-3 py-1.5 text-xs font-medium text-rose-700 hover:bg-rose-50 disabled:opacity-60"
                     onClick={() => handleDeleteFromList(reservation.id)}
                     disabled={updating}
                   >
@@ -301,7 +301,7 @@ export default function ReservationsClient() {
               ) : (
                 <button
                   type="button"
-                  className="rounded-md border border-neutral-200 px-2 py-1 text-xs text-neutral-700 hover:bg-neutral-50"
+                  className="rounded-lg border border-neutral-200 bg-white px-3 py-1.5 text-xs font-medium text-neutral-700 hover:bg-neutral-50"
                   onClick={() => openDetail(reservation.id)}
                 >
                   상세 보기
@@ -314,8 +314,8 @@ export default function ReservationsClient() {
 
       {selectedReservation && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-xl rounded-xl border border-neutral-200 bg-white p-6 shadow-xl">
-            <h3 className="text-lg font-semibold text-neutral-900">대여 신청 상세</h3>
+          <div className="w-full max-w-xl rounded-2xl border border-neutral-200 bg-white p-6 shadow-[0_18px_36px_rgba(15,23,42,0.18)]">
+            <h3 className="text-xl font-semibold tracking-tight text-slate-900">대여 신청 상세</h3>
             <p className="mt-2 text-sm text-neutral-600">
               자산: {selectedReservation.assets?.name ?? "자산"}
             </p>
@@ -380,7 +380,7 @@ export default function ReservationsClient() {
                 <>
                   <button
                     type="button"
-                    className="rounded-md border border-rose-200 px-3 py-2 text-sm text-rose-700 hover:bg-rose-50 disabled:opacity-60"
+                    className="rounded-lg border border-rose-200 px-3 py-2 text-sm font-medium text-rose-700 hover:bg-rose-50 disabled:opacity-60"
                     onClick={handleCancel}
                     disabled={updating}
                   >

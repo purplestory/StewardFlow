@@ -4,10 +4,19 @@ import { useEffect, useMemo, useState } from "react";
 import Notice from "@/components/common/Notice";
 import { supabase } from "@/lib/supabase";
 import ReservationCalendarView from "./ReservationCalendarView";
+import ReservationDetailModal from "./ReservationDetailModal";
+import {
+  formatBorrowerName,
+  formatDateTimeRange,
+  reservationStatusLabel,
+  reservationStatusOptions,
+  roleLabel,
+  type ProfileRole,
+} from "./reservation-manager-shared";
 
 type ReservationRow = {
   id: string;
-  status: "pending" | "approved" | "returned" | "rejected";
+  status: (typeof reservationStatusOptions)[number];
   start_date: string;
   end_date: string;
   note: string | null;
@@ -36,8 +45,6 @@ type ReservationQueryRow = Omit<ReservationRow, "assets"> & {
     | null;
 };
 
-type ProfileRole = "admin" | "manager" | "user";
-
 type ApprovalPolicy = {
   scope: "asset" | "space";
   department: string | null;
@@ -50,48 +57,8 @@ type PermissionContext = {
   organization_id: string | null;
 };
 
-const statusOptions: ReservationRow["status"][] = [
-  "pending",
-  "approved",
-  "returned",
-  "rejected",
-];
-
-const statusLabel: Record<ReservationRow["status"], string> = {
-  pending: "대기",
-  approved: "승인",
-  returned: "반납 완료",
-  rejected: "반려",
-};
-
-const roleLabel: Record<ProfileRole, string> = {
-  admin: "관리자",
-  manager: "부서 관리자",
-  user: "일반 사용자",
-};
-
-const formatDateTimeRange = (start: string, end: string) => {
-  const startDate = new Date(start);
-  const endDate = new Date(end);
-  if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) {
-    return `${start} ~ ${end}`;
-  }
-  return `${startDate.toLocaleString("ko-KR", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: true,
-  })} ~ ${endDate.toLocaleString("ko-KR", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: true,
-  })}`;
-};
+const statusOptions = reservationStatusOptions;
+const statusLabel = reservationStatusLabel;
 
 export default function ReservationManager() {
   const [reservations, setReservations] = useState<ReservationRow[]>([]);
@@ -207,7 +174,7 @@ export default function ReservationManager() {
     setMessage(null);
 
     if (nextStatus === "returned") {
-      setMessage("반납 완료 상태는 반납 처리 절차에서 자동으로 반영됩니다.");
+      setMessage("반납 확인 상태는 반납 처리 절차에서 자동으로 반영됩니다.");
       return;
     }
 
@@ -284,10 +251,7 @@ export default function ReservationManager() {
       end_date: reservation.end_date,
       status: reservation.status,
       resource_name: reservation.assets?.name ?? "자산",
-      borrower_id:
-        reservation.borrower?.name
-          ? `${reservation.borrower.department ?? "부서 미지정"} / ${reservation.borrower.name}`
-          : reservation.borrower_id,
+      borrower_id: formatBorrowerName(reservation.borrower, reservation.borrower_id),
     }));
   }, [filteredReservations]);
 
@@ -385,7 +349,7 @@ export default function ReservationManager() {
                 <option value="all">전체 상태</option>
                 <option value="pending">대기</option>
                 <option value="approved">승인</option>
-                <option value="returned">반납 완료</option>
+                <option value="returned">반납 확인</option>
                 <option value="rejected">반려</option>
               </select>
             </>
@@ -440,9 +404,7 @@ export default function ReservationManager() {
               </p>
               <p className="text-xs text-neutral-500">
                 신청자:{" "}
-                {reservation.borrower?.name
-                  ? `${reservation.borrower.department ?? "부서 미지정"} / ${reservation.borrower.name}`
-                  : reservation.borrower_id}
+                {formatBorrowerName(reservation.borrower, reservation.borrower_id)}
               </p>
               {reservation.note && (
                 <p className="text-xs text-neutral-400">사유: {reservation.note}</p>
@@ -501,81 +463,53 @@ export default function ReservationManager() {
         </>
       )}
 
-      {selectedReservation && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-xl rounded-xl border border-neutral-200 bg-white p-6 shadow-xl">
-            <h3 className="text-lg font-semibold text-neutral-900">예약 상세</h3>
-            <div className="mt-4 space-y-2 text-sm text-neutral-700">
-              <p>
-                <span className="font-medium text-neutral-900">자산:</span>{" "}
-                {selectedReservation.assets?.name ?? "자산"}
-              </p>
-              <p>
-                <span className="font-medium text-neutral-900">기간:</span>{" "}
-                {formatDateTimeRange(
-                  selectedReservation.start_date,
-                  selectedReservation.end_date
-                )}
-              </p>
-              <p>
-                <span className="font-medium text-neutral-900">신청자:</span>{" "}
-                {selectedReservation.borrower?.name
-                  ? `${selectedReservation.borrower.department ?? "부서 미지정"} / ${selectedReservation.borrower.name}`
-                  : selectedReservation.borrower_id}
-              </p>
-              {selectedReservation.note && (
-                <p>
-                  <span className="font-medium text-neutral-900">사유:</span>{" "}
-                  {selectedReservation.note}
-                </p>
-              )}
-              {selectedReservation.assets && (
-                <p>
-                  <span className="font-medium text-neutral-900">승인 필요 권한:</span>{" "}
-                  {roleLabel[resolveRequiredRole(policies, selectedReservation.assets)]}
-                </p>
-              )}
-            </div>
-
-            <div className="mt-5 flex flex-wrap items-center justify-end gap-2">
-              <span className="text-sm text-neutral-500">상태</span>
-              <select
-                value={selectedReservation.status}
-                onChange={(event) =>
-                  handleStatusChange(
-                    selectedReservation.id,
-                    event.target.value as ReservationRow["status"]
-                  )
-                }
-                className="rounded-md border border-neutral-200 px-2 py-1 text-sm"
-                disabled={
-                  selectedReservation.status === "returned" ||
-                  !context ||
-                  !selectedReservation.assets ||
-                  updatingId === selectedReservation.id ||
-                  roleRank[context.role] <
-                    roleRank[
-                      resolveRequiredRole(policies, selectedReservation.assets)
-                    ]
-                }
-              >
-                {statusOptions.map((status) => (
-                  <option key={status} value={status} disabled={status === "returned"}>
-                    {statusLabel[status]}
-                  </option>
-                ))}
-              </select>
-              <button
-                type="button"
-                className="btn-ghost"
-                onClick={() => setSelectedReservation(null)}
-              >
-                닫기
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ReservationDetailModal
+        isOpen={Boolean(selectedReservation)}
+        title="예약 상세"
+        resourceLabel="자산"
+        resourceName={selectedReservation?.assets?.name ?? "자산"}
+        periodText={
+          selectedReservation
+            ? formatDateTimeRange(
+                selectedReservation.start_date,
+                selectedReservation.end_date
+              )
+            : "-"
+        }
+        borrowerText={
+          selectedReservation
+            ? formatBorrowerName(
+                selectedReservation.borrower,
+                selectedReservation.borrower_id
+              )
+            : "-"
+        }
+        requiredRoleLabel={
+          selectedReservation?.assets
+            ? roleLabel[resolveRequiredRole(policies, selectedReservation.assets)]
+            : null
+        }
+        note={selectedReservation?.note ?? null}
+        status={selectedReservation?.status ?? "pending"}
+        statusOptions={statusOptions}
+        statusLabel={statusLabel}
+        disableStatusChange={
+          !selectedReservation ||
+          selectedReservation.status === "returned" ||
+          !context ||
+          !selectedReservation.assets ||
+          updatingId === selectedReservation.id ||
+          roleRank[context.role] <
+            roleRank[
+              resolveRequiredRole(policies, selectedReservation.assets)
+            ]
+        }
+        onStatusChange={(nextStatus) => {
+          if (!selectedReservation) return;
+          void handleStatusChange(selectedReservation.id, nextStatus);
+        }}
+        onClose={() => setSelectedReservation(null)}
+      />
     </div>
   );
 }

@@ -36,8 +36,8 @@ export default function ManageTabs() {
   ];
 
   return (
-    <div className="mb-6 border-b border-neutral-200">
-      <nav className="-mb-px flex space-x-1" aria-label="관리 탭">
+    <div className="mb-6 rounded-2xl border border-neutral-200 bg-white p-2 shadow-[0_8px_20px_rgba(15,23,42,0.04)]">
+      <nav className="flex min-w-max items-center gap-2 overflow-x-auto pb-1" aria-label="관리 탭">
         {tabs.map((tab) => {
           let isActive = false;
           if (tab.key === "resources") {
@@ -53,11 +53,11 @@ export default function ManageTabs() {
               key={tab.key}
               href={tab.href}
               className={`
-                whitespace-nowrap border-b-2 px-4 py-3 text-sm font-medium transition-colors
+                shrink-0 whitespace-nowrap rounded-xl px-4 py-2 text-sm font-medium transition-colors
                 ${
                   isActive
-                    ? "border-black text-black"
-                    : "border-transparent text-neutral-500 hover:border-neutral-300 hover:text-neutral-700"
+                    ? "bg-slate-900 text-white"
+                    : "text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900"
                 }
               `}
             >

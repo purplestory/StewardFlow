@@ -215,6 +215,7 @@ export default function NotificationsList() {
         body: JSON.stringify({
           accessToken,
           notificationId: id,
+          notificationIds: [id],
         }),
       });
       const result = await response.json().catch(() => null);
@@ -324,7 +325,7 @@ export default function NotificationsList() {
         {[1, 2, 3].map((item) => (
           <div
             key={item}
-            className="rounded-lg border border-neutral-200 bg-white p-4"
+            className="rounded-2xl border border-neutral-200 bg-white p-4"
           >
             <div className="flex items-start gap-3">
               <div className="h-12 w-12 rounded-lg bg-neutral-100" />
@@ -371,7 +372,7 @@ export default function NotificationsList() {
   const grouped = groupByDate(paginated);
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       <NotificationsToolbar
         unreadCount={unreadCount}
         updating={updating}
@@ -395,7 +396,7 @@ export default function NotificationsList() {
         setPageSize={setPageSize}
         setPage={setPage}
       />
-      <div className="flex items-center justify-between text-xs text-neutral-500">
+      <div className="flex items-center justify-between px-1 text-xs text-neutral-500">
         <span>
           {safePage} / {totalPages} 페이지
         </span>
@@ -404,7 +405,7 @@ export default function NotificationsList() {
             type="button"
             onClick={() => setPage((prev) => Math.max(1, prev - 1))}
             disabled={safePage === 1}
-            className="rounded-md border border-neutral-200 px-2 py-1 disabled:opacity-50"
+            className="rounded-lg border border-neutral-200 bg-white px-2 py-1 disabled:opacity-50"
           >
             이전
           </button>
@@ -418,10 +419,10 @@ export default function NotificationsList() {
                 key={entry.key}
                 type="button"
                 onClick={() => setPage(entry.page)}
-                className={`rounded-md border px-2 py-1 ${
+                className={`rounded-lg border px-2 py-1 ${
                   entry.page === safePage
                     ? "border-neutral-900 bg-neutral-900 text-white"
-                    : "border-neutral-200"
+                    : "border-neutral-200 bg-white"
                 }`}
               >
                 {entry.page}
@@ -432,7 +433,7 @@ export default function NotificationsList() {
             type="button"
             onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))}
             disabled={safePage === totalPages}
-            className="rounded-md border border-neutral-200 px-2 py-1 disabled:opacity-50"
+            className="rounded-lg border border-neutral-200 bg-white px-2 py-1 disabled:opacity-50"
           >
             다음
           </button>

@@ -77,9 +77,9 @@ export default function RootLayout({
           <AbortErrorGuard />
           <BrowserNotificationBridge />
           <WebPushRegistrar />
-          <div className="min-h-screen bg-neutral-50 text-neutral-900">
+          <div className="min-h-screen text-neutral-900">
             <Header />
-            <main className="mx-auto w-full max-w-5xl px-4 py-8">
+            <main className="mx-auto w-full max-w-6xl px-4 py-8 md:px-6 md:py-10">
               {children}
             </main>
           </div>

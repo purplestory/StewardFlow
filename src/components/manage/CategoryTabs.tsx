@@ -103,8 +103,8 @@ export default function CategoryTabs() {
   }
 
   return (
-    <div className="mb-6 border-b border-neutral-300">
-      <nav className="-mb-px flex space-x-1" aria-label="카테고리 탭">
+    <div className="mb-6 rounded-2xl border border-neutral-200 bg-white p-2 shadow-[0_8px_20px_rgba(15,23,42,0.04)]">
+      <nav className="flex min-w-max items-center gap-2 overflow-x-auto pb-1" aria-label="카테고리 탭">
         {tabs.map((tab) => {
           const isActive = pathname.startsWith(tab.href);
           return (
@@ -112,11 +112,11 @@ export default function CategoryTabs() {
               key={tab.key}
               href={tab.href}
               className={`
-                whitespace-nowrap border-b-2 px-4 py-3 text-sm font-medium transition-colors
+                shrink-0 whitespace-nowrap rounded-xl px-4 py-2 text-sm font-medium transition-colors
                 ${
                   isActive
-                    ? "border-blue-600 text-blue-600"
-                    : "border-transparent text-neutral-500 hover:border-blue-300 hover:text-blue-600"
+                    ? "bg-blue-600 text-white"
+                    : "text-neutral-600 hover:bg-blue-50 hover:text-blue-700"
                 }
               `}
             >

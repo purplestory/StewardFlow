@@ -31,7 +31,7 @@ const notificationStatusLabel: Record<NotificationRow["status"], string> = {
 const reservationStatusLabel: Record<string, string> = {
   pending: "대기",
   approved: "승인",
-  returned: "반납 완료",
+  returned: "반납 확인",
   rejected: "반려",
 };
 
@@ -129,23 +129,7 @@ export const renderTitle = (item: NotificationRow) => {
   return title;
 };
 
-export const renderNotificationDetail = (item: NotificationRow) => {
-  const payload = item.payload ?? {};
-  const startDate = payload.start_date as string | undefined;
-  const endDate = payload.end_date as string | undefined;
-
-  if (startDate && endDate) {
-    return (
-      <p className="mt-1 text-xs text-neutral-500">
-        기간: {startDate} ~ {endDate}
-      </p>
-    );
-  }
-
-  return null;
-};
-
-export const renderSummary = (item: NotificationRow) => {
+export const getSummaryText = (item: NotificationRow) => {
   const payload = item.payload ?? {};
   const startDate = payload.start_date as string | undefined;
   const endDate = payload.end_date as string | undefined;
@@ -186,10 +170,10 @@ export const renderSummary = (item: NotificationRow) => {
     return null;
   }
 
-  return <p className="text-xs text-neutral-500">{parts.join(" · ")}</p>;
+  return parts.join(" · ");
 };
 
-export const renderTemplateMessage = (item: NotificationRow) => {
+export const getTemplateText = (item: NotificationRow) => {
   const payload = item.payload ?? {};
   const resourceName = (payload.resource_name as string | undefined) ?? "대상";
   const status = payload.status as string | undefined;
@@ -204,70 +188,114 @@ export const renderTemplateMessage = (item: NotificationRow) => {
     : null;
 
   if (item.type === "reservation_created") {
-    return (
-      <p className="text-xs text-neutral-600">
-        {resourceName} 물품 예약이 접수되었습니다.
-      </p>
-    );
+    return `${resourceName} 물품 예약이 접수되었습니다.`;
   }
 
   if (item.type === "space_reservation_created") {
-    return (
-      <p className="text-xs text-neutral-600">
-        {resourceName} 공간 예약이 접수되었습니다.
-      </p>
-    );
+    return `${resourceName} 공간 예약이 접수되었습니다.`;
+  }
+
+  if (item.type === "vehicle_reservation_created") {
+    return `${resourceName} 차량 예약이 접수되었습니다.`;
   }
 
   if (item.type === "reservation_status_changed" && statusText) {
-    return (
-      <p className="text-xs text-neutral-600">
-        {resourceName} 예약 상태가 {statusText}(으)로 변경되었습니다.
-      </p>
-    );
+    return `${resourceName} 예약 상태가 ${statusText}(으)로 변경되었습니다.`;
   }
 
   if (item.type === "space_reservation_status_changed" && statusText) {
-    return (
-      <p className="text-xs text-neutral-600">
-        {resourceName} 예약 상태가 {statusText}(으)로 변경되었습니다.
-      </p>
-    );
+    return `${resourceName} 공간 예약 상태가 ${statusText}(으)로 변경되었습니다.`;
+  }
+
+  if (item.type === "vehicle_reservation_status_changed" && statusText) {
+    return `${resourceName} 차량 예약 상태가 ${statusText}(으)로 변경되었습니다.`;
   }
 
   if (item.type === "asset_transfer_request_created") {
-    return (
-      <p className="text-xs text-neutral-600">
-        {resourceName} 불용품 양도 요청이 등록되었습니다. {moveSummary}
-      </p>
-    );
+    return `${resourceName} 불용품 양도 요청이 등록되었습니다. ${moveSummary}`;
   }
 
   if (item.type === "asset_transfer_request_approved") {
-    return (
-      <p className="text-xs text-neutral-600">
-        {resourceName} 불용품 양도 요청이 승인되었습니다. {moveSummary}
-      </p>
-    );
+    return `${resourceName} 불용품 양도 요청이 승인되었습니다. ${moveSummary}`;
   }
 
   if (item.type === "asset_transfer_request_rejected") {
-    return (
-      <p className="text-xs text-neutral-600">
-        {resourceName} 불용품 양도 요청이 거절되었습니다. {moveSummary}
-      </p>
-    );
+    return `${resourceName} 불용품 양도 요청이 거절되었습니다. ${moveSummary}`;
   }
 
   if (item.type === "asset_transfer_request_cancelled") {
-    return (
-      <p className="text-xs text-neutral-600">
-        {resourceName} 불용품 양도 요청이 취소되었습니다. {moveSummary}
-      </p>
-    );
+    return `${resourceName} 불용품 양도 요청이 취소되었습니다. ${moveSummary}`;
   }
 
   return null;
+};
+
+type DetailRow = {
+  label: string;
+  value: string;
+};
+
+export const getDetailRows = (item: NotificationRow): DetailRow[] => {
+  const payload = item.payload ?? {};
+  const rows: DetailRow[] = [];
+  const resourceName = payload.resource_name as string | undefined;
+  const reservationStatus = payload.status as string | undefined;
+  const startDate = payload.start_date as string | undefined;
+  const endDate = payload.end_date as string | undefined;
+  const fromDepartment = payload.from_department as string | undefined;
+  const toDepartment = payload.to_department as string | undefined;
+  const note = payload.note as string | undefined;
+
+  if (resourceName) {
+    rows.push({ label: "대상", value: resourceName });
+  }
+
+  if (reservationStatus) {
+    rows.push({
+      label: "상태",
+      value: reservationStatusLabel[reservationStatus] ?? reservationStatus,
+    });
+  }
+
+  if (startDate && endDate) {
+    rows.push({
+      label: "기간",
+      value: `${formatDateTime(startDate)} ~ ${formatDateTime(endDate)}`,
+    });
+  }
+
+  if (fromDepartment || toDepartment) {
+    rows.push({
+      label: "이동",
+      value: `${fromDepartment ?? "미등록"} → ${toDepartment ?? "미등록"}`,
+    });
+  }
+
+  if (note) {
+    rows.push({ label: "사유", value: note });
+  }
+
+  return rows;
+};
+
+export const renderNotificationDetail = (item: NotificationRow) => {
+  const rows = getDetailRows(item);
+  if (rows.length === 0) return null;
+  const period = rows.find((row) => row.label === "기간");
+  if (!period) return null;
+  return <p className="mt-1 text-xs text-neutral-500">{period.label}: {period.value}</p>;
+};
+
+export const renderSummary = (item: NotificationRow) => {
+  const summary = getSummaryText(item);
+  if (!summary) return null;
+  return <p className="text-xs text-neutral-500">{summary}</p>;
+};
+
+export const renderTemplateMessage = (item: NotificationRow) => {
+  const template = getTemplateText(item);
+  if (!template) return null;
+  return <p className="text-xs text-neutral-600">{template}</p>;
 };
 
 export const getThumbnail = (item: NotificationRow) => {

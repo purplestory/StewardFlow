@@ -4,14 +4,14 @@ import Link from "next/link";
 import Image from "next/image";
 import {
   formatDateTime,
+  getDetailRows,
   getItemStatusLabel,
   getResourcePath,
+  getSummaryText,
+  getTemplateText,
   getThumbnail,
   getTypeColor,
   getTypeIcon,
-  renderNotificationDetail,
-  renderSummary,
-  renderTemplateMessage,
   renderTitle,
   type NotificationRow,
 } from "@/components/notifications/notification-view-helpers";
@@ -34,11 +34,17 @@ export default function NotificationListItem({
   onMarkAsRead,
 }: NotificationListItemProps) {
   const statusLabel = getItemStatusLabel(item);
+  const summaryText = getSummaryText(item);
+  const templateText = getTemplateText(item);
+  const detailRows = getDetailRows(item);
+  const hasResource = Boolean((item.payload?.resource_id as string | undefined) || item.type.startsWith("asset_transfer_request"));
 
   return (
     <div
-      className={`rounded-lg border px-4 py-3 ${
-        item.read_at ? "border-neutral-200 bg-white" : "border-amber-200 bg-amber-50"
+      className={`rounded-2xl border px-4 py-3 transition-colors ${
+        item.read_at
+          ? "border-neutral-200 bg-white"
+          : "border-amber-200 bg-amber-50/70 shadow-[0_8px_20px_rgba(245,158,11,0.08)]"
       }`}
     >
       <div className="flex items-start gap-3">
@@ -48,47 +54,71 @@ export default function NotificationListItem({
             alt=""
             width={48}
             height={48}
-            className="h-12 w-12 rounded-lg object-cover"
+            className="h-12 w-12 rounded-xl object-cover"
             unoptimized
           />
         ) : (
-          <div className="flex h-12 w-12 items-center justify-center rounded-lg border border-neutral-200 text-xs text-neutral-400">
-            없음
+          <div className="flex h-12 w-12 items-center justify-center rounded-xl border border-neutral-200 bg-white text-xs text-neutral-500">
+            {getTypeIcon(item.type)}
           </div>
         )}
-        <div className="flex-1">
+        <div className="min-w-0 flex-1">
           <button
             type="button"
             onClick={() => onToggle(item.id)}
+            aria-expanded={isExpanded}
             className="flex w-full items-start gap-2 text-left"
           >
-            <span className={`mt-1 inline-flex h-2 w-2 rounded-full ${getTypeColor(item.type)}`} />
-            <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-neutral-200 text-[10px] text-neutral-600">
-              {getTypeIcon(item.type)}
+            <span className={`mt-[7px] inline-flex h-2 w-2 shrink-0 rounded-full ${getTypeColor(item.type)}`} />
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-sm font-semibold text-neutral-900">
+                {renderTitle(item)}
+              </span>
+              {summaryText && (
+                <span className="mt-1 block truncate text-xs text-neutral-500">
+                  {summaryText}
+                </span>
+              )}
             </span>
-            <span className="text-sm font-medium text-neutral-900">{renderTitle(item)}</span>
             <span className="ml-auto shrink-0 text-xs text-neutral-500">
               {formatDateTime(item.created_at)}
             </span>
-            <span className="shrink-0 text-xs text-neutral-500">{isExpanded ? "▲" : "▼"}</span>
+            {!item.read_at && (
+              <span className="shrink-0 rounded-full bg-rose-500 px-2 py-0.5 text-[10px] font-semibold text-white">
+                NEW
+              </span>
+            )}
+            <span className="shrink-0 text-xs text-neutral-500">
+              {isExpanded ? "▲" : "▼"}
+            </span>
           </button>
           {isExpanded && (
-            <div className="mt-2 space-y-2">
-              {!compactView && renderTemplateMessage(item)}
-              {!compactView && renderSummary(item)}
-              <p className="text-xs text-neutral-500 flex items-center gap-2">
+            <div className="mt-3 rounded-xl border border-neutral-200/80 bg-white/80 p-3">
+              {!compactView && templateText && (
+                <p className="text-sm text-neutral-700">{templateText}</p>
+              )}
+              <p className="mt-2 flex items-center gap-2 text-xs text-neutral-500">
                 <span>{statusLabel.label}:</span>
                 <span className={`rounded-full px-2 py-0.5 text-[10px] ${statusLabel.badgeClass}`}>
                   {statusLabel.value}
                 </span>
               </p>
-              {!compactView && renderNotificationDetail(item)}
+              {!compactView && detailRows.length > 0 && (
+                <dl className="mt-3 space-y-1.5 rounded-lg bg-neutral-50 px-3 py-2">
+                  {detailRows.map((row) => (
+                    <div key={`${item.id}-${row.label}`} className="grid grid-cols-[56px_1fr] items-start gap-2">
+                      <dt className="text-xs text-neutral-500">{row.label}</dt>
+                      <dd className="text-xs text-neutral-700">{row.value}</dd>
+                    </div>
+                  ))}
+                </dl>
+              )}
               <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
-                {(item.payload?.resource_id as string | undefined) && (
+                {hasResource && (
                   <Link
                     href={getResourcePath(item)}
                     onClick={() => onMarkAsRead(item.id)}
-                    className="rounded-md bg-neutral-900 px-3 py-1 text-white"
+                    className="rounded-lg bg-neutral-900 px-3 py-1.5 font-medium text-white"
                   >
                     바로가기
                   </Link>
@@ -98,7 +128,7 @@ export default function NotificationListItem({
                     type="button"
                     onClick={() => onMarkAsRead(item.id)}
                     disabled={updating}
-                    className="rounded-md border border-neutral-200 px-2 py-1"
+                    className="rounded-lg border border-neutral-200 bg-white px-3 py-1.5 text-neutral-700 disabled:opacity-60"
                   >
                     읽음 처리
                   </button>

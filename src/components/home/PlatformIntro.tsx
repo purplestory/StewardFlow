@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState, Suspense } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import LogoIcon from "@/components/common/LogoIcon";
 
@@ -15,69 +15,68 @@ type OrganizationFeatures = {
 function PlatformIntroContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [features, setFeatures] = useState<OrganizationFeatures | null>(null);
 
   useEffect(() => {
     const checkAuth = async () => {
       const { data: sessionData } = await supabase.auth.getSession();
       const user = sessionData.session?.user;
-      setIsAuthenticated(!!user);
+      setIsAuthenticated(Boolean(user));
 
-      if (user) {
-        const { data: profileData, error: profileError } = await supabase
-          .from("profiles")
-          .select("organization_id")
-          .eq("id", user.id)
-          .maybeSingle();
-
-        if (profileError) {
-          console.error("메인 소개 프로필 조회 오류:", profileError.message);
-          // 프로필 조회 실패 시에도 리다이렉트하지 않음 (에러 표시)
-          return;
-        }
-
-        // skip_redirect 파라미터가 있으면 리다이렉트하지 않음
-        const skipRedirect = searchParams.get("skip_redirect") === "true";
-        
-        // organization_id가 없으면 초대 토큰 입력 페이지로 리다이렉트 (skip_redirect가 아닐 때만)
-        // - 초대 링크로 가입하는 사용자는 /join에서 토큰 입력 후 수락
-        // - 초대 없이 가입하려는 사용자는 /join에서 "가입 신청" 링크로 이동 가능
-        if (!profileData?.organization_id && !skipRedirect) {
-          router.push("/join");
-          return;
-        }
-
-        // organization_id가 있으면 features 로드
-        if (profileData?.organization_id) {
-          const { data: orgData, error: orgError } = await supabase
-            .from("organizations")
-            .select("features")
-            .eq("id", profileData.organization_id)
-            .maybeSingle();
-
-          if (orgError) {
-            console.error("메인 소개 기관 정보 조회 오류:", orgError.message);
-          } else if (orgData) {
-            setFeatures({
-              equipment: orgData.features?.equipment ?? true,
-              spaces: orgData.features?.spaces ?? true,
-              vehicles: orgData.features?.vehicles ?? false,
-            });
-          }
-        }
+      if (!user) {
+        return;
       }
 
+      const { data: profileData, error: profileError } = await supabase
+        .from("profiles")
+        .select("organization_id")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      if (profileError) {
+        console.error("메인 소개 프로필 조회 오류:", profileError.message);
+        return;
+      }
+
+      const skipRedirect = searchParams.get("skip_redirect") === "true";
+      if (!profileData?.organization_id && !skipRedirect) {
+        router.push("/join");
+        return;
+      }
+
+      if (!profileData?.organization_id) {
+        return;
+      }
+
+      const { data: orgData, error: orgError } = await supabase
+        .from("organizations")
+        .select("features")
+        .eq("id", profileData.organization_id)
+        .maybeSingle();
+
+      if (orgError) {
+        console.error("메인 소개 기관 정보 조회 오류:", orgError.message);
+        return;
+      }
+
+      if (orgData) {
+        setFeatures({
+          equipment: orgData.features?.equipment ?? true,
+          spaces: orgData.features?.spaces ?? true,
+          vehicles: orgData.features?.vehicles ?? false,
+        });
+      }
     };
 
-    checkAuth();
+    void checkAuth();
 
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
-      setIsAuthenticated(!!session?.user);
+      setIsAuthenticated(Boolean(session?.user));
       if (session?.user) {
-        checkAuth();
+        void checkAuth();
       } else {
         setFeatures(null);
       }
@@ -88,254 +87,198 @@ function PlatformIntroContent() {
     };
   }, [router, searchParams]);
 
-  const handleCategoryClick = (category: "assets" | "spaces" | "vehicles") => {
-    if (isAuthenticated && features) {
-      if (category === "assets" && features.equipment !== false) {
-        router.push("/assets");
-      } else if (category === "spaces" && features.spaces !== false) {
-        router.push("/spaces");
-      } else if (category === "vehicles" && features.vehicles === true) {
-        router.push("/vehicles");
-      }
-    }
-  };
-
   const isCategoryEnabled = (category: "assets" | "spaces" | "vehicles") => {
     if (!isAuthenticated || !features) return false;
     if (category === "assets") return features.equipment !== false;
     if (category === "spaces") return features.spaces !== false;
-    if (category === "vehicles") return features.vehicles === true;
-    return false;
+    return features.vehicles === true;
   };
+
+  const handleCategoryClick = (category: "assets" | "spaces" | "vehicles") => {
+    if (!isCategoryEnabled(category)) {
+      return;
+    }
+    if (category === "assets") {
+      router.push("/assets");
+      return;
+    }
+    if (category === "spaces") {
+      router.push("/spaces");
+      return;
+    }
+    router.push("/vehicles");
+  };
+
+  const categoryCards = [
+    {
+      key: "assets" as const,
+      title: "물품",
+      description: "소유 부서 기준으로 등록하고, 신청부터 반납까지 전 과정을 관리합니다.",
+      accent: "from-sky-500/20 to-blue-500/10",
+      icon: (
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={1.8}
+          d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
+        />
+      ),
+    },
+    {
+      key: "spaces" as const,
+      title: "공간",
+      description: "공간 예약 충돌을 방지하고, 부서 운영 일정에 맞춰 체계적으로 배정합니다.",
+      accent: "from-teal-500/20 to-cyan-500/10",
+      icon: (
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={1.8}
+          d="M3 11.5l9-7 9 7M5 10v9a1 1 0 001 1h4v-6h4v6h4a1 1 0 001-1v-9"
+        />
+      ),
+    },
+    {
+      key: "vehicles" as const,
+      title: "차량",
+      description: "사용 신청, 반납 확인, 주행 정보까지 한 화면에서 안전하게 관리합니다.",
+      accent: "from-amber-400/25 to-orange-400/15",
+      icon: (
+        <>
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={1.8}
+            d="M3 13l2-5a2 2 0 011.9-1.3h10.2A2 2 0 0119 8l2 5v6h-2v-2H5v2H3v-6z"
+          />
+          <circle cx="7.5" cy="14.5" r="1.4" strokeWidth={1.8} />
+          <circle cx="16.5" cy="14.5" r="1.4" strokeWidth={1.8} />
+        </>
+      ),
+    },
+  ];
+
+  const benefitItems = [
+    {
+      title: "권한 기반 승인",
+      description: "관리자/부서 관리자 권한에 맞는 승인 경로를 제공합니다.",
+    },
+    {
+      title: "모바일 우선 접근",
+      description: "예배 현장에서도 신청, 승인 상태, 알림을 빠르게 확인할 수 있습니다.",
+    },
+    {
+      title: "신청 내역 추적",
+      description: "내 대여 신청 수정/취소, 상태 변경 이력을 일관되게 관리합니다.",
+    },
+    {
+      title: "부서 간 협업",
+      description: "불용품 양도 요청과 공용 자원 공유를 표준화된 흐름으로 처리합니다.",
+    },
+  ];
+
   return (
     <div className="space-y-8">
-      {/* Hero Section */}
-      <div className="text-center space-y-6">
-        {/* 로고 */}
-        <div className="flex justify-center mb-4">
-          <div className="w-24 h-24 md:w-32 md:h-32 flex items-center justify-center" style={{ background: 'transparent' }}>
-            <LogoIcon className="w-full h-full" />
-          </div>
-        </div>
-        <h1 className="text-4xl md:text-5xl font-bold text-neutral-900">
-          교회 자원 관리 시스템
-        </h1>
-        <p className="text-2xl text-neutral-700">StewardFlow</p>
-        <p className="text-neutral-500 max-w-2xl mx-auto" style={{ wordBreak: "keep-all" }}>
-          물품, 공간, 차량을 통합 관리하고 효율적으로 공유하는 스튜어드십 플랫폼
-        </p>
-      </div>
-
-      {/* Features Grid */}
-      <div className="grid md:grid-cols-3 gap-6 mt-12">
-        {/* 물품 관리 */}
-        <div
-          onClick={() => handleCategoryClick("assets")}
-          className={`rounded-xl border border-neutral-200 bg-white p-6 text-center space-y-4 ${
-            isCategoryEnabled("assets")
-              ? "cursor-pointer hover:border-neutral-300 hover:shadow-md transition-all"
-              : ""
-          }`}
-        >
-          <div className="flex justify-center">
-            <div className="w-16 h-16 rounded-full bg-blue-100 flex items-center justify-center">
-              <svg
-                className="w-8 h-8 text-blue-600"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
-                />
-              </svg>
+      <section className="relative overflow-hidden rounded-3xl border border-slate-200 bg-white px-6 py-10 shadow-[0_14px_30px_rgba(15,23,42,0.08)] md:px-10">
+        <div className="pointer-events-none absolute -right-16 -top-20 h-64 w-64 rounded-full bg-sky-500/10 blur-3xl" />
+        <div className="pointer-events-none absolute -left-20 bottom-0 h-56 w-56 rounded-full bg-teal-500/10 blur-3xl" />
+        <div className="relative z-10">
+          <div className="flex items-center justify-center md:justify-start">
+            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-slate-50 ring-1 ring-slate-100 md:h-20 md:w-20">
+              <LogoIcon className="h-12 w-12 md:h-14 md:w-14" />
             </div>
           </div>
-          <h3 className="text-lg font-semibold text-neutral-900">물품</h3>
-          <p className="text-sm text-neutral-600" style={{ wordBreak: "keep-all" }}>
-            교회 부서의 보유 물품을 등록하고 공유할 수 있도록 지원합니다
-          </p>
-        </div>
-
-        {/* 공간 관리 */}
-        <div
-          onClick={() => handleCategoryClick("spaces")}
-          className={`rounded-xl border border-neutral-200 bg-white p-6 text-center space-y-4 ${
-            isCategoryEnabled("spaces")
-              ? "cursor-pointer hover:border-neutral-300 hover:shadow-md transition-all"
-              : ""
-          }`}
-        >
-          <div className="flex justify-center">
-            <div className="w-16 h-16 rounded-full bg-purple-100 flex items-center justify-center">
-              <svg
-                className="w-8 h-8 text-purple-600"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"
-                />
-              </svg>
-            </div>
+          <div className="mt-6 text-center md:text-left">
+            <p className="text-sm font-semibold tracking-[0.12em] text-slate-500">
+              CHURCH RESOURCE OPERATIONS
+            </p>
+            <h1 className="mt-3 text-3xl font-bold leading-tight text-slate-900 md:text-5xl">
+              교회 자원관리 시스템
+            </h1>
+            <p className="mt-2 text-xl font-semibold text-brand-primary md:text-2xl">
+              StewardFlow
+            </p>
+            <p className="mx-auto mt-4 max-w-2xl text-sm leading-relaxed text-slate-600 md:mx-0 md:text-base">
+              물품, 공간, 차량 운영을 하나의 흐름으로 연결해 신청, 승인, 반납, 알림까지
+              교회 현장에 맞게 관리합니다.
+            </p>
           </div>
-          <h3 className="text-lg font-semibold text-neutral-900">공간</h3>
-          <p className="text-sm text-neutral-600" style={{ wordBreak: "keep-all" }}>
-            예배와 모임을 위한 공간 예약을 체계적으로 관리하고 충돌을 방지합니다
-          </p>
-        </div>
-
-        {/* 차량 관리 */}
-        <div
-          onClick={() => handleCategoryClick("vehicles")}
-          className={`rounded-xl border border-neutral-200 bg-white p-6 text-center space-y-4 ${
-            isCategoryEnabled("vehicles")
-              ? "cursor-pointer hover:border-neutral-300 hover:shadow-md transition-all"
-              : ""
-          }`}
-        >
-          <div className="flex justify-center">
-            <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center">
-              <svg
-                className="w-8 h-8 text-green-600"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"
-                />
-              </svg>
+          <div className="mt-6 grid gap-3 text-sm text-slate-600 md:grid-cols-3">
+            <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+              조직별 메뉴/권한 설정
             </div>
-          </div>
-          <h3 className="text-lg font-semibold text-neutral-900">차량</h3>
-          <p className="text-sm text-neutral-600" style={{ wordBreak: "keep-all" }}>
-            교회 차량 사용 신청과 반납, 주행거리와 차량 상태를 관리합니다
-          </p>
-        </div>
-      </div>
-
-      {/* Key Benefits */}
-      <div className="rounded-xl border border-neutral-200 bg-gradient-to-br from-neutral-50 to-white p-8 mt-12">
-        <h2 className="text-2xl font-semibold text-center mb-6 text-neutral-900">
-          주요 기능
-        </h2>
-        <div className="grid md:grid-cols-2 gap-6">
-          <div className="flex items-start gap-4">
-            <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center">
-              <svg
-                className="w-5 h-5 text-blue-600"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
-              </svg>
+            <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+              신청 상태 실시간 반영
             </div>
-            <div>
-              <h3 className="font-semibold text-neutral-900 mb-1">통합 관리</h3>
-              <p className="text-sm text-neutral-600">
-                물품, 공간, 차량을 하나의 플랫폼에서 통합 관리
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-start gap-4">
-            <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-purple-100 flex items-center justify-center">
-              <svg
-                className="w-5 h-5 text-purple-600"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"
-                />
-              </svg>
-            </div>
-            <div>
-              <h3 className="font-semibold text-neutral-900 mb-1">실시간 예약</h3>
-              <p className="text-sm text-neutral-600">
-                실시간 예약 시스템으로 충돌 없이 자원을 공유
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-start gap-4">
-            <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-green-100 flex items-center justify-center">
-              <svg
-                className="w-5 h-5 text-green-600"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
-                />
-              </svg>
-            </div>
-            <div>
-              <h3 className="font-semibold text-neutral-900 mb-1">안전한 관리</h3>
-              <p className="text-sm text-neutral-600">
-                승인 프로세스와 반납 확인으로 안전하게 관리
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-start gap-4">
-            <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-amber-100 flex items-center justify-center">
-              <svg
-                className="w-5 h-5 text-amber-600"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
-                />
-              </svg>
-            </div>
-            <div>
-              <h3 className="font-semibold text-neutral-900 mb-1">효율적인 공유</h3>
-              <p className="text-sm text-neutral-600">
-                부서 간 자원 공유로 효율성 극대화
-              </p>
+            <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+              모바일 친화형 운영 화면
             </div>
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* CTA */}
+      <section className="grid gap-4 md:grid-cols-3">
+        {categoryCards.map((card) => {
+          const enabled = isCategoryEnabled(card.key);
+          return (
+            <button
+              key={card.key}
+              type="button"
+              onClick={() => handleCategoryClick(card.key)}
+              className={`group relative overflow-hidden rounded-2xl border p-5 text-left transition-all ${
+                enabled
+                  ? "border-slate-200 bg-white shadow-[0_8px_22px_rgba(15,23,42,0.08)] hover:-translate-y-0.5 hover:shadow-[0_14px_28px_rgba(15,23,42,0.12)]"
+                  : "cursor-default border-slate-200/80 bg-slate-50"
+              }`}
+            >
+              <div
+                className={`pointer-events-none absolute inset-0 bg-gradient-to-br opacity-80 ${card.accent}`}
+              />
+              <div className="relative z-10">
+                <div className="inline-flex h-12 w-12 items-center justify-center rounded-xl border border-white/70 bg-white/90 text-slate-700">
+                  <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    {card.icon}
+                  </svg>
+                </div>
+                <div className="mt-4 flex items-center justify-between">
+                  <h2 className="text-lg font-semibold text-slate-900">{card.title}</h2>
+                  <span
+                    className={`rounded-full px-2.5 py-1 text-[11px] font-medium ${
+                      enabled
+                        ? "bg-emerald-100 text-emerald-700"
+                        : "bg-neutral-200 text-neutral-600"
+                    }`}
+                  >
+                    {enabled ? "사용 가능" : "비활성"}
+                  </span>
+                </div>
+                <p className="mt-2 text-sm leading-relaxed text-slate-700">{card.description}</p>
+              </div>
+            </button>
+          );
+        })}
+      </section>
+
+      <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-[0_10px_24px_rgba(15,23,42,0.07)]">
+        <h2 className="text-xl font-semibold text-slate-900">운영 핵심 포인트</h2>
+        <div className="mt-4 grid gap-3 md:grid-cols-2">
+          {benefitItems.map((item) => (
+            <div
+              key={item.title}
+              className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3"
+            >
+              <p className="font-semibold text-slate-900">{item.title}</p>
+              <p className="mt-1 text-sm text-slate-600">{item.description}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
       {(!isAuthenticated || (isAuthenticated && !features)) && (
-        <div className="text-center mt-12">
+        <div className="pb-2 text-center">
           <Link
             href={isAuthenticated ? "/join-request" : "/login"}
-            className="w-auto rounded-lg bg-slate-900 px-8 text-base font-semibold text-white transition-all duration-200 hover:bg-slate-800 hover:shadow-md active:bg-slate-950 active:shadow-sm focus:outline-none focus:ring-2 focus:ring-slate-500 focus:ring-offset-2"
-            style={{ height: "56px", fontSize: "20px", paddingLeft: "48px", paddingRight: "48px", display: "inline-flex", alignItems: "center", justifyContent: "center" }}
+            className="inline-flex h-12 items-center justify-center rounded-xl bg-brand-primary px-8 text-base font-semibold text-white transition-colors hover:bg-[#173d7f]"
           >
             시작하기
           </Link>
@@ -347,14 +290,16 @@ function PlatformIntroContent() {
 
 export default function PlatformIntro() {
   return (
-    <Suspense fallback={
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-neutral-900 mx-auto"></div>
-          <p className="mt-4 text-sm text-neutral-600">로딩 중...</p>
+    <Suspense
+      fallback={
+        <div className="flex min-h-[60vh] items-center justify-center">
+          <div className="text-center">
+            <div className="mx-auto h-8 w-8 animate-spin rounded-full border-b-2 border-neutral-900" />
+            <p className="mt-4 text-sm text-neutral-600">로딩 중...</p>
+          </div>
         </div>
-      </div>
-    }>
+      }
+    >
       <PlatformIntroContent />
     </Suspense>
   );

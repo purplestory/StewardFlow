@@ -2,14 +2,14 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import NotificationBadge from "@/components/notifications/NotificationBadge";
 import { supabase } from "@/lib/supabase";
 import LogoIcon from "@/components/common/LogoIcon";
-import {
-  useHeaderSession,
-} from "@/components/layout/useHeaderSession";
+import { useHeaderSession } from "@/components/layout/useHeaderSession";
 
 export default function Header() {
+  const pathname = usePathname();
   const {
     hasLocalStorageSession,
     hasOrganization,
@@ -24,7 +24,6 @@ export default function Header() {
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
-    // 로그아웃 후 홈으로 리다이렉트 (인포그래픽 페이지 표시)
     if (typeof window !== "undefined") {
       window.location.href = "/";
     }
@@ -34,73 +33,85 @@ export default function Header() {
     setDropdownOpen(dropdownOpen === menu ? null : menu);
   };
 
-  // Close dropdown when clicking outside
+  const navLinkClass = (href: string) => {
+    const isActive = pathname === href || pathname.startsWith(`${href}/`);
+    if (isActive) {
+      return "rounded-full bg-slate-100 px-3 py-1.5 text-slate-900";
+    }
+    return "rounded-full px-3 py-1.5 text-neutral-600 hover:bg-slate-50 hover:text-slate-900";
+  };
+
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as HTMLElement;
-      if (!target.closest('.dropdown-menu')) {
+      if (!target.closest(".dropdown-menu")) {
         setDropdownOpen(null);
       }
     };
 
     if (dropdownOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-      return () => document.removeEventListener('mousedown', handleClickOutside);
+      document.addEventListener("mousedown", handleClickOutside);
+      return () => document.removeEventListener("mousedown", handleClickOutside);
     }
   }, [dropdownOpen]);
 
   return (
-    <header className="border-b border-neutral-200 bg-white">
-      <div className="mx-auto flex w-full max-w-5xl items-center justify-between px-4 py-4">
-        <Link href="/" className="flex items-center gap-1 text-xl md:text-2xl font-semibold hover:opacity-80 transition-opacity">
-          <LogoIcon className="w-10 h-10 md:w-12 md:h-12 flex-shrink-0" />
-          <span>StewardFlow</span>
+    <header className="sticky top-0 z-40 border-b border-slate-200/80 bg-white/90 backdrop-blur-md">
+      <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-4 py-3 md:px-6">
+        <Link
+          href="/"
+          className="flex items-center gap-2 transition-opacity hover:opacity-85"
+        >
+          <LogoIcon className="h-10 w-10 shrink-0 md:h-11 md:w-11" />
+          <div>
+            <p className="text-2xl font-bold tracking-tight text-slate-900">
+              StewardFlow
+            </p>
+            <p className="hidden text-[11px] text-slate-500 md:block">
+              교회 자원관리 시스템
+            </p>
+          </div>
         </Link>
-        
-        {/* Desktop Navigation */}
-        <nav className="hidden md:flex flex-wrap items-center gap-4 text-sm text-neutral-600">
-          {/* Main navigation items */}
+
+        <nav className="hidden items-center gap-3 text-sm md:flex">
           {mainNavItems.map((item) => (
-            <Link key={item.href} href={item.href} className="hover:text-black">
+            <Link key={item.href} href={item.href} className={navLinkClass(item.href)}>
               {item.label}
             </Link>
           ))}
 
-          {/* User menu */}
           {!loading && isAuthed && (
-            <div className="flex items-center gap-3">
-              {/* 가입 승인된 멤버: 드롭다운 메뉴 안에 로그아웃 포함 */}
+            <div className="ml-1 flex items-center gap-2">
               {hasOrganization && userItems.length > 0 ? (
                 <div className="relative dropdown-menu">
                   <button
                     type="button"
-                    onClick={() => toggleDropdown('user')}
-                    className="hover:text-black flex items-center gap-1"
+                    onClick={() => toggleDropdown("user")}
+                    className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-neutral-700 hover:border-slate-300 hover:text-slate-900"
                   >
-                    {userMenuLabel}
+                    <span className="max-w-[180px] truncate">{userMenuLabel}</span>
                     <span className="text-xs">▼</span>
                   </button>
-                  {dropdownOpen === 'user' && (
-                    <div className="absolute top-full left-0 mt-1 bg-white border border-neutral-200 rounded-lg shadow-lg py-1 min-w-[140px] z-50">
+                  {dropdownOpen === "user" && (
+                    <div className="absolute right-0 top-full z-50 mt-2 min-w-[180px] rounded-xl border border-slate-200 bg-white p-1 shadow-xl">
                       {userItems.map((item, index) => (
                         <Link
                           key={`${item.href}-${index}`}
                           href={item.href}
-                          className="block px-4 py-2 hover:bg-neutral-50"
+                          className="block rounded-lg px-3 py-2 text-sm text-neutral-700 hover:bg-slate-50 hover:text-slate-900"
                           onClick={() => setDropdownOpen(null)}
                         >
                           {item.label}
                         </Link>
                       ))}
-                      {/* 로그아웃 버튼 - 드롭다운 맨 아래에 구분선과 함께 배치 */}
-                      <div className="border-t border-neutral-200 my-1"></div>
+                      <div className="my-1 border-t border-slate-100" />
                       <button
                         type="button"
                         onClick={() => {
                           setDropdownOpen(null);
-                          handleSignOut();
+                          void handleSignOut();
                         }}
-                        className="w-full text-left px-4 py-2 hover:bg-neutral-50 text-neutral-600"
+                        className="block w-full rounded-lg px-3 py-2 text-left text-sm text-neutral-600 hover:bg-slate-50 hover:text-slate-900"
                       >
                         로그아웃
                       </button>
@@ -108,13 +119,14 @@ export default function Header() {
                   )}
                 </div>
               ) : (
-                /* 가입 신청 대기 중인 사용자: 사용자 이름과 로그아웃 버튼만 표시 */
                 <>
-                  <span className="text-sm text-neutral-600">{userMenuLabel}</span>
+                  <span className="max-w-[180px] truncate rounded-full border border-slate-200 bg-white px-3 py-1.5 text-neutral-700">
+                    {userMenuLabel}
+                  </span>
                   <button
                     type="button"
-                    onClick={handleSignOut}
-                    className="hover:text-black text-sm text-neutral-600"
+                    onClick={() => void handleSignOut()}
+                    className="rounded-full px-3 py-1.5 text-neutral-600 hover:bg-slate-50 hover:text-slate-900"
                   >
                     로그아웃
                   </button>
@@ -123,37 +135,36 @@ export default function Header() {
             </div>
           )}
 
-          {/* Login button (if not authenticated) */}
           {!loading && !isAuthed && (
-            <Link href="/login" className="hover:text-black">
+            <Link
+              href="/login"
+              className="rounded-full border border-slate-200 bg-white px-4 py-1.5 text-neutral-700 hover:border-slate-300 hover:text-slate-900"
+            >
               로그인
             </Link>
           )}
 
-          {/* Notification badge (로그인된 경우) */}
           {((!loading && isAuthed) || (loading && hasLocalStorageSession === true)) && (
             <NotificationBadge />
           )}
         </nav>
 
-        {/* Mobile Menu Button */}
-        <div className="md:hidden flex items-center gap-2">
-          {/* Notification badge (로그인된 경우) */}
+        <div className="flex items-center gap-2 md:hidden">
           {((!loading && isAuthed) || (loading && hasLocalStorageSession === true)) && (
             <NotificationBadge />
           )}
           <button
             type="button"
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="p-2 text-neutral-600 hover:text-black"
+            onClick={() => setMobileMenuOpen((prev) => !prev)}
+            className="rounded-lg p-2 text-neutral-600 hover:bg-slate-100 hover:text-slate-900"
             aria-label="메뉴 열기"
           >
             {mobileMenuOpen ? (
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
             ) : (
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
               </svg>
             )}
@@ -161,59 +172,67 @@ export default function Header() {
         </div>
       </div>
 
-      {/* Mobile Menu */}
       {mobileMenuOpen && (
-        <div className="md:hidden border-t border-neutral-200 bg-white">
-          <nav className="px-4 py-3 space-y-2">
-            {/* Main navigation items */}
+        <div className="border-t border-slate-200 bg-white/95 backdrop-blur md:hidden">
+          <nav className="mx-auto w-full max-w-6xl space-y-2 px-4 py-3">
             {mainNavItems.map((item) => (
               <Link
                 key={item.href}
                 href={item.href}
-                className="block py-2 text-sm text-neutral-600 hover:text-black"
+                className={`block rounded-lg px-3 py-2 text-sm ${
+                  pathname === item.href || pathname.startsWith(`${item.href}/`)
+                    ? "bg-slate-100 font-medium text-slate-900"
+                    : "text-neutral-600 hover:bg-slate-50 hover:text-slate-900"
+                }`}
                 onClick={() => setMobileMenuOpen(false)}
               >
                 {item.label}
               </Link>
             ))}
 
-            {/* User menu items */}
+            {!loading && isAuthed && userItems.length > 0 && (
+              <>
+                <div className="my-1 border-t border-slate-100" />
+                <p className="px-3 pt-1 text-[11px] font-semibold tracking-wide text-slate-400">
+                  내 메뉴
+                </p>
+                {userItems.map((item, index) => (
+                  <Link
+                    key={`${item.href}-${index}`}
+                    href={item.href}
+                    className={`block rounded-lg px-3 py-2 text-sm ${
+                      pathname === item.href || pathname.startsWith(`${item.href}/`)
+                        ? "bg-slate-100 font-medium text-slate-900"
+                        : "text-neutral-600 hover:bg-slate-50 hover:text-slate-900"
+                    }`}
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    {item.label}
+                  </Link>
+                ))}
+              </>
+            )}
+
             {!loading && isAuthed && (
               <>
-                {userItems.length > 0 && (
-                  <>
-                    <div className="border-t border-neutral-200 my-2"></div>
-                    {userItems.map((item, index) => (
-                      <Link
-                        key={`${item.href}-${index}`}
-                        href={item.href}
-                        className="block py-2 text-sm text-neutral-600 hover:text-black"
-                        onClick={() => setMobileMenuOpen(false)}
-                      >
-                        {item.label}
-                      </Link>
-                    ))}
-                  </>
-                )}
-                <div className="border-t border-neutral-200 my-2"></div>
+                <div className="my-1 border-t border-slate-100" />
                 <button
                   type="button"
                   onClick={() => {
                     setMobileMenuOpen(false);
-                    handleSignOut();
+                    void handleSignOut();
                   }}
-                  className="block w-full text-left py-2 text-sm text-neutral-600 hover:text-black"
+                  className="block w-full rounded-lg px-3 py-2 text-left text-sm text-neutral-600 hover:bg-slate-50 hover:text-slate-900"
                 >
                   로그아웃
                 </button>
               </>
             )}
 
-            {/* Login button (if not authenticated) */}
             {!loading && !isAuthed && (
               <Link
                 href="/login"
-                className="block py-2 text-sm text-neutral-600 hover:text-black"
+                className="block rounded-lg px-3 py-2 text-sm text-neutral-600 hover:bg-slate-50 hover:text-slate-900"
                 onClick={() => setMobileMenuOpen(false)}
               >
                 로그인

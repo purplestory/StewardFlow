@@ -252,24 +252,24 @@ export default function AssetDetailClient() {
           </div>
           
           <div className="space-y-3">
-            <div className="flex items-center gap-3">
-              <span className="text-sm font-semibold text-neutral-700 min-w-[100px]">
+            <div className="flex items-start gap-3">
+              <span className="min-w-[100px] text-sm font-semibold text-neutral-700">
                 소유 범위
               </span>
               <span className="text-sm text-neutral-600">
                 {asset.owner_scope === "organization" ? "기관 공용" : "부서 소유"}
               </span>
-              {asset.owner_scope === "department" && (
-                <>
-                  <span className="text-sm font-semibold text-neutral-700 min-w-[100px]">
-                    소유 부서
-                  </span>
-                  <span className="text-sm text-neutral-600">
-                    {asset.owner_department}
-                  </span>
-                </>
-              )}
             </div>
+            {asset.owner_scope === "department" && (
+              <div className="flex items-start gap-3">
+                <span className="min-w-[100px] text-sm font-semibold text-neutral-700">
+                  소유 부서
+                </span>
+                <span className="text-sm text-neutral-600">
+                  {asset.owner_department}
+                </span>
+              </div>
+            )}
             
             <div className="flex items-start gap-3">
               <span className="text-sm font-semibold text-neutral-700 min-w-[100px]">

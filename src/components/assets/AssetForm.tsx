@@ -8,6 +8,7 @@ import { generateShortId } from "@/lib/short-id";
 import { isUUID } from "@/lib/short-id";
 import Notice from "@/components/common/Notice";
 import ImageUploadField from "@/components/ui/ImageUploadField";
+import IsbnScannerModal from "@/components/ui/IsbnScannerModal";
 import {
   Dialog,
   DialogContent,
@@ -48,6 +49,22 @@ type AssetFormProps = {
   };
 };
 
+type BookLookupResult = {
+  isbn: string;
+  title: string | null;
+  author: string | null;
+  publisher: string | null;
+  publishedYear: number | null;
+  coverImageUrl: string | null;
+  source: "data4library" | "openlibrary";
+};
+
+const BOOK_CATEGORY_PATTERN = /(도서|책|book|북카페|library)/i;
+
+function normalizeIsbn(raw: string): string {
+  return raw.replace(/[^0-9Xx]/g, "").toUpperCase();
+}
+
 export default function AssetForm({ asset }: AssetFormProps = {}) {
   const queryClient = useQueryClient();
   const [imageFiles, setImageFiles] = useState<File[]>([]);
@@ -86,6 +103,14 @@ export default function AssetForm({ asset }: AssetFormProps = {}) {
   const [isDeleting, setIsDeleting] = useState(false);
   const [deletionReason, setDeletionReason] = useState("");
   const [deletionReasonOther, setDeletionReasonOther] = useState("");
+  const [categoryValue, setCategoryValue] = useState(asset?.category || "");
+  const [nameValue, setNameValue] = useState(asset?.name || "");
+  const [modelNameValue, setModelNameValue] = useState(asset?.model_name || "");
+  const [isbnInput, setIsbnInput] = useState("");
+  const [isbnLookupLoading, setIsbnLookupLoading] = useState(false);
+  const [isbnLookupMessage, setIsbnLookupMessage] = useState<string | null>(null);
+  const [bookLookupResult, setBookLookupResult] = useState<BookLookupResult | null>(null);
+  const [showIsbnScanner, setShowIsbnScanner] = useState(false);
 
   const previews = useMemo(() => previewUrls, [previewUrls]);
   const isEditMode = Boolean(asset);
@@ -96,11 +121,22 @@ export default function AssetForm({ asset }: AssetFormProps = {}) {
     if (asset.owner_scope === "organization") return true;
     return asset.owner_department === currentUserDepartment;
   }, [isEditMode, asset, currentUserRole, currentUserDepartment]);
+  const selectedCategoryLabel = useMemo(() => {
+    const found = categories.find((category) => category.value === categoryValue);
+    return found?.label ?? "";
+  }, [categories, categoryValue]);
+  const isBookCategory = useMemo(
+    () => BOOK_CATEGORY_PATTERN.test(`${categoryValue} ${selectedCategoryLabel}`),
+    [categoryValue, selectedCategoryLabel]
+  );
 
   // Load existing asset data in edit mode
   useEffect(() => {
     if (!asset) return;
 
+    setNameValue(asset.name || "");
+    setModelNameValue(asset.model_name || "");
+    setCategoryValue(asset.category || "");
     setOwnerScope(asset.owner_scope);
     setOwnerDepartment(asset.owner_department);
     setManagedByDepartment(asset.managed_by_department || "");
@@ -357,6 +393,56 @@ export default function AssetForm({ asset }: AssetFormProps = {}) {
     }
   };
 
+  const lookupBookByIsbn = async (isbnOverride?: string) => {
+    const normalized = normalizeIsbn(isbnOverride ?? isbnInput);
+    if (!(normalized.length === 10 || normalized.length === 13)) {
+      setIsbnLookupMessage("ISBN 10자리 또는 13자리를 입력해주세요.");
+      return;
+    }
+
+    setIsbnInput(normalized);
+    setIsbnLookupLoading(true);
+    setIsbnLookupMessage(null);
+
+    try {
+      const response = await fetch(`/api/books/lookup?isbn=${encodeURIComponent(normalized)}`, {
+        method: "GET",
+        headers: { Accept: "application/json" },
+        cache: "no-store",
+      });
+
+      const result = (await response.json().catch(() => null)) as
+        | {
+            ok?: boolean;
+            message?: string;
+            book?: BookLookupResult;
+          }
+        | null;
+
+      if (!response.ok || !result?.ok || !result.book) {
+        setBookLookupResult(null);
+        setIsbnLookupMessage(result?.message ?? "도서 정보를 찾지 못했습니다.");
+        return;
+      }
+
+      setBookLookupResult(result.book);
+      setNameValue((prev) => (result.book?.title ? result.book.title : prev));
+      if (result.book.author) {
+        setModelNameValue(result.book.author);
+      }
+      setIsbnLookupMessage(
+        `도서 정보를 불러왔습니다. (${result.book.source === "data4library" ? "공공 API" : "Open Library"})`
+      );
+    } catch (error) {
+      setBookLookupResult(null);
+      setIsbnLookupMessage(
+        error instanceof Error ? `조회 실패: ${error.message}` : "도서 정보 조회에 실패했습니다."
+      );
+    } finally {
+      setIsbnLookupLoading(false);
+    }
+  };
+
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setMessage(null);
@@ -365,8 +451,8 @@ export default function AssetForm({ asset }: AssetFormProps = {}) {
     if (!form) return;
 
     const formData = new FormData(form);
-    const name = formData.get("name")?.toString().trim();
-    const modelName = formData.get("model_name")?.toString().trim() || null;
+    const name = nameValue.trim();
+    const modelName = modelNameValue.trim() || null;
     
     // 일반 사용자는 항상 자신의 부서로, 관리자는 선택한 값 사용
     const ownerScopeInput = canRegisterOrganizationWide
@@ -458,7 +544,7 @@ export default function AssetForm({ asset }: AssetFormProps = {}) {
         const updateData: Record<string, unknown> = {
           name,
           image_url: imageUrl,
-          category: formData.get("category")?.toString() || null,
+          category: categoryValue || null,
           owner_scope: ownerScopeInput,
           owner_department:
             ownerScopeInput === "organization"
@@ -547,7 +633,7 @@ export default function AssetForm({ asset }: AssetFormProps = {}) {
           short_id: shortId,
           name,
           image_url: imageUrl,
-          category: formData.get("category")?.toString() || null,
+          category: categoryValue || null,
           owner_scope: ownerScopeInput,
           owner_department:
             ownerScopeInput === "organization"
@@ -620,6 +706,12 @@ export default function AssetForm({ asset }: AssetFormProps = {}) {
         if (form) {
           form.reset();
         }
+        setNameValue("");
+        setModelNameValue("");
+        setCategoryValue("");
+        setIsbnInput("");
+        setBookLookupResult(null);
+        setIsbnLookupMessage(null);
         
         // 모든 blob URL 해제 (기존 이미지 URL은 해제하지 않음)
         previewUrls.forEach(url => {
@@ -715,12 +807,81 @@ export default function AssetForm({ asset }: AssetFormProps = {}) {
 
       <div className="form-grid">
         <label className="form-grid-item">
+          <span className="form-label">카테고리</span>
+          <select
+            name="category"
+            className="form-select"
+            value={categoryValue}
+            onChange={(event) => setCategoryValue(event.target.value)}
+          >
+            <option value="">선택</option>
+            {categories.map((category) => (
+              <option key={category.value} value={category.value}>
+                {category.label}
+              </option>
+            ))}
+          </select>
+        </label>
+        {isBookCategory && (
+          <div className="form-grid-item md:col-span-2">
+            <span className="form-label">도서 ISBN 조회</span>
+            <div className="mt-2 space-y-2 rounded-lg border border-neutral-200 bg-neutral-50 p-3">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                <input
+                  type="text"
+                  className="form-input flex-1"
+                  value={isbnInput}
+                  onChange={(event) => setIsbnInput(event.target.value)}
+                  placeholder="ISBN 입력 (예: 9781234567890)"
+                  inputMode="numeric"
+                />
+                <button
+                  type="button"
+                  className="btn-ghost whitespace-nowrap"
+                  onClick={() => setShowIsbnScanner(true)}
+                  disabled={isbnLookupLoading}
+                >
+                  카메라 스캔
+                </button>
+                <button
+                  type="button"
+                  className="btn-primary whitespace-nowrap"
+                  onClick={() => void lookupBookByIsbn()}
+                  disabled={isbnLookupLoading}
+                >
+                  {isbnLookupLoading ? "조회 중..." : "도서정보 불러오기"}
+                </button>
+              </div>
+              {isbnLookupMessage && (
+                <p
+                  className={`text-xs ${
+                    isbnLookupMessage.includes("실패") || isbnLookupMessage.includes("못")
+                      ? "text-rose-600"
+                      : "text-emerald-700"
+                  }`}
+                >
+                  {isbnLookupMessage}
+                </p>
+              )}
+              {bookLookupResult && (
+                <div className="grid gap-1 text-xs text-neutral-600 sm:grid-cols-2">
+                  <p>제목: {bookLookupResult.title || "-"}</p>
+                  <p>저자: {bookLookupResult.author || "-"}</p>
+                  <p>출판사: {bookLookupResult.publisher || "-"}</p>
+                  <p>발행연도: {bookLookupResult.publishedYear || "-"}</p>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+        <label className="form-grid-item">
           <span className="form-label">물품명</span>
           <input
             name="name"
             className="form-input"
             placeholder="예: 무선 마이크 세트"
-            defaultValue={asset?.name || ""}
+            value={nameValue}
+            onChange={(event) => setNameValue(event.target.value)}
             required
           />
         </label>
@@ -734,7 +895,8 @@ export default function AssetForm({ asset }: AssetFormProps = {}) {
             type="text"
             className="form-input"
             placeholder="예: SHURE BLX24R/SM58"
-            defaultValue={asset?.model_name || ""}
+            value={modelNameValue}
+            onChange={(event) => setModelNameValue(event.target.value)}
           />
         </label>
         {canRegisterOrganizationWide && (
@@ -922,21 +1084,6 @@ export default function AssetForm({ asset }: AssetFormProps = {}) {
             </select>
         </label>
         <label className="form-grid-item">
-          <span className="form-label">카테고리</span>
-          <select
-            name="category"
-            className="form-select"
-            defaultValue={asset?.category || ""}
-          >
-            <option value="">선택</option>
-            {categories.map((category) => (
-              <option key={category.value} value={category.value}>
-                {category.label}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="form-grid-item">
           <span className="form-label">태그</span>
           <input
             name="tags"
@@ -989,6 +1136,15 @@ export default function AssetForm({ asset }: AssetFormProps = {}) {
           </Notice>
         </div>
       )}
+
+      <IsbnScannerModal
+        open={showIsbnScanner}
+        onOpenChange={setShowIsbnScanner}
+        onDetected={(isbn) => {
+          setIsbnInput(isbn);
+          void lookupBookByIsbn(isbn);
+        }}
+      />
 
       <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
         <button

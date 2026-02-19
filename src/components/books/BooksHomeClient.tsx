@@ -48,6 +48,37 @@ type BookSummary = {
   }>;
 };
 
+type BookStatus = "available" | "requested" | "borrowed" | "overdue" | "archived";
+
+type BookItem = {
+  id: string;
+  title: string;
+  author: string | null;
+  publisher: string | null;
+  published_year: number | null;
+  status: BookStatus;
+  owner_scope: "organization" | "member";
+  shelf_label: string | null;
+  cover_image_url: string | null;
+  tags: string[] | null;
+};
+
+const BOOK_STATUS_LABEL: Record<BookStatus, string> = {
+  available: "대여 가능",
+  requested: "요청 처리중",
+  borrowed: "대여 중",
+  overdue: "연체",
+  archived: "보관됨",
+};
+
+const BOOK_STATUS_BADGE_CLASS: Record<BookStatus, string> = {
+  available: "bg-emerald-50 text-emerald-700 ring-emerald-200",
+  requested: "bg-amber-50 text-amber-700 ring-amber-200",
+  borrowed: "bg-blue-50 text-blue-700 ring-blue-200",
+  overdue: "bg-rose-50 text-rose-700 ring-rose-200",
+  archived: "bg-neutral-100 text-neutral-600 ring-neutral-200",
+};
+
 export default function BooksHomeClient() {
   const [loading, setLoading] = useState(true);
   const [isAuthed, setIsAuthed] = useState(false);
@@ -55,6 +86,10 @@ export default function BooksHomeClient() {
   const [booksEnabled, setBooksEnabled] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [summary, setSummary] = useState<BookSummary | null>(null);
+  const [bookItems, setBookItems] = useState<BookItem[]>([]);
+  const [booksLoadError, setBooksLoadError] = useState<string | null>(null);
+  const [query, setQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"all" | BookStatus>("all");
 
   useEffect(() => {
     let isMounted = true;
@@ -116,28 +151,45 @@ export default function BooksHomeClient() {
         return;
       }
 
-      const response = await fetch("/api/books/gamification/summary?period=monthly", {
-        method: "GET",
-        headers: {
-          Accept: "application/json",
-          Authorization: `Bearer ${session.access_token}`,
-        },
-        cache: "no-store",
-      });
-
-      const result = (await response.json().catch(() => null)) as
-        | { ok?: boolean; message?: string; summary?: BookSummary }
-        | null;
+      const [summaryResponse, booksResponse] = await Promise.all([
+        fetch("/api/books/gamification/summary?period=monthly", {
+          method: "GET",
+          headers: {
+            Accept: "application/json",
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          cache: "no-store",
+        }),
+        supabase
+          .from("book_items")
+          .select(
+            "id,title,author,publisher,published_year,status,owner_scope,shelf_label,cover_image_url,tags,created_at"
+          )
+          .eq("organization_id", profileData.organization_id)
+          .eq("is_active", true)
+          .order("created_at", { ascending: false })
+          .limit(200),
+      ]);
 
       if (!isMounted) return;
 
-      if (!response.ok || !result?.ok || !result.summary) {
-        setMessage(result?.message ?? "도서 요약 정보를 불러오지 못했습니다.");
-        setLoading(false);
-        return;
+      const summaryResult = (await summaryResponse.json().catch(() => null)) as
+        | { ok?: boolean; message?: string; summary?: BookSummary }
+        | null;
+
+      if (!summaryResponse.ok || !summaryResult?.ok || !summaryResult.summary) {
+        setMessage(summaryResult?.message ?? "도서 요약 정보를 불러오지 못했습니다.");
+      } else {
+        setSummary(summaryResult.summary);
       }
 
-      setSummary(result.summary);
+      if (booksResponse.error) {
+        setBooksLoadError(`도서 목록 조회 실패: ${booksResponse.error.message}`);
+      } else {
+        setBooksLoadError(null);
+        setBookItems((booksResponse.data ?? []) as BookItem[]);
+      }
+
       setLoading(false);
     };
 
@@ -185,6 +237,21 @@ export default function BooksHomeClient() {
     ];
   }, [summary]);
 
+  const filteredBooks = useMemo(() => {
+    const normalized = query.trim().toLowerCase();
+    return bookItems.filter((book) => {
+      const matchesQuery =
+        normalized.length === 0 ||
+        book.title.toLowerCase().includes(normalized) ||
+        (book.author ?? "").toLowerCase().includes(normalized) ||
+        (book.publisher ?? "").toLowerCase().includes(normalized) ||
+        (book.tags ?? []).some((tag) => tag.toLowerCase().includes(normalized));
+
+      const matchesStatus = statusFilter === "all" || book.status === statusFilter;
+      return matchesQuery && matchesStatus;
+    });
+  }, [bookItems, query, statusFilter]);
+
   if (loading) {
     return <Notice>도서 라운지 정보를 불러오는 중입니다.</Notice>;
   }
@@ -224,9 +291,6 @@ export default function BooksHomeClient() {
         description="도서 대여, 독서 기록, 스트릭, 응원 기능을 위한 별도 공간입니다."
         actions={
           <div className="flex flex-wrap gap-2">
-            <Link href="/assets/new" className="btn-ghost">
-              도서 등록
-            </Link>
             {isManager && (
               <Link href="/books/manage" className="btn-primary">
                 도서 운영
@@ -250,6 +314,92 @@ export default function BooksHomeClient() {
           {message}
         </Notice>
       )}
+
+      <SectionCard
+        title="도서 카탈로그"
+        description="기관 도서와 공유 도서를 검색하고 상태를 확인할 수 있습니다."
+      >
+        <div className="mb-4 grid gap-3 md:grid-cols-[1.6fr_0.8fr]">
+          <input
+            className="form-input"
+            placeholder="제목, 저자, 출판사, 태그 검색"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+          />
+          <select
+            className="form-select"
+            value={statusFilter}
+            onChange={(event) => setStatusFilter(event.target.value as "all" | BookStatus)}
+          >
+            <option value="all">전체 상태</option>
+            <option value="available">대여 가능</option>
+            <option value="requested">요청 처리중</option>
+            <option value="borrowed">대여 중</option>
+            <option value="overdue">연체</option>
+            <option value="archived">보관됨</option>
+          </select>
+        </div>
+
+        {booksLoadError ? (
+          <Notice variant="warning" className="text-left">
+            {booksLoadError}
+          </Notice>
+        ) : filteredBooks.length > 0 ? (
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            {filteredBooks.map((book) => (
+              <article
+                key={book.id}
+                className="rounded-xl border border-neutral-200 bg-white p-3 shadow-[0_4px_12px_rgba(15,23,42,0.04)]"
+              >
+                <div className="flex items-start gap-3">
+                  <div className="h-[84px] w-[64px] shrink-0 overflow-hidden rounded-lg border border-neutral-200 bg-neutral-100">
+                    {book.cover_image_url ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={book.cover_image_url}
+                        alt={book.title}
+                        className="h-full w-full object-cover"
+                        loading="lazy"
+                      />
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center text-[10px] text-neutral-500">
+                        표지 없음
+                      </div>
+                    )}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="line-clamp-2 text-sm font-semibold text-slate-900">{book.title}</p>
+                    <p className="mt-1 text-xs text-neutral-600">{book.author || "저자 정보 없음"}</p>
+                    <p className="mt-0.5 text-xs text-neutral-500">
+                      {book.publisher || "출판사 미상"}
+                      {book.published_year ? ` · ${book.published_year}` : ""}
+                    </p>
+                    <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                      <span
+                        className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium ring-1 ${
+                          BOOK_STATUS_BADGE_CLASS[book.status]
+                        }`}
+                      >
+                        {BOOK_STATUS_LABEL[book.status]}
+                      </span>
+                      <span className="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-[11px] text-slate-700">
+                        {book.owner_scope === "organization" ? "기관 도서" : "개인 공유"}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                {book.shelf_label && (
+                  <p className="mt-2 text-xs text-neutral-500">서가: {book.shelf_label}</p>
+                )}
+              </article>
+            ))}
+          </div>
+        ) : (
+          <Notice className="p-4">
+            조건에 맞는 도서가 없습니다.
+          </Notice>
+        )}
+      </SectionCard>
 
       <SectionCard
         title="월간 리더보드"

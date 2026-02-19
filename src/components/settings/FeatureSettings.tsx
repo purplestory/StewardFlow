@@ -23,6 +23,8 @@ type MenuOrderItem = {
   enabled: boolean;
 };
 
+const MENU_KEYS = ["equipment", "spaces", "vehicles", "books"] as const;
+
 
 type FeatureSettingsProps = {
   organizationId: string | null;
@@ -64,24 +66,51 @@ export default function FeatureSettings({ organizationId }: FeatureSettingsProps
     rawOrder: unknown,
     nextFeatures: OrganizationFeatures
   ): MenuOrderItem[] => {
-    const defaultOrder: MenuOrderItem[] = [
-      { key: "equipment", enabled: nextFeatures.equipment !== false },
-      { key: "spaces", enabled: nextFeatures.spaces !== false },
-      { key: "vehicles", enabled: nextFeatures.vehicles === true },
-      { key: "books", enabled: nextFeatures.books === true },
-    ];
+    const getFeatureEnabled = (key: MenuOrderItem["key"]) => {
+      if (key === "equipment") return nextFeatures.equipment !== false;
+      if (key === "spaces") return nextFeatures.spaces !== false;
+      if (key === "vehicles") return nextFeatures.vehicles === true;
+      return nextFeatures.books === true;
+    };
+
+    const defaultOrder: MenuOrderItem[] = MENU_KEYS.map((key) => ({
+      key,
+      enabled: getFeatureEnabled(key),
+    }));
 
     if (!Array.isArray(rawOrder) || rawOrder.length === 0) {
       return defaultOrder;
     }
 
     const source = rawOrder as Array<{ key?: string; enabled?: boolean }>;
-    return defaultOrder.map((defaultItem) => {
-      const found = source.find((item) => item.key === defaultItem.key);
-      if (!found) return defaultItem;
+    const validSource = source.filter(
+      (item): item is { key: MenuOrderItem["key"]; enabled?: boolean } =>
+        typeof item?.key === "string" && MENU_KEYS.includes(item.key as MenuOrderItem["key"])
+    );
+
+    const enabledMap = new Map<MenuOrderItem["key"], boolean>();
+    const orderedKeys: MenuOrderItem["key"][] = [];
+    const seen = new Set<MenuOrderItem["key"]>();
+
+    validSource.forEach((item) => {
+      if (seen.has(item.key)) return;
+      seen.add(item.key);
+      orderedKeys.push(item.key);
+      if (typeof item.enabled === "boolean") {
+        enabledMap.set(item.key, item.enabled);
+      }
+    });
+
+    MENU_KEYS.forEach((key) => {
+      if (!seen.has(key)) orderedKeys.push(key);
+    });
+
+    return orderedKeys.map((key) => {
+      const featureEnabled = getFeatureEnabled(key);
+      const persistedEnabled = enabledMap.get(key);
       return {
-        key: defaultItem.key,
-        enabled: found.enabled ?? defaultItem.enabled,
+        key,
+        enabled: (persistedEnabled ?? featureEnabled) && featureEnabled,
       };
     });
   };

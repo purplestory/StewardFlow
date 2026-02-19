@@ -35,6 +35,12 @@ type NavItem = {
   label: string;
 };
 
+const MENU_KEYS = ["equipment", "spaces", "vehicles", "books"] as const;
+
+function isMenuKey(value: string): value is (typeof MENU_KEYS)[number] {
+  return MENU_KEYS.includes(value as (typeof MENU_KEYS)[number]);
+}
+
 const hasLocalStorageSession = () => {
   if (typeof window === "undefined") {
     return null;
@@ -86,31 +92,40 @@ const normalizeMenuOrder = (
     return buildDefaultMenuOrder(features);
   }
 
-  const orderMap = new Map(rawOrder.map((item) => [item.key, item]));
-  const defaultOrder = ["equipment", "spaces", "vehicles", "books"];
+  const getFeatureEnabled = (key: (typeof MENU_KEYS)[number]) =>
+    key === "equipment"
+      ? features.equipment !== false
+      : key === "spaces"
+        ? features.spaces !== false
+        : key === "vehicles"
+          ? features.vehicles === true
+          : features.books === true;
 
-  return defaultOrder.map((key) => {
-    const existing = orderMap.get(key);
-    if (existing) {
-      if (key === "vehicles" || key === "books") {
-        return {
-          ...existing,
-          enabled: key === "vehicles" ? features.vehicles === true : features.books === true,
-        };
-      }
-      return existing;
-    }
+  const validSource = rawOrder.filter(
+    (item): item is { key: (typeof MENU_KEYS)[number]; enabled: boolean } =>
+      typeof item?.key === "string" && isMenuKey(item.key)
+  );
 
+  const persistedEnabled = new Map<(typeof MENU_KEYS)[number], boolean>();
+  const orderedKeys: (typeof MENU_KEYS)[number][] = [];
+  const seen = new Set<(typeof MENU_KEYS)[number]>();
+
+  validSource.forEach((item) => {
+    if (seen.has(item.key)) return;
+    seen.add(item.key);
+    orderedKeys.push(item.key);
+    persistedEnabled.set(item.key, Boolean(item.enabled));
+  });
+
+  MENU_KEYS.forEach((key) => {
+    if (!seen.has(key)) orderedKeys.push(key);
+  });
+
+  return orderedKeys.map((key) => {
+    const featureEnabled = getFeatureEnabled(key);
     return {
       key,
-      enabled:
-        key === "vehicles"
-          ? features.vehicles === true
-          : key === "books"
-            ? features.books === true
-          : key === "equipment"
-            ? features.equipment !== false
-            : features.spaces !== false,
+      enabled: (persistedEnabled.get(key) ?? featureEnabled) && featureEnabled,
     };
   });
 };

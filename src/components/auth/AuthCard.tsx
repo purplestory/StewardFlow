@@ -295,10 +295,6 @@ export default function AuthCard() {
         provider: "kakao",
         options: {
           redirectTo: redirectUrl,
-          queryParams: {
-            redirect_to: redirectUrl,
-            prompt: "select_account", // 항상 계정 선택 화면 표시
-          },
         },
       });
 

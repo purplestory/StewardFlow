@@ -225,7 +225,6 @@ function JoinPageContent() {
         provider: "kakao",
         options: {
           redirectTo: `${origin}/auth/callback`,
-          queryParams: { prompt: "select_account" },
         },
       });
 

@@ -180,6 +180,45 @@ export async function GET(request: Request) {
         }));
 
   const myRank = leaderboard.find((entry) => entry.profileId === user.id)?.rankNo ?? null;
+  const profileIds = Array.from(
+    new Set([
+      ...leaderboard.map((entry) => entry.profileId),
+      ...(cheersRes.data ?? []).map((entry) => entry.from_profile_id),
+    ])
+  ).filter((id): id is string => Boolean(id));
+
+  const profileMap = new Map<string, { name: string | null; department: string | null }>();
+  if (profileIds.length > 0) {
+    const { data: profileRows } = await admin
+      .from("profiles")
+      .select("id,name,department")
+      .in("id", profileIds);
+
+    (profileRows ?? []).forEach((row) => {
+      profileMap.set(row.id, {
+        name: row.name ?? null,
+        department: row.department ?? null,
+      });
+    });
+  }
+
+  const leaderboardWithProfile = leaderboard.map((entry) => {
+    const profileInfo = profileMap.get(entry.profileId);
+    return {
+      ...entry,
+      profileName: profileInfo?.name ?? null,
+      profileDepartment: profileInfo?.department ?? null,
+    };
+  });
+
+  const recentCheers = (cheersRes.data ?? []).map((entry) => {
+    const fromProfile = profileMap.get(entry.from_profile_id);
+    return {
+      ...entry,
+      from_profile_name: fromProfile?.name ?? null,
+      from_profile_department: fromProfile?.department ?? null,
+    };
+  });
 
   return NextResponse.json({
     ok: true,
@@ -189,9 +228,9 @@ export async function GET(request: Request) {
       gamificationEnabled: true,
       settings,
       myProgress: progressRes.data ?? null,
-      leaderboard,
+      leaderboard: leaderboardWithProfile,
       myRank,
-      recentCheers: cheersRes.data ?? [],
+      recentCheers,
     },
   });
 }

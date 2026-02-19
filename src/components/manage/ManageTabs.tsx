@@ -44,7 +44,8 @@ export default function ManageTabs() {
             if (tab.key === "resources") {
               isActive = pathname.startsWith("/assets/manage") ||
                         pathname.startsWith("/spaces/manage") ||
-                        pathname.startsWith("/vehicles/manage");
+                        pathname.startsWith("/vehicles/manage") ||
+                        pathname.startsWith("/books/manage");
             } else {
               isActive = pathname.startsWith(tab.href);
             }

@@ -10,6 +10,7 @@ type OrganizationFeatures = {
   equipment?: boolean;
   spaces?: boolean;
   vehicles?: boolean;
+  books?: boolean;
 };
 
 function PlatformIntroContent() {
@@ -65,6 +66,7 @@ function PlatformIntroContent() {
           equipment: orgData.features?.equipment ?? true,
           spaces: orgData.features?.spaces ?? true,
           vehicles: orgData.features?.vehicles ?? false,
+          books: orgData.features?.books ?? false,
         });
       }
     };
@@ -87,14 +89,15 @@ function PlatformIntroContent() {
     };
   }, [router, searchParams]);
 
-  const isCategoryEnabled = (category: "assets" | "spaces" | "vehicles") => {
+  const isCategoryEnabled = (category: "assets" | "spaces" | "vehicles" | "books") => {
     if (!isAuthenticated || !features) return false;
     if (category === "assets") return features.equipment !== false;
     if (category === "spaces") return features.spaces !== false;
-    return features.vehicles === true;
+    if (category === "vehicles") return features.vehicles === true;
+    return features.books === true;
   };
 
-  const handleCategoryClick = (category: "assets" | "spaces" | "vehicles") => {
+  const handleCategoryClick = (category: "assets" | "spaces" | "vehicles" | "books") => {
     if (!isCategoryEnabled(category)) {
       return;
     }
@@ -106,7 +109,11 @@ function PlatformIntroContent() {
       router.push("/spaces");
       return;
     }
-    router.push("/vehicles");
+    if (category === "vehicles") {
+      router.push("/vehicles");
+      return;
+    }
+    router.push("/books");
   };
 
   const categoryCards = [
@@ -156,6 +163,20 @@ function PlatformIntroContent() {
         </>
       ),
     },
+    {
+      key: "books" as const,
+      title: "도서",
+      description: "북카페/개인 책장을 연결해 대여, 반납, 독서기록과 응원까지 운영합니다.",
+      accent: "from-indigo-500/20 to-sky-500/10",
+      icon: (
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={1.8}
+          d="M5 5.5A2.5 2.5 0 017.5 3H20v15H7.5A2.5 2.5 0 005 20.5V5.5zm0 0A2.5 2.5 0 017.5 8H20"
+        />
+      ),
+    },
   ];
 
   const benefitItems = [
@@ -179,7 +200,7 @@ function PlatformIntroContent() {
 
   return (
     <div className="space-y-8">
-      <section className="relative overflow-hidden rounded-3xl border border-slate-200 bg-white px-6 py-10 shadow-[0_14px_30px_rgba(15,23,42,0.08)] md:px-10">
+      <section className="relative overflow-hidden rounded-3xl border border-slate-200 bg-white px-6 py-10 shadow-[0_12px_26px_rgba(15,23,42,0.07)] md:px-10">
         <div className="pointer-events-none absolute -right-16 -top-20 h-64 w-64 rounded-full bg-sky-500/10 blur-3xl" />
         <div className="pointer-events-none absolute -left-20 bottom-0 h-56 w-56 rounded-full bg-teal-500/10 blur-3xl" />
         <div className="relative z-10">
@@ -203,21 +224,24 @@ function PlatformIntroContent() {
               교회 현장에 맞게 관리합니다.
             </p>
           </div>
-          <div className="mt-6 grid gap-3 text-sm text-slate-600 md:grid-cols-3">
-            <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
-              조직별 메뉴/권한 설정
+          <div className="mt-7 grid gap-3 text-sm text-slate-700 md:grid-cols-3">
+            <div className="flex items-center gap-2">
+              <span className="h-1.5 w-1.5 rounded-full bg-slate-400" />
+              <span>조직별 메뉴/권한 설정</span>
             </div>
-            <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
-              신청 상태 실시간 반영
+            <div className="flex items-center gap-2">
+              <span className="h-1.5 w-1.5 rounded-full bg-slate-400" />
+              <span>신청 상태 실시간 반영</span>
             </div>
-            <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
-              모바일 친화형 운영 화면
+            <div className="flex items-center gap-2">
+              <span className="h-1.5 w-1.5 rounded-full bg-slate-400" />
+              <span>모바일 친화형 운영 화면</span>
             </div>
           </div>
         </div>
       </section>
 
-      <section className="grid gap-4 md:grid-cols-3">
+      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         {categoryCards.map((card) => {
           const enabled = isCategoryEnabled(card.key);
           return (
@@ -259,19 +283,16 @@ function PlatformIntroContent() {
         })}
       </section>
 
-      <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-[0_10px_24px_rgba(15,23,42,0.07)]">
+      <section className="rounded-2xl border border-slate-200 bg-white p-6">
         <h2 className="text-xl font-semibold text-slate-900">운영 핵심 포인트</h2>
-        <div className="mt-4 grid gap-3 md:grid-cols-2">
+        <ul className="mt-4 divide-y divide-slate-200">
           {benefitItems.map((item) => (
-            <div
-              key={item.title}
-              className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3"
-            >
+            <li key={item.title} className="py-3 first:pt-0 last:pb-0">
               <p className="font-semibold text-slate-900">{item.title}</p>
               <p className="mt-1 text-sm text-slate-600">{item.description}</p>
-            </div>
+            </li>
           ))}
-        </div>
+        </ul>
       </section>
 
       {(!isAuthenticated || (isAuthenticated && !features)) && (

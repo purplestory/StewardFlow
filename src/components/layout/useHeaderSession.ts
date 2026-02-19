@@ -9,12 +9,14 @@ export type OrganizationFeatures = {
   equipment?: boolean;
   spaces?: boolean;
   vehicles?: boolean;
+  books?: boolean;
 };
 
 export type OrganizationMenuLabels = {
   equipment?: string;
   spaces?: string;
   vehicles?: string;
+  books?: string;
 };
 
 export type MenuOrderItem = {
@@ -54,6 +56,7 @@ const normalizeFeatures = (features?: OrganizationFeatures | null): Organization
   equipment: features?.equipment ?? true,
   spaces: features?.spaces ?? true,
   vehicles: features?.vehicles ?? false,
+  books: features?.books ?? false,
 });
 
 const normalizeMenuLabels = (
@@ -64,6 +67,7 @@ const normalizeMenuLabels = (
     equipment: equipmentLabel === "장비" ? "물품" : equipmentLabel,
     spaces: labels?.spaces ?? "공간",
     vehicles: labels?.vehicles ?? "차량",
+    books: labels?.books ?? "도서",
   };
 };
 
@@ -71,6 +75,7 @@ const buildDefaultMenuOrder = (features: OrganizationFeatures): MenuOrderItem[] 
   { key: "equipment", enabled: features.equipment !== false },
   { key: "spaces", enabled: features.spaces !== false },
   { key: "vehicles", enabled: features.vehicles === true },
+  { key: "books", enabled: features.books === true },
 ];
 
 const normalizeMenuOrder = (
@@ -82,13 +87,16 @@ const normalizeMenuOrder = (
   }
 
   const orderMap = new Map(rawOrder.map((item) => [item.key, item]));
-  const defaultOrder = ["equipment", "spaces", "vehicles"];
+  const defaultOrder = ["equipment", "spaces", "vehicles", "books"];
 
   return defaultOrder.map((key) => {
     const existing = orderMap.get(key);
     if (existing) {
-      if (key === "vehicles") {
-        return { ...existing, enabled: features.vehicles === true };
+      if (key === "vehicles" || key === "books") {
+        return {
+          ...existing,
+          enabled: key === "vehicles" ? features.vehicles === true : features.books === true,
+        };
       }
       return existing;
     }
@@ -98,6 +106,8 @@ const normalizeMenuOrder = (
       enabled:
         key === "vehicles"
           ? features.vehicles === true
+          : key === "books"
+            ? features.books === true
           : key === "equipment"
             ? features.equipment !== false
             : features.spaces !== false,
@@ -263,16 +273,18 @@ export function useHeaderSession() {
         menuOrder.length > 0 ? menuOrder : buildDefaultMenuOrder(features);
 
       orderToUse.forEach((item) => {
-        const key = item.key as "equipment" | "spaces" | "vehicles";
+        const key = item.key as "equipment" | "spaces" | "vehicles" | "books";
         const isFeatureEnabled =
           key === "equipment"
             ? features.equipment !== false
             : key === "spaces"
               ? features.spaces !== false
-              : features.vehicles === true;
+              : key === "vehicles"
+                ? features.vehicles === true
+                : features.books === true;
 
-        if (key === "vehicles") {
-          if (features.vehicles !== true || !item.enabled) return;
+        if (key === "vehicles" || key === "books") {
+          if (!isFeatureEnabled || !item.enabled) return;
         } else if (!item.enabled || !isFeatureEnabled) {
           return;
         }
@@ -282,10 +294,18 @@ export function useHeaderSession() {
             ? "/assets"
             : key === "spaces"
               ? "/spaces"
-              : "/vehicles";
+              : key === "vehicles"
+                ? "/vehicles"
+                : "/books";
         const label =
           menuLabels[key] ||
-          (key === "equipment" ? "물품" : key === "spaces" ? "공간" : "차량");
+          (key === "equipment"
+            ? "물품"
+            : key === "spaces"
+              ? "공간"
+              : key === "vehicles"
+                ? "차량"
+                : "도서");
 
         items.push({ href, label });
       });
@@ -305,10 +325,13 @@ export function useHeaderSession() {
 
     if (isManager) {
       items.push({ href: "/assets/manage", label: "관리페이지" });
+      if (features?.books === true) {
+        items.push({ href: "/books/manage", label: "도서 운영" });
+      }
     }
 
     return items;
-  }, [hasOrganization, isAuthed, isManager]);
+  }, [features?.books, hasOrganization, isAuthed, isManager]);
 
   const userMenuLabel = useMemo(() => {
     if (userName && userDepartment) {

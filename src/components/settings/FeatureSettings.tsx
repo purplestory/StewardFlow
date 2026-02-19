@@ -8,16 +8,18 @@ type OrganizationFeatures = {
   equipment?: boolean;
   spaces?: boolean;
   vehicles?: boolean;
+  books?: boolean;
 };
 
 type OrganizationMenuLabels = {
   equipment?: string;
   spaces?: string;
   vehicles?: string;
+  books?: string;
 };
 
 type MenuOrderItem = {
-  key: "equipment" | "spaces" | "vehicles";
+  key: "equipment" | "spaces" | "vehicles" | "books";
   enabled: boolean;
 };
 
@@ -31,27 +33,58 @@ export default function FeatureSettings({ organizationId }: FeatureSettingsProps
     equipment: true,
     spaces: true,
     vehicles: false,
+    books: false,
   });
   const [menuLabels, setMenuLabels] = useState<OrganizationMenuLabels>({
     equipment: "물품",
     spaces: "공간",
     vehicles: "차량",
+    books: "도서",
   });
   const [menuOrder, setMenuOrder] = useState<MenuOrderItem[]>([
     { key: "equipment", enabled: true },
     { key: "spaces", enabled: true },
     { key: "vehicles", enabled: false },
+    { key: "books", enabled: false },
   ]);
   const [loading, setLoading] = useState(Boolean(organizationId));
   const [message, setMessage] = useState<string | null>(null);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const [showDisableConfirm, setShowDisableConfirm] = useState<{
-    feature: "equipment" | "spaces" | "vehicles";
+    feature: "equipment" | "spaces" | "vehicles" | "books";
     enabled: boolean;
   } | null>(null);
-  const [editingMenuKey, setEditingMenuKey] = useState<"equipment" | "spaces" | "vehicles" | null>(null);
+  const [editingMenuKey, setEditingMenuKey] = useState<
+    "equipment" | "spaces" | "vehicles" | "books" | null
+  >(null);
   const [editingMenuLabel, setEditingMenuLabel] = useState<string>("");
+
+  const normalizeMenuOrder = (
+    rawOrder: unknown,
+    nextFeatures: OrganizationFeatures
+  ): MenuOrderItem[] => {
+    const defaultOrder: MenuOrderItem[] = [
+      { key: "equipment", enabled: nextFeatures.equipment !== false },
+      { key: "spaces", enabled: nextFeatures.spaces !== false },
+      { key: "vehicles", enabled: nextFeatures.vehicles === true },
+      { key: "books", enabled: nextFeatures.books === true },
+    ];
+
+    if (!Array.isArray(rawOrder) || rawOrder.length === 0) {
+      return defaultOrder;
+    }
+
+    const source = rawOrder as Array<{ key?: string; enabled?: boolean }>;
+    return defaultOrder.map((defaultItem) => {
+      const found = source.find((item) => item.key === defaultItem.key);
+      if (!found) return defaultItem;
+      return {
+        key: defaultItem.key,
+        enabled: found.enabled ?? defaultItem.enabled,
+      };
+    });
+  };
 
   useEffect(() => {
     if (!organizationId) {
@@ -73,23 +106,27 @@ export default function FeatureSettings({ organizationId }: FeatureSettingsProps
       }
 
       if (data) {
+        const nextFeatures: OrganizationFeatures = {
+          equipment: data.features?.equipment ?? true,
+          spaces: data.features?.spaces ?? true,
+          vehicles: data.features?.vehicles ?? false,
+          books: data.features?.books ?? false,
+        };
+
         if (data.features) {
-          setFeatures({
-            equipment: data.features.equipment ?? true,
-            spaces: data.features.spaces ?? true,
-            vehicles: data.features.vehicles ?? false,
-          });
+          setFeatures(nextFeatures);
+        } else {
+          setFeatures(nextFeatures);
         }
         if (data.menu_labels) {
           setMenuLabels({
             equipment: data.menu_labels.equipment ?? "물품",
             spaces: data.menu_labels.spaces ?? "공간",
             vehicles: data.menu_labels.vehicles ?? "차량",
+            books: data.menu_labels.books ?? "도서",
           });
         }
-        if (data.menu_order && Array.isArray(data.menu_order)) {
-          setMenuOrder(data.menu_order as MenuOrderItem[]);
-        }
+        setMenuOrder(normalizeMenuOrder(data.menu_order, nextFeatures));
       }
 
       setLoading(false);
@@ -259,7 +296,8 @@ export default function FeatureSettings({ organizationId }: FeatureSettingsProps
             const labelKey = item.key;
             const labelValue = menuLabels[labelKey] || 
               (labelKey === "equipment" ? "물품" : 
-               labelKey === "spaces" ? "공간" : "차량");
+               labelKey === "spaces" ? "공간" :
+               labelKey === "vehicles" ? "차량" : "도서");
             const isEnabled = features[labelKey] !== false;
 
             return (
@@ -323,7 +361,8 @@ export default function FeatureSettings({ organizationId }: FeatureSettingsProps
                       className="form-input flex-1 h-[38px] text-sm"
                       placeholder={
                         labelKey === "equipment" ? "물품" :
-                        labelKey === "spaces" ? "공간" : "차량"
+                        labelKey === "spaces" ? "공간" :
+                        labelKey === "vehicles" ? "차량" : "도서"
                       }
                       autoFocus
                     />
@@ -425,6 +464,7 @@ export default function FeatureSettings({ organizationId }: FeatureSettingsProps
                   {showDisableConfirm.feature === "equipment" && "물품 관리 기능을 비활성화하면 물품 목록과 대여 기능이 숨겨집니다. 기존 물품 데이터는 유지됩니다."}
                   {showDisableConfirm.feature === "spaces" && "공간 관리 기능을 비활성화하면 공간 목록과 예약 기능이 숨겨집니다. 기존 공간 데이터는 유지됩니다."}
                   {showDisableConfirm.feature === "vehicles" && "차량 관리 기능을 비활성화하면 차량 목록과 대여 기능이 숨겨집니다. 기존 차량 데이터는 유지됩니다."}
+                  {showDisableConfirm.feature === "books" && "도서 기능을 비활성화하면 도서 대여와 독서 경쟁 메뉴가 숨겨집니다. 기존 도서 데이터는 유지됩니다."}
                 </p>
               </div>
               <p className="text-sm text-neutral-600">

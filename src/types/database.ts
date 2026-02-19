@@ -2,6 +2,7 @@ export type Organization = {
   id: string;
   name: string;
   plan: string;
+  invite_expires_days?: number | null;
   created_at: string;
 };
 
@@ -232,8 +233,9 @@ export type AuditLog = {
 export type OrganizationInvite = {
   id: string;
   organization_id: string | null;
-  email: string;
+  email: string | null;
   role: "admin" | "manager" | "user";
+  expires_at: string | null;
   accepted_at: string | null;
   revoked_at: string | null;
   created_at: string;

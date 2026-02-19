@@ -101,9 +101,30 @@ export async function POST(request: NextRequest) {
 
     // Generate token
     const token = generateShortId(10);
+    let inviteExpiresDays = 7;
+
+    try {
+      const { data: orgData } = await supabase
+        .from("organizations")
+        .select("invite_expires_days")
+        .eq("id", organizationId)
+        .maybeSingle();
+      const numeric = Number(orgData?.invite_expires_days ?? 7);
+      if (Number.isFinite(numeric)) {
+        inviteExpiresDays = Math.min(30, Math.max(1, Math.floor(numeric)));
+      }
+    } catch {
+      inviteExpiresDays = 7;
+    }
+    const expiresAt = new Date(
+      Date.now() + inviteExpiresDays * 24 * 60 * 60 * 1000
+    ).toISOString();
 
     // Create invite
-    const { data: invite, error: inviteError } = await supabase
+    let invite: { id: string } | null = null;
+    let inviteError: { message?: string; code?: string } | null = null;
+
+    const withExpiresAt = await supabase
       .from("organization_invites")
       .insert({
         organization_id: organizationId,
@@ -112,9 +133,33 @@ export async function POST(request: NextRequest) {
         department: department || null,
         name: name || null,
         token,
+        expires_at: expiresAt,
       })
       .select("id")
       .maybeSingle();
+
+    invite = withExpiresAt.data;
+    inviteError = withExpiresAt.error;
+
+    if (
+      inviteError &&
+      (inviteError.code === "42703" || inviteError.message?.includes("expires_at"))
+    ) {
+      const withoutExpiresAt = await supabase
+        .from("organization_invites")
+        .insert({
+          organization_id: organizationId,
+          email: email || null,
+          role,
+          department: department || null,
+          name: name || null,
+          token,
+        })
+        .select("id")
+        .maybeSingle();
+      invite = withoutExpiresAt.data;
+      inviteError = withoutExpiresAt.error;
+    }
 
     if (inviteError) {
       return NextResponse.json(

@@ -64,3 +64,10 @@ book_loans: yes/no
 ## 7. 주의
 - `loan` 용어/테이블은 현재 확정 도메인이므로 이름 변경 금지
 - 운영 데이터가 있는 환경에서 임의 DROP/RENAME 금지
+
+## 8. 초대 만료 정책 마이그레이션 (2026-02-19)
+- 파일: `supabase/migrations/20260219_add_invite_expiration_policy.sql`
+- 추가 내용:
+1. `organizations.invite_expires_days` (1~30일, 기본 7일)
+2. `organization_invites.expires_at` (초대별 만료 시각)
+3. 기존 초대 데이터 backfill + 만료 인덱스 + insert trigger

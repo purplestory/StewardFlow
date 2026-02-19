@@ -22,6 +22,9 @@ const debugLog = (...args: unknown[]) => {
   }
 };
 
+const DEFAULT_INVITE_EXPIRES_DAYS = 7;
+const INVITE_EXPIRES_DAY_OPTIONS = [1, 3, 7, 14, 30] as const;
+
 export default function UserRoleManager() {
   const [profiles, setProfiles] = useState<ProfileRow[]>([]);
   const [invites, setInvites] = useState<InviteRow[]>([]);
@@ -38,6 +41,8 @@ export default function UserRoleManager() {
   const [invitationRole, setInvitationRole] =
     useState<ProfileRow["role"]>("user");
   const [invitationDepartment, setInvitationDepartment] = useState("");
+  const [inviteExpiresDays, setInviteExpiresDays] = useState<number>(DEFAULT_INVITE_EXPIRES_DAYS);
+  const [savingInvitePolicy, setSavingInvitePolicy] = useState(false);
   const [availableDepartments, setAvailableDepartments] = useState<string[]>([]);
   const [lastLoadedAt, setLastLoadedAt] = useState<string | null>(null);
   const [needsOrganization, setNeedsOrganization] = useState(false);
@@ -144,6 +149,39 @@ export default function UserRoleManager() {
     setOrganizationId(profileData.organization_id);
     setCurrentUserId(user.id);
     setCurrentUserRole(profileData.role ?? "user");
+    let departmentOrderFromOrg: string[] = [];
+    let inviteExpiresDaysForOrg = DEFAULT_INVITE_EXPIRES_DAYS;
+
+    try {
+      const { data: orgData } = await supabase
+        .from("organizations")
+        .select("department_order,invite_expires_days")
+        .eq("id", profileData.organization_id)
+        .maybeSingle();
+
+      if (orgData?.department_order) {
+        departmentOrderFromOrg = orgData.department_order as string[];
+      }
+
+      const nextInviteExpiresDays = Number(
+        orgData?.invite_expires_days ?? DEFAULT_INVITE_EXPIRES_DAYS
+      );
+      if (
+        Number.isFinite(nextInviteExpiresDays) &&
+        nextInviteExpiresDays >= 1 &&
+        nextInviteExpiresDays <= 30
+      ) {
+        inviteExpiresDaysForOrg = nextInviteExpiresDays;
+        setInviteExpiresDays(nextInviteExpiresDays);
+      } else {
+        inviteExpiresDaysForOrg = DEFAULT_INVITE_EXPIRES_DAYS;
+        setInviteExpiresDays(DEFAULT_INVITE_EXPIRES_DAYS);
+      }
+    } catch (error) {
+      console.warn("organizations 설정 컬럼을 읽을 수 없습니다:", error);
+      inviteExpiresDaysForOrg = DEFAULT_INVITE_EXPIRES_DAYS;
+      setInviteExpiresDays(DEFAULT_INVITE_EXPIRES_DAYS);
+    }
 
     // 일반 사용자는 사용자 목록을 볼 수 없음 (페이지 접근 불가)
     if (profileData.role === "user") {
@@ -220,31 +258,14 @@ export default function UserRoleManager() {
       .eq("organization_id", profileData.organization_id);
     
     if (deptData) {
-      // 순서 정보 로드
-      let departmentOrder: string[] = [];
-      try {
-        const { data: orgData } = await supabase
-          .from("organizations")
-          .select("department_order")
-          .eq("id", profileData.organization_id)
-          .maybeSingle();
-
-        if (orgData?.department_order) {
-          departmentOrder = orgData.department_order as string[];
-        }
-      } catch (error) {
-        // department_order 컬럼이 없을 수 있음 - 무시하고 계속 진행
-        console.warn("department_order 컬럼을 읽을 수 없습니다:", error);
-      }
-
       // 순서 정보가 있으면 그에 따라 정렬, 없으면 이름순 정렬
       let sortedDepartments = deptData;
-      if (departmentOrder.length > 0) {
+      if (departmentOrderFromOrg.length > 0) {
         const deptMap = new Map(sortedDepartments.map((d) => [d.id, d]));
-        sortedDepartments = departmentOrder
+        sortedDepartments = departmentOrderFromOrg
           .map((id) => deptMap.get(id))
           .filter((d): d is { id: string; name: string } => d !== undefined)
-          .concat(sortedDepartments.filter((d) => !departmentOrder.includes(d.id)));
+          .concat(sortedDepartments.filter((d) => !departmentOrderFromOrg.includes(d.id)));
       } else {
         sortedDepartments.sort((a, b) => a.name.localeCompare(b.name));
       }
@@ -336,7 +357,7 @@ export default function UserRoleManager() {
     try {
       const { data, error } = await supabase
         .from("organization_invites")
-        .select("id,email,role,department,name,created_at,accepted_at,revoked_at,token")
+        .select("id,email,role,department,name,created_at,expires_at,accepted_at,revoked_at,token")
         .eq("organization_id", profileData.organization_id)
         .is("accepted_at", null)
         .is("revoked_at", null)
@@ -345,10 +366,13 @@ export default function UserRoleManager() {
       inviteData = data as InviteRow[] | null;
       inviteError = error;
     } catch (err: unknown) {
-      // If token column doesn't exist, try without it
+      // 컬럼 일부가 아직 없을 수 있음 (token/expires_at)
       if (
         err instanceof Error &&
-        ((err.message && err.message.includes("token")) || (err as { code?: string }).code === "42703")
+        (
+          (err.message && (err.message.includes("token") || err.message.includes("expires_at"))) ||
+          (err as { code?: string }).code === "42703"
+        )
       ) {
         const { data, error } = await supabase
           .from("organization_invites")
@@ -357,12 +381,35 @@ export default function UserRoleManager() {
           .is("accepted_at", null)
           .is("revoked_at", null)
           .order("created_at", { ascending: false });
-        
-        inviteData = (data ?? []).map((inv) => ({ ...inv, token: null })) as InviteRow[];
+
+        inviteData = (data ?? []).map((inv) => ({
+          ...inv,
+          token: null,
+          expires_at: null,
+        })) as InviteRow[];
         inviteError = error;
       } else {
         inviteError = err;
       }
+    }
+
+    if (
+      inviteError &&
+      (inviteError as { code?: string; message?: string }).code === "42703"
+    ) {
+      const { data, error } = await supabase
+        .from("organization_invites")
+        .select("id,email,role,department,name,created_at,accepted_at,revoked_at")
+        .eq("organization_id", profileData.organization_id)
+        .is("accepted_at", null)
+        .is("revoked_at", null)
+        .order("created_at", { ascending: false });
+      inviteData = (data ?? []).map((inv) => ({
+        ...inv,
+        token: null,
+        expires_at: null,
+      })) as InviteRow[];
+      inviteError = error;
     }
 
     if (error) {
@@ -426,13 +473,33 @@ export default function UserRoleManager() {
           console.error("Failed to update accepted_at for invites:", updateError);
         } else {
           // 업데이트 성공 후 목록 다시 불러오기
-          const { data: updatedInvites } = await supabase
+          let updatedInvites: InviteRow[] | null = null;
+          const withNewColumns = await supabase
             .from("organization_invites")
-            .select("id,email,role,department,name,created_at,accepted_at,revoked_at,token")
+            .select("id,email,role,department,name,created_at,expires_at,accepted_at,revoked_at,token")
             .eq("organization_id", profileData.organization_id)
             .is("accepted_at", null)
             .is("revoked_at", null)
             .order("created_at", { ascending: false });
+
+          updatedInvites = withNewColumns.data as InviteRow[] | null;
+          if (
+            withNewColumns.error &&
+            withNewColumns.error.code === "42703"
+          ) {
+            const fallbackInvites = await supabase
+              .from("organization_invites")
+              .select("id,email,role,department,name,created_at,accepted_at,revoked_at")
+              .eq("organization_id", profileData.organization_id)
+              .is("accepted_at", null)
+              .is("revoked_at", null)
+              .order("created_at", { ascending: false });
+            updatedInvites = (fallbackInvites.data ?? []).map((invite) => ({
+              ...invite,
+              token: null,
+              expires_at: null,
+            })) as InviteRow[];
+          }
           
           if (updatedInvites) {
             // 업데이트된 목록으로 다시 필터링
@@ -447,7 +514,13 @@ export default function UserRoleManager() {
             });
             
             setInvites(
-              updatedPendingInvites.filter((invite) => !isInviteExpired(invite.created_at))
+              updatedPendingInvites.filter((invite) =>
+                !isInviteExpired(
+                  invite.created_at,
+                  invite.expires_at,
+                  inviteExpiresDaysForOrg
+                )
+              )
             );
             setLastLoadedAt(new Date().toISOString());
             setLoading(false);
@@ -457,7 +530,13 @@ export default function UserRoleManager() {
       }
       
       const expiredIds = filteredInvites
-        .filter((invite) => isInviteExpired(invite.created_at))
+        .filter((invite) =>
+          isInviteExpired(
+            invite.created_at,
+            invite.expires_at,
+            inviteExpiresDaysForOrg
+          )
+        )
         .map((invite) => invite.id);
 
       if (expiredIds.length > 0) {
@@ -469,7 +548,13 @@ export default function UserRoleManager() {
       }
 
       setInvites(
-        filteredInvites.filter((invite) => !isInviteExpired(invite.created_at))
+        filteredInvites.filter((invite) =>
+          !isInviteExpired(
+            invite.created_at,
+            invite.expires_at,
+            inviteExpiresDaysForOrg
+          )
+        )
       );
     }
 
@@ -766,9 +851,15 @@ export default function UserRoleManager() {
 
     // 클라이언트에서 직접 초대 토큰 생성
     const token = generateShortId(10);
+    const expiresAt = new Date(
+      Date.now() + inviteExpiresDays * 24 * 60 * 60 * 1000
+    ).toISOString();
 
     // 초대 생성
-    const { data: invite, error: inviteError } = await supabase
+    let invite: { id: string } | null = null;
+    let inviteError: { message?: string; code?: string } | null = null;
+
+    const withExpiresAt = await supabase
       .from("organization_invites")
       .insert({
         organization_id: organizationId,
@@ -777,9 +868,35 @@ export default function UserRoleManager() {
         department: invitationDepartment.trim() || null,
         name: invitationName.trim() || null,
         token,
+        expires_at: expiresAt,
       })
       .select("id")
       .maybeSingle();
+
+    invite = withExpiresAt.data;
+    inviteError = withExpiresAt.error;
+
+    // 구버전 스키마 호환: expires_at 컬럼 미적용이면 expires_at 없이 재시도
+    if (
+      inviteError &&
+      (inviteError.code === "42703" || inviteError.message?.includes("expires_at"))
+    ) {
+      const withoutExpiresAt = await supabase
+        .from("organization_invites")
+        .insert({
+          organization_id: organizationId,
+          email: email || null,
+          role: invitationRole,
+          department: invitationDepartment.trim() || null,
+          name: invitationName.trim() || null,
+          token,
+        })
+        .select("id")
+        .maybeSingle();
+
+      invite = withoutExpiresAt.data;
+      inviteError = withoutExpiresAt.error;
+    }
 
     if (inviteError || !invite) {
       setMessage(inviteError?.message ?? "초대 생성에 실패했습니다.");
@@ -853,6 +970,39 @@ export default function UserRoleManager() {
     setInvitationName("");
     setInvitationRole("user");
     setInvitationDepartment("");
+  };
+
+  const saveInviteExpirationPolicy = async () => {
+    if (!organizationId) {
+      setMessage("기관 정보를 확인할 수 없습니다.");
+      return;
+    }
+    if (currentUserRole !== "admin") {
+      setMessage("초대 만료일 설정은 관리자만 변경할 수 있습니다.");
+      return;
+    }
+
+    setSavingInvitePolicy(true);
+    setMessage(null);
+    const { error } = await supabase
+      .from("organizations")
+      .update({ invite_expires_days: inviteExpiresDays })
+      .eq("id", organizationId);
+
+    if (error) {
+      if (error.code === "42703" || error.message?.includes("invite_expires_days")) {
+        setMessage(
+          "초대 만료 정책 컬럼이 없습니다. 최신 마이그레이션(20260219_add_invite_expiration_policy.sql)을 적용해주세요."
+        );
+      } else {
+        setMessage(`초대 만료일 저장 실패: ${error.message}`);
+      }
+      setSavingInvitePolicy(false);
+      return;
+    }
+
+    setMessage("초대 만료일 설정을 저장했습니다.");
+    setSavingInvitePolicy(false);
   };
 
   const resendInvite = async (invite: InviteRow) => {
@@ -1533,6 +1683,36 @@ export default function UserRoleManager() {
             이름, 역할, 부서는 초대 시 지정되며 가입 시 확인됩니다. 이메일은 가입 시 변경 가능합니다.
           </p>
         </div>
+        <div className="module-toolbar mb-3">
+          <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-neutral-600">초대 링크 유효기간</span>
+              <select
+                className="form-select h-9 w-28 text-xs"
+                value={inviteExpiresDays}
+                onChange={(event) => setInviteExpiresDays(Number(event.target.value))}
+                disabled={currentUserRole !== "admin" || savingInvitePolicy}
+              >
+                {INVITE_EXPIRES_DAY_OPTIONS.map((days) => (
+                  <option key={days} value={days}>
+                    {days}일
+                  </option>
+                ))}
+              </select>
+              <button
+                type="button"
+                onClick={saveInviteExpirationPolicy}
+                disabled={currentUserRole !== "admin" || savingInvitePolicy}
+                className="btn-outline h-9 px-3 text-xs"
+              >
+                {savingInvitePolicy ? "저장 중..." : "만료일 저장"}
+              </button>
+            </div>
+            <p className="text-[11px] text-neutral-500">
+              현재 신규 초대는 생성 시점 기준 {inviteExpiresDays}일 후 만료됩니다.
+            </p>
+          </div>
+        </div>
         <div className="grid gap-2 sm:grid-cols-2">
           <input
             type="text"
@@ -1636,7 +1816,7 @@ export default function UserRoleManager() {
                     생성: {formatDateTime(invite.created_at)}
                   </p>
                   <p className="text-xs text-neutral-400">
-                    만료: {formatDateTime(getExpiresAt(invite.created_at))}
+                    만료: {formatDateTime(getExpiresAt(invite.created_at, invite.expires_at, inviteExpiresDays))}
                   </p>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
@@ -2111,23 +2291,36 @@ export default function UserRoleManager() {
   );
 }
 
-const INVITE_EXPIRES_DAYS = 7;
-
-const getExpiresAt = (value: string) => {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) {
-    return value;
+const getExpiresAt = (
+  createdAt: string,
+  expiresAt: string | null | undefined,
+  fallbackDays: number = DEFAULT_INVITE_EXPIRES_DAYS
+) => {
+  if (expiresAt) {
+    const expiresDate = new Date(expiresAt);
+    if (!Number.isNaN(expiresDate.getTime())) {
+      return expiresDate.toISOString();
+    }
   }
-  date.setDate(date.getDate() + INVITE_EXPIRES_DAYS);
+
+  const date = new Date(createdAt);
+  if (Number.isNaN(date.getTime())) {
+    return createdAt;
+  }
+  date.setDate(date.getDate() + fallbackDays);
   return date.toISOString();
 };
 
-const isInviteExpired = (value: string) => {
-  const expiresAt = new Date(getExpiresAt(value));
-  if (Number.isNaN(expiresAt.getTime())) {
+const isInviteExpired = (
+  createdAt: string,
+  expiresAt: string | null | undefined,
+  fallbackDays: number = DEFAULT_INVITE_EXPIRES_DAYS
+) => {
+  const expiresDate = new Date(getExpiresAt(createdAt, expiresAt, fallbackDays));
+  if (Number.isNaN(expiresDate.getTime())) {
     return false;
   }
-  return expiresAt.getTime() < Date.now();
+  return expiresDate.getTime() < Date.now();
 };
 
 const formatDateTime = (value: string) => {

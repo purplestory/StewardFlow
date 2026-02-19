@@ -34,7 +34,7 @@ export default function AuthCard() {
 
     const { data: invite } = await supabase
       .from("organization_invites")
-      .select("id,organization_id,role,accepted_at,created_at")
+      .select("id,organization_id,role,accepted_at,created_at,expires_at")
       .eq("email", email)
       .is("accepted_at", null)
       .is("revoked_at", null)
@@ -45,7 +45,7 @@ export default function AuthCard() {
       return;
     }
 
-    if (isInviteExpired(invite.created_at)) {
+    if (isInviteExpired(invite.created_at, invite.expires_at)) {
       await supabase
         .from("organization_invites")
         .update({ revoked_at: new Date().toISOString() })
@@ -145,7 +145,7 @@ export default function AuthCard() {
           // 이메일이 있는 경우: 이메일로 초대 찾기
           const { data: inviteByEmail } = await supabase
             .from("organization_invites")
-            .select("id,organization_id,role,accepted_at,created_at,email")
+            .select("id,organization_id,role,accepted_at,created_at,expires_at,email")
             .eq("email", userEmail)
             .is("accepted_at", null)
             .is("revoked_at", null)
@@ -164,7 +164,7 @@ export default function AuthCard() {
         }
 
         // 초대가 만료되었는지 확인
-        if (isInviteExpired(invite.created_at)) {
+        if (isInviteExpired(invite.created_at, invite.expires_at)) {
           await supabase
             .from("organization_invites")
             .update({ revoked_at: new Date().toISOString() })
@@ -469,13 +469,20 @@ export default function AuthCard() {
   );
 }
 
-const INVITE_EXPIRES_DAYS = 7;
+const DEFAULT_INVITE_EXPIRES_DAYS = 7;
 
-const isInviteExpired = (value: string) => {
-  const createdAt = new Date(value);
+const isInviteExpired = (createdAtValue: string, expiresAtValue?: string | null) => {
+  if (expiresAtValue) {
+    const expiresAt = new Date(expiresAtValue);
+    if (!Number.isNaN(expiresAt.getTime())) {
+      return expiresAt.getTime() < Date.now();
+    }
+  }
+
+  const createdAt = new Date(createdAtValue);
   if (Number.isNaN(createdAt.getTime())) {
     return false;
   }
-  createdAt.setDate(createdAt.getDate() + INVITE_EXPIRES_DAYS);
+  createdAt.setDate(createdAt.getDate() + DEFAULT_INVITE_EXPIRES_DAYS);
   return createdAt.getTime() < Date.now();
 };

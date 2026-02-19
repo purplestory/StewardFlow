@@ -5,11 +5,60 @@ import { createSupabaseServerClient } from "@/lib/supabase-server";
 import { createSupabaseAdmin } from "@/lib/supabase-admin";
 import { generateShortId } from "@/lib/short-id";
 
-// 초대 링크 유효기간 (일)
-const INVITE_EXPIRES_DAYS = 7;
+const DEFAULT_INVITE_EXPIRES_DAYS = 7;
 
 const PENDING_JOIN_TOKEN_COOKIE = "pending_join_token";
 const PENDING_JOIN_MAX_AGE = 60 * 10; // 10분
+
+const normalizeInviteExpiresDays = (value: unknown) => {
+  const numeric = Number(value ?? DEFAULT_INVITE_EXPIRES_DAYS);
+  if (!Number.isFinite(numeric)) return DEFAULT_INVITE_EXPIRES_DAYS;
+  if (numeric < 1) return 1;
+  if (numeric > 30) return 30;
+  return Math.floor(numeric);
+};
+
+const resolveInviteExpiresAt = (
+  createdAt: string,
+  expiresAt: string | null | undefined,
+  fallbackDays: number
+) => {
+  if (expiresAt) {
+    const parsedExpiresAt = new Date(expiresAt);
+    if (!Number.isNaN(parsedExpiresAt.getTime())) {
+      return parsedExpiresAt;
+    }
+  }
+
+  const createdAtDate = new Date(createdAt);
+  if (Number.isNaN(createdAtDate.getTime())) {
+    return null;
+  }
+  createdAtDate.setDate(
+    createdAtDate.getDate() + normalizeInviteExpiresDays(fallbackDays)
+  );
+  return createdAtDate;
+};
+
+async function getOrganizationInviteExpiresDays(
+  supabaseClient: Awaited<ReturnType<typeof createSupabaseServerClient>> | ReturnType<typeof createSupabaseAdmin>,
+  organizationId: string
+) {
+  try {
+    const { data: organizationData, error: organizationError } = await supabaseClient
+      .from("organizations")
+      .select("invite_expires_days")
+      .eq("id", organizationId)
+      .maybeSingle();
+
+    if (organizationError) {
+      return DEFAULT_INVITE_EXPIRES_DAYS;
+    }
+    return normalizeInviteExpiresDays(organizationData?.invite_expires_days);
+  } catch {
+    return DEFAULT_INVITE_EXPIRES_DAYS;
+  }
+}
 
 /** 카카오 OAuth 리다이렉트 전에 초대 토큰을 httpOnly 쿠키에 저장 (브라우저 컨텍스트 변경 시에도 복원 가능) */
 export async function setPendingJoinTokenCookie(token: string): Promise<{ ok: boolean; error?: string }> {
@@ -100,7 +149,18 @@ export async function generateInviteToken(
     // Generate short, URL-safe token (10 characters for good security and readability)
     const token = generateShortId(10);
 
-    const { data: invite, error } = await supabase
+    const inviteExpiresDays = await getOrganizationInviteExpiresDays(
+      supabase,
+      organizationId
+    );
+    const expiresAt = new Date(
+      Date.now() + inviteExpiresDays * 24 * 60 * 60 * 1000
+    ).toISOString();
+
+    let invite: { id: string } | null = null;
+    let error: { message?: string; code?: string } | null = null;
+
+    const withExpiresAt = await supabase
       .from("organization_invites")
       .insert({
         organization_id: organizationId,
@@ -109,9 +169,34 @@ export async function generateInviteToken(
         department: department || null,
         name: name || null,
         token,
+        expires_at: expiresAt,
       })
       .select("id")
       .maybeSingle();
+
+    invite = withExpiresAt.data;
+    error = withExpiresAt.error;
+
+    if (
+      error &&
+      (error.code === "42703" || error.message?.includes("expires_at"))
+    ) {
+      const withoutExpiresAt = await supabase
+        .from("organization_invites")
+        .insert({
+          organization_id: organizationId,
+          email: email || null,
+          role,
+          department: department || null,
+          name: name || null,
+          token,
+        })
+        .select("id")
+        .maybeSingle();
+
+      invite = withoutExpiresAt.data;
+      error = withoutExpiresAt.error;
+    }
 
     if (error) {
       return { ok: false, message: error.message };
@@ -152,6 +237,7 @@ export async function getInviteByToken(
     department: string | null;
     name: string | null;
     created_at: string;
+    expires_at?: string | null;
     inviter?: {
       name: string | null;
       department: string | null;
@@ -174,11 +260,42 @@ export async function getInviteByToken(
       };
     }
 
-    const { data: allInvites, error: searchError } = await supabase
+    let allInvites: {
+      id: string;
+      organization_id: string;
+      email: string;
+      role: string;
+      department: string | null;
+      name: string | null;
+      created_at: string;
+      expires_at: string | null;
+      accepted_at: string | null;
+      revoked_at: string | null;
+    } | null = null;
+    let searchError: { message?: string; code?: string } | null = null;
+
+    const withExpiresAt = await supabase
       .from("organization_invites")
-      .select("id,organization_id,email,role,department,name,created_at,accepted_at,revoked_at")
+      .select("id,organization_id,email,role,department,name,created_at,expires_at,accepted_at,revoked_at")
       .eq("token", cleanToken)
       .maybeSingle();
+    allInvites = withExpiresAt.data;
+    searchError = withExpiresAt.error;
+
+    if (
+      searchError &&
+      (searchError.code === "42703" || searchError.message?.includes("expires_at"))
+    ) {
+      const withoutExpiresAt = await supabase
+        .from("organization_invites")
+        .select("id,organization_id,email,role,department,name,created_at,accepted_at,revoked_at")
+        .eq("token", cleanToken)
+        .maybeSingle();
+      allInvites = withoutExpiresAt.data
+        ? { ...withoutExpiresAt.data, expires_at: null }
+        : null;
+      searchError = withoutExpiresAt.error;
+    }
 
     if (searchError) {
       console.error("getInviteByToken error:", searchError);
@@ -205,13 +322,21 @@ export async function getInviteByToken(
       return { ok: false, message: "취소된 초대 링크입니다. 관리자에게 새로운 초대를 요청하세요." };
     }
 
-    // 만료 확인
-    const createdAt = new Date(allInvites.created_at);
-    const expiresAt = new Date(createdAt);
-    expiresAt.setDate(expiresAt.getDate() + INVITE_EXPIRES_DAYS);
+    const inviteExpiresDays = await getOrganizationInviteExpiresDays(
+      supabase,
+      allInvites.organization_id
+    );
+    const inviteExpiresAt = resolveInviteExpiresAt(
+      allInvites.created_at,
+      allInvites.expires_at,
+      inviteExpiresDays
+    );
 
-    if (expiresAt.getTime() < Date.now()) {
-      return { ok: false, message: `초대 링크가 만료되었습니다. (유효기간: ${INVITE_EXPIRES_DAYS}일) 관리자에게 새로운 초대를 요청하세요.` };
+    if (inviteExpiresAt && inviteExpiresAt.getTime() < Date.now()) {
+      return {
+        ok: false,
+        message: `초대 링크가 만료되었습니다. (유효기간: ${inviteExpiresDays}일) 관리자에게 새로운 초대를 요청하세요.`,
+      };
     }
 
     // organization_id 확인 (필수)
@@ -293,6 +418,7 @@ export async function getInviteByToken(
       department: allInvites.department,
       name: allInvites.name,
       created_at: allInvites.created_at,
+      expires_at: allInvites.expires_at ?? null,
     };
     return { 
       ok: true, 

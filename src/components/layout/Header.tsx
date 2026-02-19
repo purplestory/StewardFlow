@@ -94,10 +94,9 @@ export default function Header() {
                   <button
                     type="button"
                     onClick={() => toggleDropdown("user")}
-                    className="inline-flex h-10 items-center gap-1 rounded-xl border border-slate-200 bg-white px-3 text-sm font-medium text-neutral-700 hover:border-slate-300 hover:text-slate-900"
+                    className="inline-flex h-10 items-center rounded-xl border border-slate-200 bg-white px-3 text-sm font-medium text-neutral-700 hover:border-slate-300 hover:text-slate-900"
                   >
                     <span className="max-w-[180px] truncate">{userMenuLabel}</span>
-                    <span className="text-xs">▼</span>
                   </button>
                   {dropdownOpen === "user" && (
                     <div className="absolute right-0 top-full z-50 mt-2 min-w-[180px] rounded-xl border border-slate-200 bg-white p-1 shadow-xl">

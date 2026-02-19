@@ -1224,10 +1224,10 @@ export default function SampleDataGenerator({
   };
 
   return (
-    <div className="rounded-xl border border-neutral-200 bg-white p-6">
+    <section className="surface-card p-5 md:p-6">
       <div className="mb-4">
-        <h3 className="text-lg font-semibold mb-2">샘플 데이터 생성</h3>
-        <p className="text-sm text-neutral-600">
+        <h3 className="text-xl font-semibold tracking-tight text-slate-900">샘플 데이터 생성</h3>
+        <p className="mt-1 text-sm text-neutral-600">
           서비스를 테스트할 수 있도록 샘플 부서, 물품, 공간을 자동으로 생성합니다.
         </p>
       </div>
@@ -1241,12 +1241,12 @@ export default function SampleDataGenerator({
         </Notice>
       )}
 
-      <div className="flex flex-col sm:flex-row gap-3">
+      <div className="grid gap-3 sm:grid-cols-2">
         <button
           type="button"
           onClick={generateSampleData}
           disabled={generating || deleting}
-          className="btn-primary w-full sm:flex-1"
+          className="btn-primary w-full"
         >
           {generating ? "생성 중..." : "샘플 데이터 생성"}
         </button>
@@ -1254,7 +1254,7 @@ export default function SampleDataGenerator({
           type="button"
           onClick={deleteSampleData}
           disabled={generating || deleting}
-          className="h-[38px] w-full sm:flex-1 rounded-lg text-sm font-medium transition-all bg-white text-red-600 border border-red-300 hover:bg-red-50 hover:border-red-400 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white whitespace-nowrap flex items-center justify-center"
+          className="btn-outline h-10 w-full border-rose-200 text-rose-600 hover:bg-rose-50"
         >
           {deleting ? "삭제 중..." : "샘플 데이터 삭제"}
         </button>
@@ -1269,6 +1269,6 @@ export default function SampleDataGenerator({
           <li>차량: 교회 승용차, 교회 승합차, 교회 SUV</li>
         </ul>
       </div>
-    </div>
+    </section>
   );
 }

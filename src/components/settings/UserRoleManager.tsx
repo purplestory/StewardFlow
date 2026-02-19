@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { generateShortId } from "@/lib/short-id";
 import { deleteUserAccount } from "@/actions/auth-actions";
+import Notice from "@/components/common/Notice";
 import type {
   DeletionRequestRow,
   DepartmentRequestWithProfile,
@@ -1471,58 +1472,67 @@ export default function UserRoleManager() {
 
   if (loading) {
     return (
-      <div className="rounded-lg border border-dashed border-neutral-300 p-6 text-center text-sm text-neutral-500">
-        사용자 목록을 불러오는 중입니다.
-      </div>
-    );
-  }
-
-  if (message) {
-    return (
-      <div className="rounded-lg border border-dashed border-rose-200 bg-rose-50 p-6 text-center text-sm text-rose-600">
-        {message}
-      </div>
+      <Notice>사용자 목록을 불러오는 중입니다.</Notice>
     );
   }
 
   if (needsOrganization) {
     return (
-      <div className="rounded-lg border border-amber-200 bg-amber-50 p-6 text-sm text-amber-700">
+      <Notice variant="warning" className="text-left">
         기관 설정이 필요합니다.{" "}
         <a href="/settings/org" className="underline">
           기관 설정
         </a>
         으로 이동해 생성/참여를 완료해주세요.
-      </div>
+      </Notice>
     );
   }
 
-  return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-3 rounded-lg border border-neutral-200 bg-white p-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-neutral-600">내 역할:</span>
-            <span className="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium bg-neutral-100 text-neutral-900">
-              {roleLabel[currentUserRole]}
-            </span>
-          </div>
-          {lastLoadedAt && (
-            <span className="text-xs text-neutral-400">
-              최근 갱신: {formatDateTime(lastLoadedAt)}
-            </span>
-          )}
-        </div>
-        <button
-          type="button"
-          onClick={load}
-          className="btn-ghost w-full sm:w-auto"
-        >
-          새로고침
-        </button>
-      </div>
+  const messageVariant =
+    message?.includes("실패") || message?.includes("오류")
+      ? "error"
+      : message?.includes("불가") || message?.includes("권한")
+      ? "warning"
+      : "neutral";
 
-      <div className="space-y-3 rounded-lg border border-neutral-200 bg-white p-4">
+  return (
+    <div className="manage-stack">
+      {message && (
+        <Notice variant={messageVariant} className="text-left">
+          {message}
+        </Notice>
+      )}
+
+      <section className="module-toolbar">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-neutral-600">내 역할:</span>
+              <span className="chip-muted">{roleLabel[currentUserRole]}</span>
+            </div>
+            {lastLoadedAt && (
+              <span className="text-xs text-neutral-400">
+                최근 갱신: {formatDateTime(lastLoadedAt)}
+              </span>
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={load}
+            className="btn-outline w-full sm:w-auto"
+          >
+            새로고침
+          </button>
+        </div>
+      </section>
+
+      <section className="surface-card p-5 md:p-6">
+        <div className="mb-3">
+          <h3 className="text-base font-semibold text-slate-900">사용자 초대</h3>
+          <p className="mt-1 text-xs text-neutral-500">
+            이름, 역할, 부서는 초대 시 지정되며 가입 시 확인됩니다. 이메일은 가입 시 변경 가능합니다.
+          </p>
+        </div>
         <div className="grid gap-2 sm:grid-cols-2">
           <input
             type="text"
@@ -1542,7 +1552,7 @@ export default function UserRoleManager() {
             type="email"
           />
         </div>
-        <div className="grid gap-2 md:grid-cols-[minmax(0,160px)_minmax(0,1fr)_auto]">
+        <div className="mt-2 grid gap-2 md:grid-cols-[minmax(0,160px)_minmax(0,1fr)_auto]">
           <select
             className="form-select w-full min-w-0"
             value={invitationRole}
@@ -1578,28 +1588,25 @@ export default function UserRoleManager() {
             type="button"
             onClick={sendInvite}
             disabled={currentUserRole === "user" || !invitationName.trim()}
-            className="w-full px-4 py-2 rounded-lg text-sm font-medium transition-all bg-neutral-900 text-white hover:bg-neutral-800 whitespace-nowrap md:w-auto"
+            className="btn-primary w-full md:w-auto"
           >
             초대 링크 생성
           </button>
         </div>
-        <p className="text-xs text-neutral-500">
-          이름, 역할, 부서는 초대 시 지정되며 가입 시 확인됩니다. 이메일은 가입 시 변경 가능합니다.
-        </p>
         {currentUserRole === "user" && (
-          <span className="text-xs text-neutral-500">
+          <span className="mt-2 block text-xs text-neutral-500">
             초대는 관리자 또는 부서 관리자만 가능합니다.
           </span>
         )}
         {currentUserRole === "manager" && (
-          <span className="text-xs text-amber-600">
+          <span className="mt-2 block text-xs text-amber-600">
             부서 관리자는 일반 사용자 또는 부서 관리자만 초대할 수 있습니다.
           </span>
         )}
-      </div>
+      </section>
 
-      <div className="rounded-lg border border-neutral-200 bg-white p-4 text-xs">
-        <h3 className="text-sm font-semibold">대기 중인 초대</h3>
+      <section className="surface-card p-5 md:p-6 text-xs">
+        <h3 className="text-sm font-semibold text-slate-900">대기 중인 초대</h3>
         {invites.length === 0 ? (
           <div className="mt-2 text-neutral-500">
             <p>대기 중인 초대가 없습니다.</p>
@@ -1608,16 +1615,18 @@ export default function UserRoleManager() {
             </p>
           </div>
         ) : (
-          <div className="mt-3 space-y-2">
+          <div className="module-list mt-3">
             {invites.map((invite) => (
               <div
                 key={invite.id}
-                className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-neutral-200 px-3 py-2"
+                className="list-row flex-col justify-between gap-3 text-xs sm:flex-row sm:items-center"
               >
-                <div>
-                  <p className="text-sm font-medium">
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium text-neutral-900">
                     {invite.name || invite.email}
-                    {invite.name && <span className="text-neutral-500"> ({invite.email || "이메일 없음"})</span>}
+                    {invite.name && (
+                      <span className="text-neutral-500"> ({invite.email || "이메일 없음"})</span>
+                    )}
                   </p>
                   <p className="text-xs text-neutral-500">
                     역할: {roleLabel[invite.role]}
@@ -1630,12 +1639,12 @@ export default function UserRoleManager() {
                     만료: {formatDateTime(getExpiresAt(invite.created_at))}
                   </p>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   {invite.token && (
                     <button
                       type="button"
                       onClick={() => copyInviteLink(invite)}
-                      className="btn-ghost text-xs"
+                      className="btn-outline h-9 px-3 text-xs"
                     >
                       링크 복사
                     </button>
@@ -1643,14 +1652,14 @@ export default function UserRoleManager() {
                   <button
                     type="button"
                     onClick={() => resendInvite(invite)}
-                    className="btn-ghost text-xs"
+                    className="btn-outline h-9 px-3 text-xs"
                   >
                     재전송
                   </button>
                   <button
                     type="button"
                     onClick={() => revokeInvite(invite)}
-                    className="h-[38px] rounded-lg border border-rose-200 bg-white px-3 text-xs font-medium text-rose-600 transition-all duration-200 hover:bg-rose-50 hover:border-rose-300 hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-rose-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="btn-outline h-9 border-rose-200 px-3 text-xs text-rose-600 hover:bg-rose-50"
                   >
                     취소
                   </button>
@@ -1659,28 +1668,28 @@ export default function UserRoleManager() {
             ))}
           </div>
         )}
-      </div>
+      </section>
 
       {departmentChangeRequests.length > 0 && (
-        <div className="space-y-3 rounded-lg border border-blue-200 bg-blue-50 p-4">
-          <h3 className="text-sm font-semibold text-blue-900">부서 변경 요청</h3>
-          {departmentChangeRequests.map((request) => (
-            <div
-              key={request.id}
-              className="rounded-lg border border-blue-200 bg-white p-3"
-            >
-              <div className="flex flex-wrap items-start justify-between gap-2">
+        <section className="surface-card border-blue-200 p-5 md:p-6">
+          <h3 className="text-sm font-semibold text-slate-900">부서 변경 요청</h3>
+          <div className="module-list mt-3">
+            {departmentChangeRequests.map((request) => (
+              <div
+                key={request.id}
+                className="list-row flex-col items-start justify-between gap-3 sm:flex-row sm:items-center"
+              >
                 <div className="flex-1">
                   <p className="text-sm font-medium text-neutral-900">
                     {request.requester_name || request.requester_email}
                   </p>
-                  <p className="text-xs text-neutral-500 mt-1">
+                  <p className="mt-1 text-xs text-neutral-500">
                     {request.from_department || "(없음)"} → {request.to_department}
                   </p>
                   {request.note && (
-                    <p className="text-xs text-neutral-600 mt-1">사유: {request.note}</p>
+                    <p className="mt-1 text-xs text-neutral-600">사유: {request.note}</p>
                   )}
-                  <p className="text-xs text-neutral-400 mt-1">
+                  <p className="mt-1 text-xs text-neutral-400">
                     {formatDateTime(request.created_at)}
                   </p>
                 </div>
@@ -1688,67 +1697,61 @@ export default function UserRoleManager() {
                   <button
                     type="button"
                     onClick={() => approveDepartmentChange(request)}
-                    className="h-[38px] rounded-lg border border-green-200 bg-white px-3 text-xs font-medium text-green-600 transition-all duration-200 hover:bg-green-50 hover:border-green-300 hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="btn-outline h-9 border-emerald-200 px-3 text-xs text-emerald-700 hover:bg-emerald-50"
                   >
                     승인
                   </button>
                   <button
                     type="button"
                     onClick={() => rejectDepartmentChange(request)}
-                    className="h-[38px] rounded-lg border border-rose-200 bg-white px-3 text-xs font-medium text-rose-600 transition-all duration-200 hover:bg-rose-50 hover:border-rose-300 hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-rose-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="btn-outline h-9 border-rose-200 px-3 text-xs text-rose-600 hover:bg-rose-50"
                   >
                     거부
                   </button>
                 </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        </section>
       )}
 
-      {/* 계정 탈퇴 요청 (최고 관리자만) */}
       {currentUserRole === "admin" && deletionRequests.length > 0 && (
-        <div className="space-y-3 rounded-lg border border-rose-200 bg-rose-50 p-4">
-          <h3 className="text-sm font-semibold text-rose-900">계정 탈퇴 요청</h3>
-          <p className="text-xs text-rose-700">
-            부서 관리자의 계정 탈퇴 요청입니다. 승인 시 계정이 영구적으로 삭제됩니다.
+        <section className="surface-card border-rose-200 p-5 md:p-6">
+          <h3 className="text-sm font-semibold text-slate-900">계정 탈퇴 요청</h3>
+          <p className="mt-1 text-xs text-neutral-500">
+            부서 관리자의 탈퇴 요청입니다. 승인 시 계정이 영구적으로 삭제됩니다.
           </p>
-          {deletionRequests.map((request) => (
-            <div
-              key={request.id}
-              className="rounded-lg border border-rose-200 bg-white p-3"
-            >
-              <div className="space-y-3">
-                <div className="flex flex-wrap items-start justify-between gap-2">
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-neutral-900">
-                      {request.requester_name || request.requester_email}
+          <div className="module-list mt-3">
+            {deletionRequests.map((request) => (
+              <div key={request.id} className="list-row flex-col items-stretch gap-3">
+                <div>
+                  <p className="text-sm font-medium text-neutral-900">
+                    {request.requester_name || request.requester_email}
+                  </p>
+                  <p className="mt-1 text-xs text-neutral-500">
+                    역할: {roleLabel[request.requester_role as ProfileRow["role"]] || request.requester_role}
+                    {request.requester_department && ` · 부서: ${request.requester_department}`}
+                  </p>
+                  {request.transfer_to_user_name && (
+                    <p className="mt-1 text-xs text-amber-700">
+                      권한 위임 대상: {request.transfer_to_user_name}
                     </p>
-                    <p className="text-xs text-neutral-500 mt-1">
-                      역할: {roleLabel[request.requester_role as ProfileRow["role"]] || request.requester_role}
-                      {request.requester_department && ` · 부서: ${request.requester_department}`}
-                    </p>
-                    {request.transfer_to_user_name && (
-                      <p className="text-xs text-amber-700 mt-1">
-                        권한 위임 대상: {request.transfer_to_user_name}
-                      </p>
-                    )}
-                    {request.note && (
-                      <p className="text-xs text-neutral-600 mt-1">탈퇴 사유: {request.note}</p>
-                    )}
-                    <p className="text-xs text-neutral-400 mt-1">
-                      요청일: {formatDateTime(request.created_at)}
-                    </p>
-                  </div>
+                  )}
+                  {request.note && (
+                    <p className="mt-1 text-xs text-neutral-600">탈퇴 사유: {request.note}</p>
+                  )}
+                  <p className="mt-1 text-xs text-neutral-400">
+                    요청일: {formatDateTime(request.created_at)}
+                  </p>
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-neutral-700 mb-1">
+                  <label className="mb-1 block text-xs font-medium text-neutral-700">
                     관리자 메모 (선택)
                   </label>
                   <textarea
                     value={adminNote}
                     onChange={(e) => setAdminNote(e.target.value)}
-                    className="w-full form-input min-h-[60px] text-sm"
+                    className="form-textarea min-h-[60px] text-sm"
                     placeholder="승인/거부 사유를 입력하세요"
                     disabled={processingRequestId === request.id}
                   />
@@ -1761,7 +1764,7 @@ export default function UserRoleManager() {
                       approveDeletionRequest(request.id);
                     }}
                     disabled={processingRequestId !== null}
-                    className="flex-1 h-[38px] rounded-lg border border-green-200 bg-white px-3 text-xs font-medium text-green-600 transition-all duration-200 hover:bg-green-50 hover:border-green-300 hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="btn-outline h-9 flex-1 border-emerald-200 px-3 text-xs text-emerald-700 hover:bg-emerald-50"
                   >
                     {processingRequestId === request.id ? "처리 중..." : "승인"}
                   </button>
@@ -1772,60 +1775,57 @@ export default function UserRoleManager() {
                       rejectDeletionRequest(request.id);
                     }}
                     disabled={processingRequestId !== null}
-                    className="flex-1 h-[38px] rounded-lg border border-rose-200 bg-white px-3 text-xs font-medium text-rose-600 transition-all duration-200 hover:bg-rose-50 hover:border-rose-300 hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-rose-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="btn-outline h-9 flex-1 border-rose-200 px-3 text-xs text-rose-600 hover:bg-rose-50"
                   >
                     {processingRequestId === request.id ? "처리 중..." : "거부"}
                   </button>
                 </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        </section>
       )}
 
-      {/* 미승인 사용자 목록 (최고관리자만) */}
       {currentUserRole === "admin" && pendingUsers.length > 0 && (
-        <div className="space-y-3 rounded-lg border border-amber-200 bg-amber-50 p-4">
-          <h3 className="text-sm font-semibold text-amber-900">미승인 사용자</h3>
-          <p className="text-xs text-amber-700">
-            초대코드 없이 가입한 사용자입니다. 기관, 부서, 권한을 지정하여 승인해주세요.
+        <section className="surface-card border-amber-200 p-5 md:p-6">
+          <h3 className="text-sm font-semibold text-slate-900">미승인 사용자</h3>
+          <p className="mt-1 text-xs text-neutral-500">
+            초대코드 없이 가입한 사용자입니다. 기관, 부서, 권한을 지정해 승인해주세요.
           </p>
-          {pendingUsers.map((user) => (
-            <div
-              key={user.id}
-              className="rounded-lg border border-amber-200 bg-white p-3"
-            >
-              <div className="flex flex-wrap items-start justify-between gap-2">
+          <div className="module-list mt-3">
+            {pendingUsers.map((user) => (
+              <div
+                key={user.id}
+                className="list-row flex-col items-start justify-between gap-3 sm:flex-row sm:items-center"
+              >
                 <div className="flex-1">
                   <p className="text-sm font-medium text-neutral-900">
                     {user.name || "이름 없음"}
                   </p>
                   <p className="text-xs text-neutral-500">{user.email}</p>
-                  <p className="text-xs text-neutral-400 mt-1">
+                  <p className="mt-1 text-xs text-neutral-400">
                     가입일: {formatDateTime(user.created_at || new Date().toISOString())}
                   </p>
                 </div>
                 <button
                   type="button"
                   onClick={() => handleStartApproval(user.id)}
-                  className="h-[38px] px-4 rounded-lg text-sm font-medium transition-all bg-amber-600 text-white hover:bg-amber-700 whitespace-nowrap"
+                  className="btn-primary h-9 px-3 text-xs"
                 >
                   승인하기
                 </button>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        </section>
       )}
 
       {/* 승인 모달 */}
       {approvingUserId && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="w-full max-w-md rounded-lg bg-white shadow-xl">
-            <div className="rounded-t-lg bg-amber-600 px-6 py-4">
-              <h3 className="text-lg font-semibold text-white">사용자 승인</h3>
-            </div>
-            <div className="px-6 py-4 space-y-4">
+        <div className="modal-backdrop">
+          <div className="modal-surface max-w-md">
+            <h3 className="text-lg font-semibold text-slate-900">사용자 승인</h3>
+            <div className="mt-4 space-y-4">
               <div>
                 <label className="form-label">기관 선택</label>
                 <select
@@ -1879,19 +1879,19 @@ export default function UserRoleManager() {
                 </>
               )}
             </div>
-            <div className="flex gap-3 rounded-b-lg border-t border-neutral-200 bg-neutral-50 px-6 py-4">
+            <div className="mt-5 flex gap-2">
               <button
                 type="button"
                 onClick={handleApproveUser}
                 disabled={!approvalOrganizationId}
-                className="flex-1 btn-primary bg-amber-600 hover:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="btn-primary flex-1 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 승인
               </button>
               <button
                 type="button"
                 onClick={handleCancelApproval}
-                className="flex-1 btn-ghost"
+                className="btn-outline flex-1"
               >
                 취소
               </button>
@@ -1900,107 +1900,106 @@ export default function UserRoleManager() {
         </div>
       )}
 
-      <div className="space-y-2">
-        <h3 className="text-sm font-semibold">등록된 사용자</h3>
+      <section className="surface-card p-5 md:p-6">
+        <h3 className="text-sm font-semibold text-slate-900">등록된 사용자</h3>
         {profiles.length === 0 ? (
-          <div className="rounded-lg border border-dashed border-neutral-300 p-6 text-center text-sm text-neutral-500">
+          <div className="mt-3 rounded-lg border border-dashed border-neutral-300 p-6 text-center text-sm text-neutral-500">
             <p>등록된 사용자가 없습니다.</p>
             <p className="mt-2 text-xs text-neutral-400">
               초대를 보내 새 사용자를 추가해 주세요.
             </p>
           </div>
         ) : (
-          profiles.map((profile) => (
-            <div
-              key={profile.id}
-              className="list-row flex-col text-xs sm:flex-row"
-            >
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium">
-                  {profile.name ?? "이름 없음"}
-                </p>
-                <p className="text-xs text-neutral-500">{profile.email}</p>
-              </div>
-              <div className="grid w-full grid-cols-1 gap-2 sm:flex sm:w-auto sm:flex-shrink-0 sm:items-center">
-                {/* 최고 관리자는 부서를 변경할 수 있음 */}
-                {currentUserRole === "admin" ? (
+          <div className="module-list mt-3">
+            {profiles.map((profile) => (
+              <div
+                key={profile.id}
+                className="list-row flex-col text-xs sm:flex-row"
+              >
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium text-neutral-900">
+                    {profile.name ?? "이름 없음"}
+                  </p>
+                  <p className="text-xs text-neutral-500">{profile.email}</p>
+                </div>
+                <div className="grid w-full grid-cols-1 gap-2 sm:flex sm:w-auto sm:flex-shrink-0 sm:items-center">
+                  {currentUserRole === "admin" ? (
+                    <select
+                      className="form-select h-[38px] w-full sm:min-w-[120px] sm:w-auto"
+                      value={profile.department || ""}
+                      onChange={(event) =>
+                        updateDepartment(
+                          profile.id,
+                          event.target.value || null
+                        )
+                      }
+                      disabled={currentUserId === profile.id}
+                    >
+                      <option value="">부서 미지정</option>
+                      {availableDepartments.map((dept) => (
+                        <option key={dept} value={dept}>
+                          {dept}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <span className="text-xs text-neutral-400 sm:min-w-[120px]">
+                      {profile.department ?? "부서 미등록"}
+                    </span>
+                  )}
                   <select
-                    className="form-select h-[38px] w-full sm:min-w-[120px] sm:w-auto"
-                    value={profile.department || ""}
+                    className="form-select h-10 w-full sm:min-w-[120px] sm:w-auto"
+                    value={profile.role}
                     onChange={(event) =>
-                      updateDepartment(
+                      updateRole(
                         profile.id,
-                        event.target.value || null
+                        event.target.value as ProfileRow["role"]
                       )
                     }
-                    disabled={currentUserId === profile.id}
+                    disabled={
+                      currentUserId === profile.id ||
+                      currentUserRole === "user" ||
+                      (currentUserRole === "manager" && profile.role === "admin")
+                    }
                   >
-                    <option value="">부서 미지정</option>
-                    {availableDepartments.map((dept) => (
-                      <option key={dept} value={dept}>
-                        {dept}
-                      </option>
-                    ))}
+                    {roleOptions
+                      .filter((option) =>
+                        currentUserRole === "manager"
+                          ? profile.role === "admin" || option.value !== "admin"
+                          : true
+                      )
+                      .map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
                   </select>
-                ) : (
-                  <span className="text-xs text-neutral-400 sm:min-w-[120px]">
-                    {profile.department ?? "부서 미등록"}
-                  </span>
-                )}
-                <select
-                  className="form-select h-10 w-full sm:min-w-[120px] sm:w-auto"
-                  value={profile.role}
-                  onChange={(event) =>
-                    updateRole(
-                      profile.id,
-                      event.target.value as ProfileRow["role"]
-                    )
-                  }
-                  disabled={
-                    currentUserId === profile.id || 
-                    currentUserRole === "user" ||
-                    // 부서 관리자는 관리자 역할을 변경할 수 없음
-                    (currentUserRole === "manager" && profile.role === "admin")
-                  }
-                >
-                  {roleOptions
-                    .filter((option) =>
-                      currentUserRole === "manager"
-                        ? profile.role === "admin" || option.value !== "admin"
-                        : true
-                    )
-                    .map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                </select>
-                {/* 삭제 버튼 (관리자만, 자기 자신 제외) */}
-                {currentUserRole === "admin" && profile.id !== currentUserId && (
-                  <button
-                    type="button"
-                    onClick={() => deleteUser(profile.id, profile.name || "이름 없음")}
-                    disabled={deletingUserId === profile.id || loading}
-                    className="icon-button icon-button-danger justify-self-end sm:justify-self-auto"
-                    title="사용자 삭제"
-                  >
-                    {deletingUserId === profile.id ? (
-                      <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                      </svg>
-                    ) : (
-                      <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                      </svg>
-                    )}
-                  </button>
-                )}
+                  {currentUserRole === "admin" && profile.id !== currentUserId && (
+                    <button
+                      type="button"
+                      onClick={() => deleteUser(profile.id, profile.name || "이름 없음")}
+                      disabled={deletingUserId === profile.id || loading}
+                      className="icon-button icon-button-danger justify-self-end sm:justify-self-auto"
+                      title="사용자 삭제"
+                    >
+                      {deletingUserId === profile.id ? (
+                        <svg className="h-5 w-5 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                      ) : (
+                        <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                      )}
+                    </button>
+                  )}
+                </div>
               </div>
-            </div>
-          ))
+            ))}
+          </div>
         )}
-      </div>
+      </section>
 
       {/* 성공 토스트 모달 */}
       {successToast && (
@@ -2016,12 +2015,10 @@ export default function UserRoleManager() {
 
       {/* 삭제 확인 모달 */}
       {showDeleteConfirm && userToDelete && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="w-full max-w-md rounded-lg bg-white shadow-xl">
-            <div className="rounded-t-lg bg-rose-600 px-6 py-4">
-              <h3 className="text-lg font-semibold text-white">사용자 삭제 확인</h3>
-            </div>
-            <div className="px-6 py-4 space-y-4">
+        <div className="modal-backdrop">
+          <div className="modal-surface max-w-md">
+            <h3 className="text-lg font-semibold text-slate-900">사용자 삭제 확인</h3>
+            <div className="mt-4 space-y-4">
               <div className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3">
                 <p className="text-sm text-rose-900 font-medium mb-2">
                   정말로 &quot;{userToDelete.name}&quot; 사용자를 삭제하시겠습니까?
@@ -2031,18 +2028,18 @@ export default function UserRoleManager() {
                 </p>
               </div>
             </div>
-            <div className="flex gap-3 rounded-b-lg border-t border-neutral-200 bg-neutral-50 px-6 py-4">
+            <div className="mt-5 flex gap-2">
               <button
                 type="button"
                 onClick={confirmDeleteUser}
-                className="flex-1 btn-primary bg-rose-600 hover:bg-rose-700"
+                className="btn-danger flex-1"
               >
                 삭제
               </button>
               <button
                 type="button"
                 onClick={cancelDeleteUser}
-                className="flex-1 btn-ghost"
+                className="btn-outline flex-1"
               >
                 취소
               </button>
@@ -2053,12 +2050,10 @@ export default function UserRoleManager() {
 
       {/* 초대 링크 모달 */}
       {showInviteLinkModal && generatedInviteLink && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="w-full max-w-md rounded-lg bg-white shadow-xl">
-            <div className="rounded-t-lg bg-emerald-600 px-6 py-4">
-              <h3 className="text-lg font-semibold text-white">초대 링크 생성 완료</h3>
-            </div>
-            <div className="px-6 py-4 space-y-4">
+        <div className="modal-backdrop">
+          <div className="modal-surface max-w-md">
+            <h3 className="text-lg font-semibold text-slate-900">초대 링크 생성 완료</h3>
+            <div className="mt-4 space-y-4">
               <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3">
                 <p className="text-sm text-emerald-700 mb-2">
                   초대 링크가 생성되었습니다. 복사하거나 모바일 공유로 바로 전송하세요.
@@ -2082,21 +2077,21 @@ export default function UserRoleManager() {
                         setMessage("클립보드 복사에 실패했습니다.");
                       }
                     }}
-                    className="w-full px-4 py-2 rounded-lg text-sm font-medium transition-all bg-emerald-600 text-white hover:bg-emerald-700 whitespace-nowrap sm:w-auto"
+                    className="btn-primary h-10 w-full px-4 text-sm sm:w-auto"
                   >
                     {inviteLinkCopied ? "복사됨!" : "복사"}
                   </button>
                   <button
                     type="button"
                     onClick={shareGeneratedInviteLink}
-                    className="w-full px-4 py-2 rounded-lg text-sm font-medium transition-all bg-neutral-800 text-white hover:bg-neutral-700 whitespace-nowrap sm:w-auto"
+                    className="btn-outline h-10 w-full px-4 text-sm sm:w-auto"
                   >
                     공유
                   </button>
                 </div>
               </div>
             </div>
-            <div className="flex gap-3 rounded-b-lg border-t border-neutral-200 bg-neutral-50 px-6 py-4">
+            <div className="mt-5 flex gap-2">
               <button
                 type="button"
                 onClick={async () => {
@@ -2104,7 +2099,7 @@ export default function UserRoleManager() {
                   setGeneratedInviteLink(null);
                   await load();
                 }}
-                className="flex-1 btn-primary"
+                className="btn-primary flex-1"
               >
                 확인
               </button>

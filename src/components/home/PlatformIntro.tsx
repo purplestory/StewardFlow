@@ -259,13 +259,18 @@ function PlatformIntroContent() {
                 className={`pointer-events-none absolute inset-0 bg-gradient-to-br opacity-80 ${card.accent}`}
               />
               <div className="relative z-10">
-                <div className="inline-flex h-12 w-12 items-center justify-center rounded-xl border border-white/70 bg-white/90 text-slate-700">
-                  <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    {card.icon}
-                  </svg>
-                </div>
-                <div className="mt-4 flex items-center justify-between">
-                  <h2 className="text-lg font-semibold text-slate-900">{card.title}</h2>
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2.5">
+                    <svg
+                      className="h-6 w-6 flex-shrink-0 text-slate-700"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      {card.icon}
+                    </svg>
+                    <h2 className="text-lg font-semibold text-slate-900">{card.title}</h2>
+                  </div>
                   <span
                     className={`rounded-full px-2.5 py-1 text-[11px] font-medium ${
                       enabled
@@ -276,7 +281,7 @@ function PlatformIntroContent() {
                     {enabled ? "사용 가능" : "비활성"}
                   </span>
                 </div>
-                <p className="mt-2 text-sm leading-relaxed text-slate-700">{card.description}</p>
+                <p className="mt-3 text-sm leading-relaxed text-slate-700">{card.description}</p>
               </div>
             </button>
           );

@@ -151,11 +151,12 @@ export default function SpaceAdminPanel() {
   };
 
   return (
-    <div className="space-y-4 p-4 md:p-5">
+    <section className="surface-card">
+      <div className="space-y-4 p-4 md:p-5">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h2 className="text-lg font-semibold">공간 관리</h2>
-          <p className="text-sm text-neutral-600">
+          <h2 className="text-xl font-semibold tracking-tight text-slate-900">공간 관리</h2>
+          <p className="mt-1 text-sm text-neutral-600">
             공간 상태를 일괄 변경하거나 검색할 수 있습니다.
           </p>
         </div>
@@ -167,32 +168,33 @@ export default function SpaceAdminPanel() {
         </Link>
       </div>
 
-      <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-neutral-600">
-        <div className="flex flex-wrap items-center gap-2">
-          <span>총 {spaces.length}건</span>
-          <button
-            type="button"
-            onClick={load}
-            className="btn-ghost"
-          >
-            새로고침
-          </button>
+      <div className="module-toolbar space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-neutral-600">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="module-kpi">총 {spaces.length}건</span>
+            <button
+              type="button"
+              onClick={load}
+              className="btn-outline"
+            >
+              새로고침
+            </button>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <input
+              className="form-input text-sm md:w-72"
+              placeholder="공간명/소유 부서 검색"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+            />
+          </div>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <input
-            className="form-input text-sm md:w-72"
-            placeholder="공간명/소유 부서 검색"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-          />
-        </div>
+        <StatusFilterPills
+          options={statusFilterOptions}
+          value={statusFilter}
+          onChange={(next) => setStatusFilter(next as Space["status"] | "all")}
+        />
       </div>
-
-      <StatusFilterPills
-        options={statusFilterOptions}
-        value={statusFilter}
-        onChange={(next) => setStatusFilter(next as Space["status"] | "all")}
-      />
 
       {/* 일괄 변경 - 선택된 항목이 있을 때만 표시 */}
       {selectedIds.size > 0 && (
@@ -290,15 +292,24 @@ export default function SpaceAdminPanel() {
               <div className="flex items-center gap-2">
                 <Link
                   href={`/spaces/${space.short_id || space.id}/edit`}
-                  className="btn-ghost"
+                  className="icon-button"
+                  title="수정"
                 >
-                  수정
+                  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                    />
+                  </svg>
                 </Link>
               </div>
             </div>
           ))}
         </div>
       )}
-    </div>
+      </div>
+    </section>
   );
 }

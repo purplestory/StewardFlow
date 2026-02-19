@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import Notice from "@/components/common/Notice";
+import SectionCard from "@/components/ui/SectionCard";
 
 type ApprovalPolicy = {
   id: string;
@@ -305,14 +306,11 @@ export default function ApprovalPolicyManager() {
         </Notice>
       )}
 
-      <div>
-        <h3 className="text-lg font-semibold mb-2">승인정책 관리</h3>
-        <p className="text-sm text-neutral-600 mb-4">
-          물품, 공간, 차량의 대여 승인에 필요한 권한을 설정합니다.
-        </p>
-      </div>
-
-      <div className="rounded-xl border border-neutral-200 bg-white p-6 space-y-4">
+      <SectionCard
+        title="승인정책 관리"
+        description="물품, 공간, 차량의 대여 승인에 필요한 권한을 설정합니다."
+        bodyClassName="space-y-4"
+      >
         <form
           onSubmit={handleCreate}
           className="grid gap-3 md:grid-cols-4"
@@ -344,26 +342,26 @@ export default function ApprovalPolicyManager() {
             <option value="admin">관리자</option>
             <option value="user">일반 사용자</option>
           </select>
-          <button className="px-4 py-2 rounded-lg text-sm font-medium transition-all bg-neutral-900 text-white hover:bg-neutral-800 whitespace-nowrap">
+          <button className="btn-primary">
             정책 추가
           </button>
         </form>
 
         {policies.length === 0 ? (
-          <div className="text-center text-sm text-neutral-500">
+          <div className="rounded-lg border border-dashed border-neutral-200 p-5 text-center text-sm text-neutral-500">
             <p>등록된 승인 정책이 없습니다.</p>
             <p className="mt-2 text-xs text-neutral-400">
               위에서 정책을 추가해 주세요.
             </p>
           </div>
         ) : (
-          <div className="space-y-2 text-sm">
+          <div className="module-list text-sm">
             {policies.map((policy) => (
               <div
                 key={policy.id}
-                className="flex items-center gap-2 rounded-lg border border-neutral-200 px-3 py-2"
+                className="list-row flex-col items-stretch gap-2 sm:flex-row sm:items-center"
               >
-                <div className="text-neutral-700 flex-shrink-0 min-w-0">
+                <div className="min-w-0 flex-shrink-0 text-neutral-700">
                   {scopeLabels[policy.scope]} ·{" "}
                   {policy.department ?? "기관 공용"}
                 </div>
@@ -384,7 +382,7 @@ export default function ApprovalPolicyManager() {
                 <button
                   type="button"
                   onClick={() => handleDelete(policy.id)}
-                  className="flex-shrink-0 p-2 rounded-lg border border-rose-200 bg-white text-rose-600 hover:bg-rose-50 hover:border-rose-300 transition-colors"
+                  className="icon-button icon-button-danger"
                   title="삭제"
                 >
                   <svg
@@ -406,16 +404,14 @@ export default function ApprovalPolicyManager() {
             ))}
           </div>
         )}
-      </div>
+      </SectionCard>
 
       {/* 삭제 확인 모달 */}
       {showDeleteConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="w-full max-w-md rounded-lg bg-white shadow-xl">
-            <div className="rounded-t-lg bg-rose-600 px-6 py-4">
-              <h3 className="text-lg font-semibold text-white">승인 정책 삭제</h3>
-            </div>
-            <div className="px-6 py-4 space-y-4">
+        <div className="modal-backdrop">
+          <div className="modal-surface max-w-md">
+            <h3 className="text-lg font-semibold text-slate-900">승인 정책 삭제</h3>
+            <div className="mt-4 space-y-4">
               <div className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3">
                 <p className="text-sm text-rose-700">
                   정말 이 승인 정책을 삭제하시겠습니까?
@@ -435,18 +431,18 @@ export default function ApprovalPolicyManager() {
                 })()}
               </div>
             </div>
-            <div className="flex gap-3 rounded-b-lg border-t border-neutral-200 bg-neutral-50 px-6 py-4">
+            <div className="mt-5 flex gap-2">
               <button
                 type="button"
                 onClick={confirmDelete}
-                className="flex-1 btn-primary bg-rose-600 hover:bg-rose-700"
+                className="btn-danger flex-1"
               >
                 삭제
               </button>
               <button
                 type="button"
                 onClick={() => setShowDeleteConfirm(null)}
-                className="flex-1 btn-ghost"
+                className="btn-outline flex-1"
               >
                 취소
               </button>

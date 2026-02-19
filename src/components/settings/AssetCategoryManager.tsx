@@ -487,186 +487,182 @@ export default function AssetCategoryManager({
   }
 
   return (
-    <div className="space-y-4">
+    <div className="manage-stack">
       <div>
-        <h3 className="text-lg font-semibold mb-2">물품 카테고리 관리</h3>
-        <p className="text-sm text-neutral-600 mb-4">
-          물품 등록 시 사용할 카테고리를 추가하거나 삭제할 수 있습니다.
+        <h3 className="module-title">물품 카테고리 관리</h3>
+        <p className="module-description">
+          물품 등록 시 사용할 카테고리를 추가하고 표시 순서를 관리할 수 있습니다.
         </p>
       </div>
 
       {message && (
         <Notice
-          variant={message.includes("실패") ? "error" : "success"}
+          variant={message.includes("실패") || message.includes("오류") ? "error" : "success"}
+          className="text-left"
         >
           {message}
         </Notice>
       )}
 
-      <div className="space-y-4">
-        <div className="rounded-lg border border-neutral-200 bg-white p-4">
-          <h4 className="text-sm font-semibold mb-3">카테고리 추가</h4>
-          <div className="flex gap-2">
-            <input
-              type="text"
-              className="form-input flex-1"
-              placeholder="카테고리명 (예: 음향)"
-              value={newCategoryLabel}
-              onChange={(e) => setNewCategoryLabel(e.target.value)}
-            />
-            <button
-              type="button"
-              onClick={handleAddCategory}
-              disabled={isAdding || !newCategoryLabel.trim()}
-              className="btn-primary whitespace-nowrap flex-shrink-0"
-            >
-              {isAdding ? "추가 중..." : "추가"}
-            </button>
-          </div>
-          <p className="text-xs text-neutral-500 mt-1">
-            카테고리명을 입력하면 시스템이 자동으로 고유한 카테고리 코드를 생성합니다.
-          </p>
+      <section className="surface-card p-5 md:p-6">
+        <h4 className="text-sm font-semibold text-neutral-900">카테고리 추가</h4>
+        <div className="mt-3 grid gap-2 md:grid-cols-[minmax(0,1fr)_auto]">
+          <input
+            type="text"
+            className="form-input"
+            placeholder="카테고리명 (예: 음향)"
+            value={newCategoryLabel}
+            onChange={(e) => setNewCategoryLabel(e.target.value)}
+          />
+          <button
+            type="button"
+            onClick={handleAddCategory}
+            disabled={isAdding || !newCategoryLabel.trim()}
+            className="btn-primary md:min-w-24"
+          >
+            {isAdding ? "추가 중..." : "추가"}
+          </button>
         </div>
+        <p className="mt-2 text-xs text-neutral-500">
+          카테고리명을 입력하면 시스템이 고유한 카테고리 코드를 자동 생성합니다.
+        </p>
+      </section>
 
-        <div className="rounded-lg border border-neutral-200 bg-white p-4">
-          <h4 className="text-sm font-semibold mb-3">현재 카테고리 목록</h4>
-          {categories.length === 0 ? (
-            <p className="text-sm text-neutral-500">등록된 카테고리가 없습니다.</p>
-          ) : (
-            <div className="space-y-2">
-              {categories.map((category, index) => (
-                <div
-                  key={category.value}
-                  data-drag-index={index}
-                  draggable={!isReordering && editingCategoryValue === null}
-                  onDragStart={() => handleDragStart(index)}
-                  onDragOver={(e) => handleDragOver(e, index)}
-                  onDragLeave={handleDragLeave}
-                  onDrop={(e) => handleDrop(e, index)}
-                  onTouchStart={(e) => handleTouchStart(e, index)}
-                  onTouchMove={handleTouchMove}
-                  onTouchEnd={handleTouchEnd}
-                  className={`flex items-center justify-between p-2 rounded border border-neutral-200 bg-neutral-50 transition-all ${
-                    draggedIndex === index
-                      ? "opacity-50 cursor-grabbing"
-                      : dragOverIndex === index
-                      ? "border-blue-400 bg-blue-50"
-                      : "cursor-grab"
-                  } ${isReordering ? "opacity-50 pointer-events-none" : ""}`}
+      <section className="surface-card p-5 md:p-6">
+        <h4 className="text-sm font-semibold text-neutral-900">현재 카테고리 목록</h4>
+        {categories.length === 0 ? (
+          <p className="mt-3 text-sm text-neutral-500">등록된 카테고리가 없습니다.</p>
+        ) : (
+          <div className="module-list mt-3">
+            {categories.map((category, index) => (
+              <div
+                key={category.value}
+                data-drag-index={index}
+                draggable={!isReordering && editingCategoryValue === null}
+                onDragStart={() => handleDragStart(index)}
+                onDragOver={(e) => handleDragOver(e, index)}
+                onDragLeave={handleDragLeave}
+                onDrop={(e) => handleDrop(e, index)}
+                onTouchStart={(e) => handleTouchStart(e, index)}
+                onTouchMove={handleTouchMove}
+                onTouchEnd={handleTouchEnd}
+                className={`flex items-center gap-2 px-4 py-3 transition-all ${
+                  draggedIndex === index
+                    ? "cursor-grabbing opacity-50"
+                    : dragOverIndex === index
+                    ? "bg-blue-50"
+                    : "cursor-grab bg-white"
+                } ${isReordering ? "pointer-events-none opacity-50" : ""}`}
+              >
+                <svg
+                  className="h-5 w-5 flex-shrink-0 text-neutral-400"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
                 >
-                  <div className="flex items-center gap-2 flex-1">
-                    <svg
-                      className="w-5 h-5 text-neutral-400 flex-shrink-0"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M4 8h16M4 16h16"
+                  />
+                </svg>
+
+                {editingCategoryValue === category.value ? (
+                  <div className="flex flex-1 flex-col gap-2 sm:flex-row sm:items-center">
+                    <input
+                      type="text"
+                      className="form-input flex-1 text-sm"
+                      value={editingCategoryLabel}
+                      onChange={(e) => setEditingCategoryLabel(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          handleUpdateCategory();
+                        } else if (e.key === "Escape") {
+                          handleCancelEdit();
+                        }
+                      }}
+                      autoFocus
+                    />
+                    <button
+                      type="button"
+                      onClick={handleUpdateCategory}
+                      disabled={isUpdating || !editingCategoryLabel.trim()}
+                      className="btn-primary h-9 px-3 text-xs"
                     >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M4 8h16M4 16h16"
-                      />
-                    </svg>
-                    {editingCategoryValue === category.value ? (
-                    <div className="flex-1 flex items-center gap-2">
-                      <input
-                        type="text"
-                        className="form-input flex-1 text-sm"
-                        value={editingCategoryLabel}
-                        onChange={(e) => setEditingCategoryLabel(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") {
-                            handleUpdateCategory();
-                          } else if (e.key === "Escape") {
-                            handleCancelEdit();
-                          }
-                        }}
-                        autoFocus
-                      />
+                      {isUpdating ? "저장 중..." : "저장"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleCancelEdit}
+                      disabled={isUpdating}
+                      className="btn-outline h-9 px-3 text-xs"
+                    >
+                      취소
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    <div className="flex-1">
+                      <span className="text-sm font-medium text-neutral-900">
+                        {category.label}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1">
                       <button
                         type="button"
-                        onClick={handleUpdateCategory}
-                        disabled={isUpdating || !editingCategoryLabel.trim()}
-                        className="btn-primary text-xs px-3 py-1"
+                        onClick={() => handleEditCategory(category.value)}
+                        className="icon-button"
+                        title="수정"
                       >
-                        {isUpdating ? "저장 중..." : "저장"}
+                        <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        </svg>
                       </button>
                       <button
                         type="button"
-                        onClick={handleCancelEdit}
-                        disabled={isUpdating}
-                        className="btn-ghost text-xs px-3 py-1"
+                        onClick={() => handleDeleteCategory(category.value)}
+                        className="icon-button icon-button-danger"
+                        title="삭제"
                       >
-                        취소
+                        <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
                       </button>
                     </div>
-                    ) : (
-                      <>
-                        <div className="flex-1">
-                          <span className="text-sm font-medium">{category.label}</span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <button
-                            type="button"
-                            onClick={() => handleEditCategory(category.value)}
-                            className="p-2 text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100 rounded transition-colors"
-                            title="수정"
-                          >
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                            </svg>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleDeleteCategory(category.value)}
-                            className="p-2 text-rose-600 hover:text-rose-700 hover:bg-rose-50 rounded transition-colors"
-                            title="삭제"
-                          >
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                            </svg>
-                          </button>
-                        </div>
-                      </>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* 삭제 확인 모달 */}
-      {showDeleteConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="w-full max-w-md rounded-lg bg-white shadow-xl">
-            <div className="rounded-t-lg bg-rose-600 px-6 py-4">
-              <h3 className="text-lg font-semibold text-white">카테고리 삭제</h3>
-            </div>
-            <div className="px-6 py-4 space-y-4">
-              <div className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3">
-                <p className="text-sm text-rose-700">
-                  정말 &quot;{categories.find((c) => c.value === showDeleteConfirm)?.label}&quot; 카테고리를 삭제하시겠습니까?
-                </p>
-                <p className="text-xs text-rose-600 mt-2">
-                  이 카테고리를 사용하는 물품들은 카테고리 정보가 제거될 수 있습니다.
-                </p>
+                  </>
+                )}
               </div>
+            ))}
+          </div>
+        )}
+      </section>
+
+      {showDeleteConfirm && (
+        <div className="modal-backdrop">
+          <div className="modal-surface max-w-md">
+            <h3 className="text-lg font-semibold text-slate-900">카테고리 삭제</h3>
+            <div className="mt-4 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3">
+              <p className="text-sm text-rose-700">
+                정말 &quot;{categories.find((c) => c.value === showDeleteConfirm)?.label}&quot;
+                {" "}카테고리를 삭제하시겠습니까?
+              </p>
+              <p className="mt-2 text-xs text-rose-600">
+                이 카테고리를 사용하는 물품의 카테고리 정보가 제거될 수 있습니다.
+              </p>
             </div>
-            <div className="flex gap-3 rounded-b-lg border-t border-neutral-200 bg-neutral-50 px-6 py-4">
+            <div className="mt-5 flex gap-2">
               <button
                 type="button"
                 onClick={confirmDeleteCategory}
-                className="flex-1 btn-primary bg-rose-600 hover:bg-rose-700"
+                className="btn-danger flex-1"
               >
                 삭제
               </button>
               <button
                 type="button"
                 onClick={() => setShowDeleteConfirm(null)}
-                className="flex-1 btn-ghost"
+                className="btn-outline flex-1"
               >
                 취소
               </button>

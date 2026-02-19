@@ -362,8 +362,8 @@ export default function DepartmentManager({ organizationId }: DepartmentManagerP
   return (
     <div className="space-y-6">
       <div>
-        <h3 className="text-lg font-semibold mb-2">부서 관리</h3>
-        <p className="text-sm text-neutral-600 mb-4">
+        <h3 className="text-xl font-semibold tracking-tight text-slate-900">부서 관리</h3>
+        <p className="mt-1 text-sm text-neutral-600">
           기관의 부서를 생성하고 관리할 수 있습니다.
         </p>
       </div>
@@ -384,7 +384,7 @@ export default function DepartmentManager({ organizationId }: DepartmentManagerP
       {/* Create Form */}
       <form
         onSubmit={handleCreate}
-        className="rounded-xl border border-neutral-200 bg-white p-6 space-y-3"
+        className="surface-card space-y-3 p-5 md:p-6"
       >
         <h4 className="font-medium">새 부서 생성</h4>
         <div className="space-y-3">
@@ -414,7 +414,7 @@ export default function DepartmentManager({ organizationId }: DepartmentManagerP
       </form>
 
       {/* Department List */}
-      <div className="rounded-lg border border-neutral-200 bg-white p-4">
+      <div className="surface-card p-4 md:p-5">
         <h4 className="text-sm font-semibold mb-3">부서 목록</h4>
         {departments.length === 0 ? (
           <Notice variant="neutral" className="text-left">
@@ -536,12 +536,10 @@ export default function DepartmentManager({ organizationId }: DepartmentManagerP
 
       {/* 삭제 확인 모달 */}
       {showDeleteConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="w-full max-w-md rounded-lg bg-white shadow-xl">
-            <div className="rounded-t-lg bg-rose-600 px-6 py-4">
-              <h3 className="text-lg font-semibold text-white">부서 삭제</h3>
-            </div>
-            <div className="px-6 py-4 space-y-4">
+        <div className="modal-backdrop">
+          <div className="modal-surface max-w-md">
+            <h3 className="text-lg font-semibold text-slate-900">부서 삭제</h3>
+            <div className="mt-4 space-y-4">
               <div className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3">
                 <p className="text-sm text-rose-700">
                   정말 &quot;{departments.find((d) => d.id === showDeleteConfirm)?.name}&quot; 부서를 삭제하시겠습니까?
@@ -551,12 +549,12 @@ export default function DepartmentManager({ organizationId }: DepartmentManagerP
                 </p>
               </div>
             </div>
-            <div className="flex gap-3 rounded-b-lg border-t border-neutral-200 bg-neutral-50 px-6 py-4">
+            <div className="mt-5 flex gap-2">
               <button
                 type="button"
                 onClick={confirmDelete}
                 disabled={saving}
-                className="flex-1 btn-primary bg-rose-600 hover:bg-rose-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="btn-danger flex-1 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {saving ? "삭제 중..." : "삭제"}
               </button>
@@ -564,7 +562,7 @@ export default function DepartmentManager({ organizationId }: DepartmentManagerP
                 type="button"
                 onClick={() => setShowDeleteConfirm(null)}
                 disabled={saving}
-                className="flex-1 btn-ghost disabled:opacity-50 disabled:cursor-not-allowed"
+                className="btn-outline flex-1 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 취소
               </button>

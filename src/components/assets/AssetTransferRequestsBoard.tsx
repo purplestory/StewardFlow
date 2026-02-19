@@ -628,19 +628,19 @@ export default function AssetTransferRequestsBoard() {
   }
 
   return (
-    <div className="space-y-4">
-      <div className="rounded-2xl border border-neutral-200 bg-white p-6">
+    <div className="manage-stack">
+      <div className="surface-card p-5 md:p-6">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <h1 className="text-2xl font-semibold">불용품 양도 요청</h1>
-            <p className="mt-2 text-sm text-neutral-600">
+            <h2 className="text-xl font-semibold tracking-tight text-slate-900">불용품 양도 요청</h2>
+            <p className="mt-1 text-sm text-neutral-600">
               내 요청과 내 부서로 들어온 요청을 확인할 수 있습니다.
             </p>
           </div>
           <button
             type="button"
             onClick={reload}
-            className="shrink-0 rounded p-2 text-neutral-600 transition-colors hover:bg-neutral-100 hover:text-neutral-900"
+            className="icon-button"
             title="새로고침"
           >
             <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -707,7 +707,7 @@ export default function AssetTransferRequestsBoard() {
       {message && <Notice variant="error">{message}</Notice>}
       {toast && <Notice variant="success">{toast}</Notice>}
 
-      <div className="rounded-xl border border-neutral-200 bg-white p-4">
+      <div className="module-toolbar">
         <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-4">
           <select
             className="form-select w-full"
@@ -758,7 +758,7 @@ export default function AssetTransferRequestsBoard() {
           {filteredRequests.map((request) => (
             <div
               key={request.id}
-              className="rounded-lg border border-neutral-200 bg-white px-4 py-3 text-sm"
+              className="list-row text-sm"
             >
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div>
@@ -783,7 +783,7 @@ export default function AssetTransferRequestsBoard() {
                         type="button"
                         onClick={() => handleCancel(request)}
                         disabled={updatingId === request.id}
-                        className="h-[38px] px-4 rounded-lg text-sm font-medium transition-all bg-white text-neutral-700 border border-neutral-200 hover:bg-neutral-50 whitespace-nowrap flex items-center justify-center"
+                        className="btn-outline h-[38px]"
                       >
                         취소
                       </button>
@@ -793,19 +793,19 @@ export default function AssetTransferRequestsBoard() {
                         <button
                           type="button"
                           onClick={() => handleResolve(request, "approved")}
-                          disabled={updatingId === request.id}
-                          className="h-[38px] px-4 rounded-lg text-sm font-medium transition-all bg-neutral-900 text-white hover:bg-neutral-800 whitespace-nowrap flex items-center justify-center"
-                        >
-                          승인
-                        </button>
+                        disabled={updatingId === request.id}
+                        className="btn-primary h-[38px]"
+                      >
+                        승인
+                      </button>
                         <button
                           type="button"
                           onClick={() => handleResolve(request, "rejected")}
-                          disabled={updatingId === request.id}
-                          className="h-[38px] px-4 rounded-lg text-sm font-medium transition-all bg-white text-rose-600 border border-rose-200 hover:bg-rose-50 hover:border-rose-300 whitespace-nowrap flex items-center justify-center"
-                        >
-                          거절
-                        </button>
+                        disabled={updatingId === request.id}
+                        className="btn-outline h-[38px] border-rose-200 text-rose-600 hover:bg-rose-50"
+                      >
+                        거절
+                      </button>
                       </>
                     )}
                   </div>

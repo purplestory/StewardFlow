@@ -171,11 +171,12 @@ export default function AssetAdminPanel() {
   };
 
   return (
-    <div className="space-y-4 p-4 md:p-5">
+    <section className="surface-card">
+      <div className="space-y-4 p-4 md:p-5">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h2 className="text-lg font-semibold">물품 관리</h2>
-          <p className="text-sm text-neutral-600">
+          <h2 className="text-xl font-semibold tracking-tight text-slate-900">물품 관리</h2>
+          <p className="mt-1 text-sm text-neutral-600">
             물품 상태를 일괄 변경하거나 검색할 수 있습니다.
           </p>
         </div>
@@ -187,32 +188,33 @@ export default function AssetAdminPanel() {
         </Link>
       </div>
 
-      <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-neutral-600">
-        <div className="flex flex-wrap items-center gap-2">
-          <span>총 {assets.length}건</span>
-          <button
-            type="button"
-            onClick={load}
-            className="btn-ghost"
-          >
-            새로고침
-          </button>
+      <div className="module-toolbar space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-neutral-600">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="module-kpi">총 {assets.length}건</span>
+            <button
+              type="button"
+              onClick={load}
+              className="btn-outline"
+            >
+              새로고침
+            </button>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <input
+              className="form-input text-sm md:w-72"
+              placeholder="자산명/소유 부서 검색"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+            />
+          </div>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <input
-            className="form-input text-sm md:w-72"
-            placeholder="자산명/소유 부서 검색"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-          />
-        </div>
+        <StatusFilterPills
+          options={statusFilterOptions}
+          value={statusFilter}
+          onChange={(next) => setStatusFilter(next as Asset["status"] | "all")}
+        />
       </div>
-
-      <StatusFilterPills
-        options={statusFilterOptions}
-        value={statusFilter}
-        onChange={(next) => setStatusFilter(next as Asset["status"] | "all")}
-      />
 
       {/* 일괄 변경 - 선택된 항목이 있을 때만 표시 */}
       {selectedIds.size > 0 && (
@@ -527,6 +529,7 @@ export default function AssetAdminPanel() {
           </div>
         </DialogContent>
       </Dialog>
-    </div>
+      </div>
+    </section>
   );
 }

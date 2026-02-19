@@ -25,9 +25,9 @@ export default function SectionCard({
   return (
     <section className={cx("surface-card", className)}>
       {title || description || actions ? (
-        <header className="flex flex-wrap items-start justify-between gap-4 border-b border-neutral-200 px-4 py-4 md:px-6">
+        <header className="module-head border-b border-neutral-200 px-4 py-4 md:px-6">
           <div>
-            {title ? <h2 className="text-lg font-semibold text-slate-900">{title}</h2> : null}
+            {title ? <h2 className="text-xl font-semibold tracking-tight text-slate-900">{title}</h2> : null}
             {description ? (
               <p className="mt-1 text-sm text-neutral-600">{description}</p>
             ) : null}

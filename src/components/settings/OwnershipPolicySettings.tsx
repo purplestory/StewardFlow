@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import Notice from "@/components/common/Notice";
+import SectionCard from "@/components/ui/SectionCard";
 
 type OrganizationFeatures = {
   equipment?: boolean;
@@ -111,19 +112,18 @@ export default function OwnershipPolicySettings({ organizationId }: OwnershipPol
 
   return (
     <div className="space-y-6">
-      <div>
-        <h3 className="text-lg font-semibold mb-4">소유 정책 설정</h3>
-        <p className="text-sm text-neutral-600 mb-4">
-          공간과 차량의 소유 구조를 설정할 수 있습니다. 각 기관마다 정책이 다를 수 있습니다.
-        </p>
-
-        <div className="space-y-4">
+      <SectionCard
+        title="소유 정책 설정"
+        description="공간과 차량의 소유 구조를 설정할 수 있습니다. 각 기관마다 정책이 다를 수 있습니다."
+        bodyClassName="space-y-4"
+      >
+        <div className="module-list">
           {features.spaces !== false && (
-            <div className="p-4 border border-neutral-200 rounded-lg mb-6">
-              <label className="block form-label mb-3">
+            <div className="px-4 py-4">
+              <label className="form-label">
                 공간 소유 정책
               </label>
-              <div className="space-y-3">
+              <div className="mt-3 space-y-3">
                 <label className="flex items-center gap-2">
                   <input
                     type="radio"
@@ -169,11 +169,11 @@ export default function OwnershipPolicySettings({ organizationId }: OwnershipPol
           )}
 
           {features.vehicles === true && (
-            <div className="p-4 border border-neutral-200 rounded-lg mb-6">
-              <label className="block form-label mb-3">
+            <div className="px-4 py-4">
+              <label className="form-label">
                 차량 소유 정책
               </label>
-              <div className="space-y-3">
+              <div className="mt-3 space-y-3">
                 <label className="flex items-center gap-2">
                   <input
                     type="radio"
@@ -217,14 +217,14 @@ export default function OwnershipPolicySettings({ organizationId }: OwnershipPol
               </div>
             </div>
           )}
-
-          <div className="p-4 border border-neutral-200 rounded-lg bg-neutral-50">
-            <p className="text-xs text-neutral-600">
-              <strong>참고:</strong> 물품은 부서 소유와 기관 공용 둘 다 가능합니다. (설정 불필요)
-            </p>
-          </div>
         </div>
-      </div>
+
+        <div className="module-toolbar">
+          <p className="text-xs text-neutral-600">
+            <strong>참고:</strong> 물품은 부서 소유와 기관 공용 둘 다 가능합니다. (설정 불필요)
+          </p>
+        </div>
+      </SectionCard>
 
       {message && (
         <Notice

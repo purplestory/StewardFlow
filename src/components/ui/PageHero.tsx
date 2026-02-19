@@ -21,19 +21,17 @@ export default function PageHero({
   className,
 }: PageHeroProps) {
   return (
-    <div className={cx("surface-panel p-4 md:p-6", className)}>
-      <div className="flex flex-wrap items-start justify-between gap-4">
+    <div className={cx("surface-panel p-5 md:p-7", className)}>
+      <div className="module-head">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-slate-900">
-            {title}
-          </h1>
+          <h1 className="module-title">{title}</h1>
           {description ? (
-            <p className="mt-2 text-sm text-neutral-600">{description}</p>
+            <p className="module-description">{description}</p>
           ) : null}
         </div>
         {actions ? <div className="shrink-0">{actions}</div> : null}
       </div>
-      {children ? <div className="mt-5">{children}</div> : null}
+      {children ? <div className="mt-4">{children}</div> : null}
     </div>
   );
 }

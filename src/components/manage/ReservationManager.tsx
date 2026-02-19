@@ -304,15 +304,16 @@ export default function ReservationManager() {
   }
 
   return (
-    <div className="space-y-4 p-4 md:p-5">
-      <div className="surface-card space-y-3 p-3 md:p-4">
+    <section className="surface-card p-4 md:p-5">
+      <div className="space-y-4">
+      <div className="module-toolbar space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-neutral-600">
           <div className="flex flex-wrap items-center gap-2">
-            <span>총 {reservations.length}건</span>
+            <span className="module-kpi">총 {reservations.length}건</span>
             <button
               type="button"
               onClick={load}
-              className="btn-ghost"
+              className="btn-outline"
             >
               새로고침
             </button>
@@ -505,7 +506,8 @@ export default function ReservationManager() {
         }}
         onClose={() => setSelectedReservation(null)}
       />
-    </div>
+      </div>
+    </section>
   );
 }
 

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import Notice from "@/components/common/Notice";
+import SectionCard from "@/components/ui/SectionCard";
 
 type ReturnVerificationPolicy = {
   enabled?: boolean;
@@ -92,21 +93,19 @@ export default function ReturnVerificationPolicySettings({ organizationId }: Ret
 
   return (
     <div className="space-y-6">
-      <div>
-        <h3 className="text-lg font-semibold mb-4">반납 확인 정책</h3>
-        <p className="text-sm text-neutral-600 mb-4">
-          물품, 공간, 차량 사용 후 반납 시 확인 절차를 설정할 수 있습니다.
-        </p>
-
-        <div className="space-y-4">
-          <div className="flex items-center justify-between p-4 border border-neutral-200 rounded-lg gap-4">
+      <SectionCard
+        title="반납 확인 정책"
+        description="물품, 공간, 차량 사용 후 반납 시 확인 절차를 설정할 수 있습니다."
+      >
+        <div className="module-list">
+          <div className="flex items-center justify-between gap-4 px-4 py-4">
             <div className="flex-1">
-              <label className="font-medium text-sm">반납 확인 절차 활성화</label>
-              <p className="text-xs text-neutral-500 mt-1">
+              <label className="text-sm font-medium">반납 확인 절차 활성화</label>
+              <p className="mt-1 text-xs text-neutral-500">
                 반납 시 사진 촬영 및 확인 절차를 필수로 진행합니다.
               </p>
             </div>
-            <label className="relative inline-flex items-center cursor-pointer">
+            <label className="relative inline-flex cursor-pointer items-center">
               <input
                 type="checkbox"
                 checked={returnVerificationPolicy.enabled === true}
@@ -115,22 +114,22 @@ export default function ReturnVerificationPolicySettings({ organizationId }: Ret
                   setReturnVerificationPolicy(newPolicy);
                   await handleSave(newPolicy);
                 }}
-                className="sr-only peer"
+                className="peer sr-only"
               />
-              <div className="w-11 h-6 bg-neutral-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-neutral-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-black"></div>
+              <div className="toggle-switch"></div>
             </label>
           </div>
 
           {returnVerificationPolicy.enabled && (
             <>
-              <div className="flex items-center justify-between p-4 border border-neutral-200 rounded-lg gap-4">
+              <div className="flex items-center justify-between gap-4 px-4 py-4">
                 <div className="flex-1">
-                  <label className="font-medium text-sm">사진 촬영 필수</label>
-                  <p className="text-xs text-neutral-500 mt-1">
+                  <label className="text-sm font-medium">사진 촬영 필수</label>
+                  <p className="mt-1 text-xs text-neutral-500">
                     반납 시 반드시 사진을 촬영해야 합니다. (차량은 계기판 및 외관 사진 필수)
                   </p>
                 </div>
-                <label className="relative inline-flex items-center cursor-pointer flex-shrink-0">
+                <label className="relative inline-flex flex-shrink-0 cursor-pointer items-center">
                   <input
                     type="checkbox"
                     checked={returnVerificationPolicy.require_photo !== false}
@@ -139,20 +138,20 @@ export default function ReturnVerificationPolicySettings({ organizationId }: Ret
                       setReturnVerificationPolicy(newPolicy);
                       await handleSave(newPolicy);
                     }}
-                    className="sr-only peer"
+                    className="peer sr-only"
                   />
-                  <div className="w-11 h-6 bg-neutral-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-neutral-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-black"></div>
+                  <div className="toggle-switch"></div>
                 </label>
               </div>
 
-              <div className="flex items-center justify-between p-4 border border-neutral-200 rounded-lg gap-4">
+              <div className="flex items-center justify-between gap-4 px-4 py-4">
                 <div className="flex-1">
-                  <label className="font-medium text-sm">관리자 확인 필수</label>
-                  <p className="text-xs text-neutral-500 mt-1">
+                  <label className="text-sm font-medium">관리자 확인 필수</label>
+                  <p className="mt-1 text-xs text-neutral-500">
                     반납 후 관리자 또는 부서 관리자의 확인이 필요합니다.
                   </p>
                 </div>
-                <label className="relative inline-flex items-center cursor-pointer">
+                <label className="relative inline-flex cursor-pointer items-center">
                   <input
                     type="checkbox"
                     checked={returnVerificationPolicy.require_verification !== false}
@@ -161,15 +160,15 @@ export default function ReturnVerificationPolicySettings({ organizationId }: Ret
                       setReturnVerificationPolicy(newPolicy);
                       await handleSave(newPolicy);
                     }}
-                    className="sr-only peer"
+                    className="peer sr-only"
                   />
-                  <div className="w-11 h-6 bg-neutral-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-neutral-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-black"></div>
+                  <div className="toggle-switch"></div>
                 </label>
               </div>
             </>
           )}
         </div>
-      </div>
+      </SectionCard>
 
       {message && (
         <Notice

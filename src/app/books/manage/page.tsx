@@ -50,6 +50,18 @@ type PendingRequestItem = PendingRequestRow & {
   borrower_department: string | null;
 };
 
+const toBooksDataErrorMessage = (message: string, fallback: string) => {
+  if (
+    message.includes("Could not find the table") ||
+    message.includes("schema cache") ||
+    message.includes("book_items") ||
+    message.includes("book_loans")
+  ) {
+    return "도서 기능 초기화가 필요합니다. 관리자에게 마이그레이션 적용을 요청해주세요.";
+  }
+  return fallback;
+};
+
 export default function BooksManagePage() {
   const [loading, setLoading] = useState(true);
   const [hasPermission, setHasPermission] = useState(false);
@@ -160,7 +172,12 @@ export default function BooksManagePage() {
       if (!isMounted) return;
 
       if (settingsRes.error) {
-        setMessage(`도서 운영 설정 조회 실패: ${settingsRes.error.message}`);
+        setMessage(
+          toBooksDataErrorMessage(
+            settingsRes.error.message,
+            `도서 운영 설정 조회 실패: ${settingsRes.error.message}`
+          )
+        );
       } else {
         setProgramSettings(settingsRes.data ?? null);
       }
@@ -172,11 +189,21 @@ export default function BooksManagePage() {
       }
 
       if (pendingReturnRes.error) {
-        setMessage(`반납 검수 목록 조회 실패: ${pendingReturnRes.error.message}`);
+        setMessage(
+          toBooksDataErrorMessage(
+            pendingReturnRes.error.message,
+            `반납 검수 목록 조회 실패: ${pendingReturnRes.error.message}`
+          )
+        );
         setPendingReturns([]);
       }
       if (pendingRequestRes.error) {
-        setMessage(`대여 요청 목록 조회 실패: ${pendingRequestRes.error.message}`);
+        setMessage(
+          toBooksDataErrorMessage(
+            pendingRequestRes.error.message,
+            `대여 요청 목록 조회 실패: ${pendingRequestRes.error.message}`
+          )
+        );
         setPendingRequests([]);
       }
 

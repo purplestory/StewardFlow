@@ -120,6 +120,10 @@ export default function OrganizationManager() {
     );
   }
 
+  if (loading && isAuthenticated === null) {
+    return <Notice>기관 정보를 불러오는 중입니다.</Notice>;
+  }
+
   const handleCreate = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setMessage(null);
@@ -142,15 +146,11 @@ export default function OrganizationManager() {
       return;
     }
 
-    console.log("Creating organization with user:", user.id);
-
     const { data: orgData, error } = await supabase
       .from("organizations")
       .insert({ name })
       .select("id,name")
       .maybeSingle();
-
-    console.log("Organization insert result:", { orgData, error });
 
     if (error) {
       console.error("Organization create error:", error);
@@ -170,8 +170,6 @@ export default function OrganizationManager() {
       setLoading(false);
       return;
     }
-
-    console.log("Updating profile with organization_id:", orgData.id);
 
     const { error: updateError } = await supabase
       .from("profiles")
@@ -303,9 +301,9 @@ export default function OrganizationManager() {
       )}
 
       {organizationId && organization ? (
-        <div className="rounded-xl border border-neutral-200 bg-white p-6 space-y-4">
+        <section className="surface-card p-5 md:p-6">
           <div>
-            <h2 className="text-lg font-semibold mb-2">내 기관</h2>
+            <h2 className="text-xl font-semibold tracking-tight text-slate-900">내 기관</h2>
             {isEditingName && userRole === "admin" ? (
               <div className="flex gap-2">
                 <input
@@ -335,40 +333,55 @@ export default function OrganizationManager() {
                 </button>
               </div>
             ) : (
-              <div className="flex items-center gap-2">
+              <div className="module-head">
                 <p className="text-sm text-neutral-900 font-medium">
                   {organization.name}
                 </p>
                 {userRole === "admin" && (
-                  <div className="flex items-center gap-1 text-xs text-neutral-500">
+                  <div className="flex items-center gap-2">
                     <button
                       type="button"
                       onClick={() => setIsEditingName(true)}
-                      className="hover:text-neutral-700"
+                      className="icon-button"
+                      title="기관명 수정"
                     >
-                      수정
+                      <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                        />
+                      </svg>
                     </button>
-                    <span className="text-neutral-300">|</span>
                     <button
                       type="button"
                       onClick={() => setShowDeleteConfirm(true)}
                       disabled={loading}
-                      className="text-rose-600 hover:text-rose-700 disabled:opacity-50"
+                      className="icon-button icon-button-danger disabled:opacity-50"
+                      title="기관 삭제"
                     >
-                      삭제
+                      <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                        />
+                      </svg>
                     </button>
                   </div>
                 )}
               </div>
             )}
           </div>
-        </div>
+        </section>
       ) : (
         <form
           onSubmit={handleCreate}
-          className="rounded-xl border border-neutral-200 bg-white p-6 space-y-3"
+          className="surface-card space-y-3 p-5 md:p-6"
         >
-          <h2 className="text-lg font-semibold">기관 생성</h2>
+          <h2 className="text-xl font-semibold tracking-tight text-slate-900">기관 생성</h2>
           <p className="text-sm text-neutral-600">
             새로운 기관을 생성합니다. 기관 생성자는 자동으로 관리자 권한을 받습니다.
           </p>
@@ -389,19 +402,15 @@ export default function OrganizationManager() {
       )}
 
       {organizationId && (
-        <div className="rounded-xl border border-neutral-200 bg-white p-6">
-          <DepartmentManager organizationId={organizationId} />
-        </div>
+        <DepartmentManager organizationId={organizationId} />
       )}
 
       {/* 삭제 확인 모달 */}
       {showDeleteConfirm && userRole === "admin" && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="w-full max-w-md rounded-lg bg-white shadow-xl">
-            <div className="rounded-t-lg bg-rose-600 px-6 py-4">
-              <h3 className="text-lg font-semibold text-white">기관 삭제</h3>
-            </div>
-            <div className="px-6 py-4 space-y-4">
+        <div className="modal-backdrop">
+          <div className="modal-surface max-w-md">
+            <h3 className="text-lg font-semibold text-slate-900">기관 삭제</h3>
+            <div className="mt-4 space-y-4">
               <div className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3">
                 <p className="text-sm text-rose-900 mb-2">
                   정말 &quot;{organization?.name}&quot; 기관을 삭제하시겠습니까?
@@ -411,12 +420,12 @@ export default function OrganizationManager() {
                 </p>
               </div>
             </div>
-            <div className="flex gap-3 rounded-b-lg border-t border-neutral-200 bg-neutral-50 px-6 py-4">
+            <div className="mt-5 flex gap-2">
               <button
                 type="button"
                 onClick={handleDelete}
                 disabled={loading}
-                className="flex-1 btn-primary bg-rose-600 hover:bg-rose-700 disabled:opacity-50"
+                className="btn-danger flex-1 disabled:opacity-50"
               >
                 삭제
               </button>
@@ -424,7 +433,7 @@ export default function OrganizationManager() {
                 type="button"
                 onClick={() => setShowDeleteConfirm(false)}
                 disabled={loading}
-                className="flex-1 btn-ghost"
+                className="btn-outline flex-1"
               >
                 취소
               </button>

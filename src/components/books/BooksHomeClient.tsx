@@ -88,6 +88,18 @@ const BOOK_STATUS_BADGE_CLASS: Record<BookStatus, string> = {
   archived: "bg-neutral-100 text-neutral-600 ring-neutral-200",
 };
 
+const toBooksDataErrorMessage = (message: string, fallback: string) => {
+  if (
+    message.includes("Could not find the table") ||
+    message.includes("schema cache") ||
+    message.includes("book_items") ||
+    message.includes("book_loans")
+  ) {
+    return "도서 기능 초기화가 필요합니다. 관리자에게 마이그레이션 적용을 요청해주세요.";
+  }
+  return fallback;
+};
+
 export default function BooksHomeClient() {
   const [loading, setLoading] = useState(true);
   const [isAuthed, setIsAuthed] = useState(false);
@@ -218,14 +230,24 @@ export default function BooksHomeClient() {
       }
 
       if (booksResponse.error) {
-        setBooksLoadError(`도서 목록 조회 실패: ${booksResponse.error.message}`);
+        setBooksLoadError(
+          toBooksDataErrorMessage(
+            booksResponse.error.message,
+            `도서 목록 조회 실패: ${booksResponse.error.message}`
+          )
+        );
       } else {
         setBooksLoadError(null);
         setBookItems((booksResponse.data ?? []) as BookItem[]);
       }
 
       if (loansResponse.error) {
-        setActionMessage(`대출 상태 조회 실패: ${loansResponse.error.message}`);
+        setActionMessage(
+          toBooksDataErrorMessage(
+            loansResponse.error.message,
+            `대출 상태 조회 실패: ${loansResponse.error.message}`
+          )
+        );
         setMyActiveLoansByBookId({});
       } else {
         const rows = (loansResponse.data ?? []) as ActiveBookLoan[];

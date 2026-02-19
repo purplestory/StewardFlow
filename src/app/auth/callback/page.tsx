@@ -60,18 +60,20 @@ function AuthCallbackPageContent() {
           }
         };
 
+        const waitForActiveSessionUser = async (retries = 8, delayMs = 120) => {
+          let attempt = 0;
+          while (attempt < retries) {
+            if (await hasActiveSessionUser()) return true;
+            attempt += 1;
+            await new Promise((resolve) => setTimeout(resolve, delayMs));
+          }
+          return false;
+        };
+
         const completeSuccess = async () => {
           if (isPopup || isIframe) {
             // Wait for session to be fully established and verify
-            let retries = 0;
-            while (retries < 10) {
-              await new Promise((resolve) => setTimeout(resolve, 100));
-              const {
-                data: { user },
-              } = await supabase.auth.getUser();
-              if (user) break;
-              retries++;
-            }
+            await waitForActiveSessionUser(10, 100);
 
             try {
               if (hasOpener && window.opener) {
@@ -116,13 +118,13 @@ function AuthCallbackPageContent() {
 
         const handleAuthError = async (message: string) => {
           // 콜백이 중복 실행되어 code 재교환 실패가 나도, 이미 세션이 있으면 성공 흐름으로 처리한다.
-          if (await hasActiveSessionUser()) {
+          if (await waitForActiveSessionUser(10, 120)) {
             await completeSuccess();
             return;
           }
 
-          setError(message);
           if (isPopup || isIframe) {
+            setError(message);
             const target = hasOpener ? window.opener : window.parent;
             if (target && target !== window) {
               target.postMessage(
@@ -137,6 +139,7 @@ function AuthCallbackPageContent() {
               setTimeout(() => window.close(), 100);
             }
           } else {
+            // 전체 페이지 콜백에서는 에러 텍스트를 먼저 그리지 않고 즉시 이동해 깜빡임을 줄인다.
             window.location.replace(`/login?error=${encodeURIComponent(message)}`);
           }
         };
@@ -206,7 +209,6 @@ function AuthCallbackPageContent() {
           return;
         }
 
-        setError("오류가 발생했습니다.");
         // 팝업 창 또는 iframe인지 확인
         const isPopupError = (() => {
           try {
@@ -223,6 +225,7 @@ function AuthCallbackPageContent() {
           }
         })();
         if ((isPopupError && window.opener) || isIframe) {
+          setError("오류가 발생했습니다.");
           const target = (window.opener && !window.opener.closed) ? window.opener : window.parent;
           if (target && target !== window) {
             target.postMessage({ 
@@ -243,8 +246,25 @@ function AuthCallbackPageContent() {
     void handleCallback().catch((error) => {
       if (isAbortError(error)) return;
       console.error("Auth callback unhandled error:", error);
-      setError("오류가 발생했습니다.");
-      window.location.replace("/login?error=오류가 발생했습니다");
+      const isPopupUnhandled = (() => {
+        try {
+          return window.opener !== null && !window.opener.closed;
+        } catch {
+          return false;
+        }
+      })();
+      const isIframeUnhandled = (() => {
+        try {
+          return window.self !== window.top;
+        } catch {
+          return true;
+        }
+      })();
+      if (isPopupUnhandled || isIframeUnhandled) {
+        setError("오류가 발생했습니다.");
+      } else {
+        window.location.replace("/login?error=오류가 발생했습니다");
+      }
     });
   }, [searchParams]);
 

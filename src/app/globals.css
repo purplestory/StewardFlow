@@ -1,10 +1,10 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f5f7fb;
+  --background: #f3f6fb;
   --foreground: #101828;
   --surface: #ffffff;
-  --surface-soft: #f8fafc;
+  --surface-soft: #f7f9fc;
   --border: #e2e8f0;
   --brand-primary: #1f4b99;
   --brand-primary-strong: #163b7d;
@@ -28,9 +28,7 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-geist-sans), "Noto Sans KR", sans-serif;
-  background-image:
-    radial-gradient(circle at 16% 8%, rgba(31, 75, 153, 0.08), transparent 28%),
-    radial-gradient(circle at 84% 0%, rgba(15, 118, 110, 0.08), transparent 24%);
+  background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.82) 0%, rgba(243, 246, 251, 1) 100%);
 }
 
 .react-calendar {
@@ -267,7 +265,7 @@ input[type="time"] {
     var(--brand-primary) 0%,
     var(--brand-primary-strong) 100%
   );
-  box-shadow: 0 10px 20px rgba(31, 75, 153, 0.2);
+  box-shadow: 0 8px 16px rgba(31, 75, 153, 0.16);
 }
 
 .btn-primary:hover {
@@ -300,8 +298,8 @@ input[type="time"] {
 }
 
 .btn-ghost {
-  @apply h-10 px-4 rounded-lg text-sm font-medium transition-all bg-white text-neutral-700 border border-neutral-200;
-  @apply hover:bg-neutral-50 hover:border-neutral-300;
+  @apply h-10 px-3 rounded-lg text-sm font-medium transition-all bg-transparent text-neutral-700 border border-transparent;
+  @apply hover:bg-neutral-100 hover:text-neutral-900;
   @apply focus:outline-none focus:ring-2 focus:ring-neutral-500 focus:ring-offset-2;
   @apply disabled:opacity-50 disabled:cursor-not-allowed;
   @apply flex items-center justify-center whitespace-nowrap;
@@ -334,13 +332,13 @@ input[type="time"] {
 
 /* Shared Surface Styles */
 .surface-panel {
-  @apply rounded-3xl border border-slate-200 bg-white;
-  box-shadow: 0 14px 36px rgba(15, 23, 42, 0.08);
+  @apply rounded-2xl border border-slate-200 bg-white;
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.06);
 }
 
 .surface-card {
   @apply rounded-2xl border border-slate-200 bg-white;
-  box-shadow: none;
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.04);
 }
 
 .surface-card-interactive {
@@ -377,7 +375,7 @@ input[type="time"] {
 }
 
 .tab-shell {
-  @apply mb-6 overflow-hidden rounded-2xl border border-slate-200 bg-white p-1.5;
+  @apply mb-6 overflow-hidden rounded-2xl border border-slate-200 bg-white p-1.5 shadow-[0_4px_14px_rgba(15,23,42,0.04)];
 }
 
 .tab-scroll {
@@ -395,7 +393,7 @@ input[type="time"] {
 }
 
 .tab-chip {
-  @apply inline-flex h-9 shrink-0 items-center justify-center whitespace-nowrap rounded-lg px-3.5 text-sm font-medium transition-colors md:h-10 md:px-4;
+  @apply inline-flex h-9 shrink-0 items-center justify-center whitespace-nowrap rounded-lg px-3.5 text-sm font-semibold transition-colors md:h-10 md:px-4;
   @apply text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900;
 }
 
@@ -427,11 +425,69 @@ input[type="time"] {
 }
 
 .list-row {
-  @apply flex items-center gap-3 rounded-lg border border-neutral-200 bg-white px-3 py-2.5;
+  @apply flex items-center gap-3 rounded-xl border border-neutral-200 bg-white px-4 py-3;
 }
 
 .list-row-muted {
-  @apply rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2.5;
+  @apply rounded-xl border border-neutral-200 bg-neutral-50 px-4 py-3;
+}
+
+/* Manage module primitives */
+.manage-stack {
+  @apply space-y-5 md:space-y-6;
+}
+
+.module-panel {
+  @apply rounded-2xl border border-slate-200 bg-white p-4 md:p-5;
+}
+
+.module-head {
+  @apply flex flex-wrap items-start justify-between gap-3;
+}
+
+.module-title {
+  @apply text-xl font-semibold tracking-tight text-slate-900;
+}
+
+.module-description {
+  @apply mt-1 text-sm text-neutral-600;
+}
+
+.module-toolbar {
+  @apply rounded-xl border border-slate-200 bg-slate-50/80 p-3 md:p-4;
+}
+
+.module-toolbar-grid {
+  @apply grid gap-2 md:grid-cols-[minmax(0,1fr)_14rem];
+}
+
+.module-kpi {
+  @apply inline-flex items-center rounded-full border border-neutral-200 bg-white px-3 py-1 text-xs font-medium text-neutral-600;
+}
+
+.module-list {
+  @apply overflow-hidden rounded-xl border border-neutral-200 bg-white;
+}
+
+.module-list > * + * {
+  @apply border-t border-neutral-200;
+}
+
+.toggle-switch {
+  @apply relative inline-flex h-7 w-12 items-center rounded-full bg-neutral-300 transition-colors duration-200;
+}
+
+.toggle-switch::after {
+  content: "";
+  @apply absolute left-1 top-1 h-5 w-5 rounded-full bg-white shadow-sm transition-transform duration-200;
+}
+
+.peer:checked + .toggle-switch {
+  @apply bg-slate-900;
+}
+
+.peer:checked + .toggle-switch::after {
+  transform: translateX(20px);
 }
 
 .form-section {

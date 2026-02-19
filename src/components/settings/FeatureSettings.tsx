@@ -24,6 +24,7 @@ type MenuOrderItem = {
 };
 
 const MENU_KEYS = ["equipment", "spaces", "vehicles", "books"] as const;
+const DEFAULT_MENU_ORDER: MenuOrderItem["key"][] = ["books", "equipment", "spaces", "vehicles"];
 
 
 type FeatureSettingsProps = {
@@ -44,10 +45,10 @@ export default function FeatureSettings({ organizationId }: FeatureSettingsProps
     books: "도서",
   });
   const [menuOrder, setMenuOrder] = useState<MenuOrderItem[]>([
+    { key: "books", enabled: false },
     { key: "equipment", enabled: true },
     { key: "spaces", enabled: true },
     { key: "vehicles", enabled: false },
-    { key: "books", enabled: false },
   ]);
   const [loading, setLoading] = useState(Boolean(organizationId));
   const [message, setMessage] = useState<string | null>(null);
@@ -73,7 +74,7 @@ export default function FeatureSettings({ organizationId }: FeatureSettingsProps
       return nextFeatures.books === true;
     };
 
-    const defaultOrder: MenuOrderItem[] = MENU_KEYS.map((key) => ({
+    const defaultOrder: MenuOrderItem[] = DEFAULT_MENU_ORDER.map((key) => ({
       key,
       enabled: getFeatureEnabled(key),
     }));
@@ -101,7 +102,7 @@ export default function FeatureSettings({ organizationId }: FeatureSettingsProps
       }
     });
 
-    MENU_KEYS.forEach((key) => {
+    DEFAULT_MENU_ORDER.forEach((key) => {
       if (!seen.has(key)) orderedKeys.push(key);
     });
 
@@ -306,21 +307,15 @@ export default function FeatureSettings({ organizationId }: FeatureSettingsProps
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h3 className="text-lg font-semibold mb-4">기능 설정</h3>
-        <p className="text-sm text-neutral-600 mb-4">
-          기관에서 사용할 기능을 활성화하거나 비활성화할 수 있습니다.
+    <section className="surface-card p-5 md:p-6">
+      <div className="mb-4">
+        <h3 className="text-xl font-semibold tracking-tight text-slate-900">기능 및 메뉴 설정</h3>
+        <p className="mt-1 text-sm text-neutral-600">
+          기능 활성화, 메뉴 이름, 순서를 하나의 규칙으로 관리합니다.
         </p>
       </div>
 
-      <div className="rounded-lg border border-neutral-200 bg-white p-4">
-        <h4 className="text-sm font-semibold mb-3">기능 및 메뉴 설정</h4>
-        <p className="text-xs text-neutral-500 mb-4">
-          기능을 활성화하고 메뉴 이름과 표시 순서를 변경할 수 있습니다.
-        </p>
-
-        <div className="space-y-3">
+      <div className="module-list">
           {menuOrder.map((item, index) => {
             const labelKey = item.key;
             const labelValue = menuLabels[labelKey] || 
@@ -341,14 +336,14 @@ export default function FeatureSettings({ organizationId }: FeatureSettingsProps
                 onTouchStart={(e) => isEnabled && handleTouchStart(e, index)}
                 onTouchMove={(e) => isEnabled && handleTouchMove(e)}
                 onTouchEnd={(e) => isEnabled && handleTouchEnd(e)}
-                className={`flex items-center gap-3 p-3 border border-neutral-200 rounded-lg transition-all ${
+                className={`flex items-center gap-3 px-4 py-3 transition-all ${
                   draggedIndex === index
                     ? "opacity-50 cursor-grabbing"
                     : dragOverIndex === index
-                    ? "border-blue-400 bg-blue-50"
+                    ? "bg-blue-50"
                     : isEnabled
                     ? "cursor-grab bg-white"
-                    : "bg-neutral-50"
+                    : "bg-neutral-50/80"
                 }`}
               >
                 {/* 드래그 핸들 */}
@@ -387,7 +382,7 @@ export default function FeatureSettings({ organizationId }: FeatureSettingsProps
                           setEditingMenuLabel("");
                         }
                       }}
-                      className="form-input flex-1 h-[38px] text-sm"
+                      className="form-input flex-1 h-10 text-sm"
                       placeholder={
                         labelKey === "equipment" ? "물품" :
                         labelKey === "spaces" ? "공간" :
@@ -405,7 +400,7 @@ export default function FeatureSettings({ organizationId }: FeatureSettingsProps
                         // 즉시 저장
                         await handleSave(undefined, newMenuLabels, undefined);
                       }}
-                      className="btn-primary text-xs px-3 py-1 whitespace-nowrap"
+                      className="btn-primary h-10 text-xs px-3 whitespace-nowrap"
                     >
                       저장
                     </button>
@@ -415,7 +410,7 @@ export default function FeatureSettings({ organizationId }: FeatureSettingsProps
                         setEditingMenuKey(null);
                         setEditingMenuLabel("");
                       }}
-                      className="btn-ghost text-xs px-3 py-1 whitespace-nowrap"
+                      className="btn-outline h-10 text-xs px-3 whitespace-nowrap"
                     >
                       취소
                     </button>
@@ -431,7 +426,7 @@ export default function FeatureSettings({ organizationId }: FeatureSettingsProps
                         setEditingMenuKey(labelKey);
                         setEditingMenuLabel(labelValue);
                       }}
-                      className="p-2 text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100 rounded transition-colors"
+                      className="icon-button"
                       title="수정"
                     >
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -462,13 +457,12 @@ export default function FeatureSettings({ organizationId }: FeatureSettingsProps
                       }}
                       className="sr-only peer"
                     />
-                    <div className="w-11 h-6 bg-neutral-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-neutral-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-black"></div>
+                    <div className="toggle-switch"></div>
                   </label>
                 </div>
               </div>
             );
           })}
-        </div>
       </div>
 
       {message && (
@@ -482,12 +476,10 @@ export default function FeatureSettings({ organizationId }: FeatureSettingsProps
 
       {/* 기능 비활성화 확인 모달 */}
       {showDisableConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="w-full max-w-md rounded-lg bg-white shadow-xl">
-            <div className="rounded-t-lg bg-amber-600 px-6 py-4">
-              <h3 className="text-lg font-semibold text-white">기능 비활성화 확인</h3>
-            </div>
-            <div className="px-6 py-4 space-y-4">
+        <div className="modal-backdrop">
+          <div className="modal-surface max-w-md">
+            <h3 className="text-lg font-semibold text-slate-900">기능 비활성화 확인</h3>
+            <div className="mt-4 space-y-4">
               <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3">
                 <p className="text-sm text-amber-700">
                   {showDisableConfirm.feature === "equipment" && "물품 관리 기능을 비활성화하면 물품 목록과 대여 기능이 숨겨집니다. 기존 물품 데이터는 유지됩니다."}
@@ -500,7 +492,7 @@ export default function FeatureSettings({ organizationId }: FeatureSettingsProps
                 정말 이 기능을 비활성화하시겠습니까?
               </p>
             </div>
-            <div className="flex gap-3 rounded-b-lg border-t border-neutral-200 bg-neutral-50 px-6 py-4">
+            <div className="mt-5 flex gap-2">
               <button
                 type="button"
                 onClick={async () => {
@@ -517,14 +509,14 @@ export default function FeatureSettings({ organizationId }: FeatureSettingsProps
                   // 즉시 저장
                   await handleSave(newFeatures, undefined, newMenuOrder);
                 }}
-                className="flex-1 btn-primary bg-amber-600 hover:bg-amber-700"
+                className="btn-primary flex-1"
               >
                 비활성화
               </button>
               <button
                 type="button"
                 onClick={() => setShowDisableConfirm(null)}
-                className="flex-1 btn-ghost"
+                className="btn-outline flex-1"
               >
                 취소
               </button>
@@ -532,6 +524,6 @@ export default function FeatureSettings({ organizationId }: FeatureSettingsProps
           </div>
         </div>
       )}
-    </div>
+    </section>
   );
 }

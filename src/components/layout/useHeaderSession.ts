@@ -36,6 +36,8 @@ type NavItem = {
 };
 
 const MENU_KEYS = ["equipment", "spaces", "vehicles", "books"] as const;
+type MenuKey = (typeof MENU_KEYS)[number];
+const MAIN_MENU_DEFAULT_ORDER: MenuKey[] = ["books", "equipment", "spaces", "vehicles"];
 
 function isMenuKey(value: string): value is (typeof MENU_KEYS)[number] {
   return MENU_KEYS.includes(value as (typeof MENU_KEYS)[number]);
@@ -78,11 +80,32 @@ const normalizeMenuLabels = (
 };
 
 const buildDefaultMenuOrder = (features: OrganizationFeatures): MenuOrderItem[] => [
+  { key: "books", enabled: features.books === true },
   { key: "equipment", enabled: features.equipment !== false },
   { key: "spaces", enabled: features.spaces !== false },
   { key: "vehicles", enabled: features.vehicles === true },
-  { key: "books", enabled: features.books === true },
 ];
+
+const getFeatureEnabled = (features: OrganizationFeatures, key: MenuKey) => {
+  if (key === "equipment") return features.equipment !== false;
+  if (key === "spaces") return features.spaces !== false;
+  if (key === "vehicles") return features.vehicles === true;
+  return features.books === true;
+};
+
+const getMenuHref = (key: MenuKey) => {
+  if (key === "equipment") return "/assets";
+  if (key === "spaces") return "/spaces";
+  if (key === "vehicles") return "/vehicles";
+  return "/books";
+};
+
+const getDefaultMenuLabel = (key: MenuKey) => {
+  if (key === "equipment") return "물품";
+  if (key === "spaces") return "공간";
+  if (key === "vehicles") return "차량";
+  return "도서";
+};
 
 const normalizeMenuOrder = (
   rawOrder: MenuOrderItem[] | null | undefined,
@@ -91,15 +114,6 @@ const normalizeMenuOrder = (
   if (!rawOrder || rawOrder.length === 0) {
     return buildDefaultMenuOrder(features);
   }
-
-  const getFeatureEnabled = (key: (typeof MENU_KEYS)[number]) =>
-    key === "equipment"
-      ? features.equipment !== false
-      : key === "spaces"
-        ? features.spaces !== false
-        : key === "vehicles"
-          ? features.vehicles === true
-          : features.books === true;
 
   const validSource = rawOrder.filter(
     (item): item is { key: (typeof MENU_KEYS)[number]; enabled: boolean } =>
@@ -117,12 +131,12 @@ const normalizeMenuOrder = (
     persistedEnabled.set(item.key, Boolean(item.enabled));
   });
 
-  MENU_KEYS.forEach((key) => {
+  MAIN_MENU_DEFAULT_ORDER.forEach((key) => {
     if (!seen.has(key)) orderedKeys.push(key);
   });
 
   return orderedKeys.map((key) => {
-    const featureEnabled = getFeatureEnabled(key);
+    const featureEnabled = getFeatureEnabled(features, key);
     return {
       key,
       enabled: (persistedEnabled.get(key) ?? featureEnabled) && featureEnabled,
@@ -283,50 +297,19 @@ export function useHeaderSession() {
 
     const items: NavItem[] = [];
 
-    if (features && menuLabels) {
+    if (features) {
       const orderToUse =
         menuOrder.length > 0 ? menuOrder : buildDefaultMenuOrder(features);
-
       orderToUse.forEach((item) => {
-        const key = item.key as "equipment" | "spaces" | "vehicles" | "books";
-        const isFeatureEnabled =
-          key === "equipment"
-            ? features.equipment !== false
-            : key === "spaces"
-              ? features.spaces !== false
-              : key === "vehicles"
-                ? features.vehicles === true
-                : features.books === true;
+        const key = item.key;
+        if (!isMenuKey(key)) return;
+        if (!item.enabled || !getFeatureEnabled(features, key)) return;
 
-        if (key === "vehicles" || key === "books") {
-          if (!isFeatureEnabled || !item.enabled) return;
-        } else if (!item.enabled || !isFeatureEnabled) {
-          return;
-        }
-
-        const href =
-          key === "equipment"
-            ? "/assets"
-            : key === "spaces"
-              ? "/spaces"
-              : key === "vehicles"
-                ? "/vehicles"
-                : "/books";
-        const label =
-          menuLabels[key] ||
-          (key === "equipment"
-            ? "물품"
-            : key === "spaces"
-              ? "공간"
-              : key === "vehicles"
-                ? "차량"
-                : "도서");
-
-        items.push({ href, label });
+        const label = menuLabels?.[key] ?? getDefaultMenuLabel(key);
+        items.push({ href: getMenuHref(key), label });
       });
     }
 
-    items.push({ href: "/feedback", label: "피드백" });
     return items;
   }, [features, hasOrganization, menuLabels, menuOrder]);
 
@@ -336,6 +319,7 @@ export function useHeaderSession() {
     const items: NavItem[] = [
       { href: "/notifications", label: "알림" },
       { href: "/my", label: "마이페이지" },
+      { href: "/feedback", label: "피드백" },
     ];
 
     if (isManager) {

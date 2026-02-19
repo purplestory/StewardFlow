@@ -203,7 +203,7 @@ export default function AssetAdminActions({
   }
 
   return (
-    <div className="space-y-4 rounded-xl border border-neutral-200 bg-white p-6">
+    <div className="surface-card space-y-4 p-4 md:p-5">
       <div>
         <h2 className="text-lg font-semibold">관리자/부서 관리자 전용</h2>
         <p className="mt-1 text-sm text-neutral-600">
@@ -226,7 +226,7 @@ export default function AssetAdminActions({
         <button
           type="button"
           onClick={() => setShowTransferForm(!showTransferForm)}
-          className="self-end p-2 rounded-lg border border-neutral-200 bg-white text-neutral-700 hover:bg-neutral-50 transition-colors h-[38px] w-[38px] flex items-center justify-center sm:ml-auto sm:self-auto"
+          className="icon-button self-end sm:ml-auto sm:self-auto"
           title="소유 범위/부서 변경"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -237,12 +237,12 @@ export default function AssetAdminActions({
 
       {/* 소유 범위/부서 변경 폼 (접어두기) */}
       {showTransferForm && (
-        <div className="rounded-lg border border-neutral-200 bg-neutral-50 p-4 space-y-3">
+        <div className="module-toolbar space-y-3">
           <div className="grid gap-3 md:grid-cols-3">
             <label className="flex flex-col gap-2">
               <span className="form-label">소유 범위</span>
               <select
-                className="form-select h-[38px]"
+                className="form-select h-10"
                 value={nextOwnerScope}
                 onChange={(event) => {
                   const value = event.target.value as "organization" | "department";
@@ -264,12 +264,12 @@ export default function AssetAdminActions({
             <label className="flex flex-col gap-2 md:col-span-2">
               <span className="form-label">소유 부서</span>
               {nextOwnerScope === "organization" ? (
-                <div className="form-input bg-neutral-50 text-neutral-600 h-[38px]">
+                <div className="field-static">
                   기관 공용
                 </div>
               ) : (
                 <select
-                  className="form-select h-[38px]"
+                  className="form-select h-10"
                   value={nextOwnerDepartment || ""}
                   onChange={(event) => setNextOwnerDepartment(event.target.value)}
                 >
@@ -287,7 +287,7 @@ export default function AssetAdminActions({
             type="button"
             onClick={handleTransfer}
             disabled={updating}
-            className="h-[38px] px-4 rounded-lg text-sm font-medium transition-all bg-white text-neutral-700 border border-neutral-200 hover:bg-neutral-50 whitespace-nowrap flex items-center justify-center"
+            className="btn-secondary"
           >
             부서 이동 저장
           </button>
@@ -299,7 +299,7 @@ export default function AssetAdminActions({
           type="button"
           onClick={handleRetire}
           disabled={updating || localStatus === "retired"}
-          className="h-[38px] px-4 rounded-lg text-sm font-medium transition-all bg-white text-rose-600 border border-rose-200 hover:bg-rose-50 hover:border-rose-300 whitespace-nowrap flex items-center justify-center"
+          className="btn-ghost text-rose-700 hover:bg-rose-50"
         >
           불용품 전환
         </button>

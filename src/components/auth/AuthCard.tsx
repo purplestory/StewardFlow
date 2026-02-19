@@ -380,8 +380,10 @@ export default function AuthCard() {
     profile.phone;
 
   return (
-    <div className="surface-card p-5 md:p-6">
-      <div className="space-y-3">
+    <div className="space-y-3">
+      <div className="space-y-2">
+        <p className="text-sm font-semibold text-slate-900">카카오 로그인</p>
+        <p className="text-xs text-neutral-500">로그인 상태가 유지되며, 초대 링크 가입으로 이어집니다.</p>
         <button
           type="button"
           onClick={handleKakaoSignIn}
@@ -405,7 +407,7 @@ export default function AuthCard() {
       </div>
 
       {status.userId && profile && (
-        <form onSubmit={handleProfileUpdate} className="mt-6 space-y-3">
+        <form onSubmit={handleProfileUpdate} className="mt-5 space-y-3 border-t border-neutral-200 pt-5">
           <div className="text-sm font-medium">프로필</div>
           <label className="flex flex-col gap-2">
             <span className="form-label">담당자 이름</span>
@@ -463,7 +465,6 @@ export default function AuthCard() {
           {message}
         </p>
       )}
-
     </div>
   );
 }

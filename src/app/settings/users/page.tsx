@@ -8,7 +8,6 @@ import ManageLayout from "@/components/manage/ManageLayout";
 import { supabase } from "@/lib/supabase";
 import Notice from "@/components/common/Notice";
 import PageHero from "@/components/ui/PageHero";
-import SectionCard from "@/components/ui/SectionCard";
 
 export default function UsersSettingsPage() {
   const router = useRouter();
@@ -63,9 +62,7 @@ export default function UsersSettingsPage() {
         description="기관 내 사용자 초대 및 역할을 관리합니다."
       />
       <OrganizationGate>
-        <SectionCard bodyClassName="p-0">
-          <UserRoleManager />
-        </SectionCard>
+        <UserRoleManager />
       </OrganizationGate>
     </ManageLayout>
   );

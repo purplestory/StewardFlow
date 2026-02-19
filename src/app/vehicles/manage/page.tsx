@@ -7,7 +7,6 @@ import CategoryTabs from "@/components/manage/CategoryTabs";
 import ManageLayout from "@/components/manage/ManageLayout";
 import Notice from "@/components/common/Notice";
 import PageHero from "@/components/ui/PageHero";
-import SectionCard from "@/components/ui/SectionCard";
 import { useUserProfile } from "@/hooks/useAssets";
 
 export default function VehicleManagePage() {
@@ -43,12 +42,8 @@ export default function VehicleManagePage() {
       <CategoryTabs />
       <OrganizationGate>
         <div className="space-y-6">
-          <SectionCard bodyClassName="p-0">
-            <VehicleAdminPanel />
-          </SectionCard>
-          <SectionCard bodyClassName="p-0">
-            <ReservationManager />
-          </SectionCard>
+          <VehicleAdminPanel />
+          <ReservationManager />
         </div>
       </OrganizationGate>
     </ManageLayout>

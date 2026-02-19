@@ -44,8 +44,8 @@ export default function Header() {
   const mobileNavLinkClass = (href: string) => {
     const isActive = pathname === href || pathname.startsWith(`${href}/`);
     return isActive
-      ? "block rounded-xl bg-slate-100 px-3 py-2.5 text-sm font-medium text-slate-900"
-      : "block rounded-xl px-3 py-2.5 text-sm text-neutral-600 hover:bg-slate-50 hover:text-slate-900";
+      ? "block border-l-2 border-slate-900 pl-3 pr-2 py-2.5 text-sm font-semibold text-slate-900"
+      : "block pl-3 pr-2 py-2.5 text-sm text-neutral-600 hover:text-slate-900";
   };
 
   useEffect(() => {
@@ -182,7 +182,7 @@ export default function Header() {
       {mobileMenuOpen && (
         <div className="border-t border-slate-200 bg-white/95 backdrop-blur md:hidden">
           <nav className="mx-auto w-full max-w-6xl px-4 py-3">
-            <div className="surface-card space-y-1 p-2">
+            <div className="space-y-1">
             {mainNavItems.map((item) => (
               <Link
                 key={item.href}
@@ -222,7 +222,7 @@ export default function Header() {
                     setMobileMenuOpen(false);
                     void handleSignOut();
                   }}
-                  className="block w-full rounded-xl px-3 py-2.5 text-left text-sm text-neutral-600 hover:bg-slate-50 hover:text-slate-900"
+                  className="block w-full pl-3 pr-2 py-2.5 text-left text-sm text-neutral-600 hover:text-slate-900"
                 >
                   로그아웃
                 </button>
@@ -232,7 +232,7 @@ export default function Header() {
             {!loading && !isAuthed && (
               <Link
                 href="/login"
-                className="block rounded-xl px-3 py-2.5 text-sm text-neutral-600 hover:bg-slate-50 hover:text-slate-900"
+                className="block pl-3 pr-2 py-2.5 text-sm text-neutral-600 hover:text-slate-900"
                 onClick={() => setMobileMenuOpen(false)}
               >
                 로그인

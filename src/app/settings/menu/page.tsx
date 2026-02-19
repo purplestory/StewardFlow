@@ -8,7 +8,6 @@ import ManageLayout from "@/components/manage/ManageLayout";
 import Notice from "@/components/common/Notice";
 import { supabase } from "@/lib/supabase";
 import PageHero from "@/components/ui/PageHero";
-import SectionCard from "@/components/ui/SectionCard";
 
 export default function MenuSettingsPage() {
   const [loading, setLoading] = useState(true);
@@ -68,12 +67,8 @@ export default function MenuSettingsPage() {
         description="기관에서 사용할 기능을 활성화/비활성화하고, 메뉴 이름과 순서를 설정할 수 있습니다."
       />
       <OrganizationGate>
-        <SectionCard bodyClassName="p-0">
-          <FeatureSettings organizationId={organizationId} />
-        </SectionCard>
-        <SectionCard bodyClassName="p-0">
-          <AssetCategoryManager organizationId={organizationId} />
-        </SectionCard>
+        <FeatureSettings organizationId={organizationId} />
+        <AssetCategoryManager organizationId={organizationId} />
       </OrganizationGate>
     </ManageLayout>
   );

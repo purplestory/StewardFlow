@@ -24,25 +24,22 @@ export default function ResourceInfoGrid({
   const visibleItems = items.filter((item) => !item.hidden);
 
   return (
-    <div className={cx("space-y-2", className)}>
-      {visibleItems.map((item) => (
-        <div
-          key={item.label}
-          className="rounded-xl border border-neutral-200 bg-neutral-50/70 px-3 py-2"
-        >
-          <div className="grid gap-1 sm:grid-cols-[110px_minmax(0,1fr)] sm:gap-3">
-            <span className="text-sm font-semibold text-neutral-700">{item.label}</span>
-            <div
+    <div className={cx("overflow-hidden rounded-xl border border-neutral-200 bg-white", className)}>
+      <dl className="divide-y divide-neutral-200">
+        {visibleItems.map((item) => (
+          <div key={item.label} className="grid gap-1 px-4 py-3 sm:grid-cols-[120px_minmax(0,1fr)] sm:gap-3">
+            <dt className="text-sm font-semibold text-neutral-700">{item.label}</dt>
+            <dd
               className={cx(
                 "min-w-0 break-words text-sm text-neutral-600",
                 item.multiline && "whitespace-pre-wrap"
               )}
             >
               {item.value}
-            </div>
+            </dd>
           </div>
-        </div>
-      ))}
+        ))}
+      </dl>
     </div>
   );
 }

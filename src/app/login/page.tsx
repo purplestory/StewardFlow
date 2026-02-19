@@ -121,32 +121,31 @@ function LoginPageContent() {
             관리자가 보낸 초대 링크가 있어야 가입할 수 있습니다.
           </p>
         </div>
-        <AuthCard />
-        <div className="surface-card p-5 md:p-6">
-          <p className="mb-4 text-sm font-medium text-slate-900">초대 링크로 가입하기</p>
-          <form onSubmit={handleInviteTokenSubmit} className="space-y-3">
-            <input
-              type="text"
-              value={inviteToken}
-              onChange={(e) => setInviteToken(e.target.value)}
-              placeholder="초대 링크를 붙여넣으세요 (예: https://example.com/join?token=AbC123XyZ9 또는 AbC123XyZ9)"
-              className="form-input w-full text-sm"
-            />
-            <button
-              type="submit"
-              className="btn-ghost w-full"
-            >
-              초대 링크로 가입하기
-            </button>
-          </form>
-          {inviteMessage && (
-            <p className="mt-3 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
-              {inviteMessage}
+        <div className="surface-panel p-5 md:p-6">
+          <AuthCard />
+          <div className="mt-5 space-y-3 border-t border-neutral-200 pt-5">
+            <p className="text-sm font-semibold text-slate-900">초대 링크로 가입하기</p>
+            <form onSubmit={handleInviteTokenSubmit} className="space-y-3">
+              <input
+                type="text"
+                value={inviteToken}
+                onChange={(e) => setInviteToken(e.target.value)}
+                placeholder="초대 링크를 붙여넣으세요 (예: https://example.com/join?token=AbC123XyZ9 또는 AbC123XyZ9)"
+                className="form-input w-full text-sm"
+              />
+              <button type="submit" className="btn-ghost w-full">
+                초대 링크로 가입하기
+              </button>
+            </form>
+            {inviteMessage && (
+              <p className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
+                {inviteMessage}
+              </p>
+            )}
+            <p className="text-xs text-neutral-500">
+              관리자가 보낸 초대 링크 전체, 또는 토큰을 붙여넣으세요.
             </p>
-          )}
-          <p className="mt-4 text-xs text-neutral-500">
-            관리자가 보낸 초대 링크 전체, 또는 토큰을 붙여넣으세요.
-          </p>
+          </div>
         </div>
       </div>
     </div>

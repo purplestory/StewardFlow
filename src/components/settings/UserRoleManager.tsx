@@ -1516,7 +1516,7 @@ export default function UserRoleManager() {
         <button
           type="button"
           onClick={load}
-          className="w-full px-4 py-2 rounded-lg text-sm font-medium transition-all bg-white text-neutral-700 border border-neutral-200 hover:bg-neutral-50 sm:w-auto"
+          className="btn-ghost w-full sm:w-auto"
         >
           새로고침
         </button>
@@ -1913,7 +1913,7 @@ export default function UserRoleManager() {
           profiles.map((profile) => (
             <div
               key={profile.id}
-              className="flex flex-col gap-3 rounded-lg border border-neutral-200 px-3 py-2 text-xs sm:flex-row sm:items-center"
+              className="list-row flex-col text-xs sm:flex-row"
             >
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium">
@@ -1981,7 +1981,7 @@ export default function UserRoleManager() {
                     type="button"
                     onClick={() => deleteUser(profile.id, profile.name || "이름 없음")}
                     disabled={deletingUserId === profile.id || loading}
-                    className="h-[38px] w-[38px] flex items-center justify-center rounded-lg border border-rose-200 bg-white text-rose-600 transition-all hover:bg-rose-50 hover:border-rose-300 disabled:opacity-50 disabled:cursor-not-allowed justify-self-end sm:justify-self-auto"
+                    className="icon-button icon-button-danger justify-self-end sm:justify-self-auto"
                     title="사용자 삭제"
                   >
                     {deletingUserId === profile.id ? (

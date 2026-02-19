@@ -434,7 +434,7 @@ export default function DepartmentManager({ organizationId }: DepartmentManagerP
                 onTouchStart={(e) => handleTouchStart(e, index)}
                 onTouchMove={handleTouchMove}
                 onTouchEnd={handleTouchEnd}
-                className={`flex items-center gap-3 p-2 border border-neutral-200 rounded transition-all ${
+                className={`list-row transition-all ${
                   draggedIndex === index
                     ? "opacity-50 cursor-grabbing"
                     : dragOverIndex === index
@@ -507,7 +507,7 @@ export default function DepartmentManager({ organizationId }: DepartmentManagerP
                       <button
                         type="button"
                         onClick={() => startEdit(dept)}
-                        className="p-2 text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100 rounded transition-colors"
+                        className="icon-button"
                         title="수정"
                       >
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -518,7 +518,7 @@ export default function DepartmentManager({ organizationId }: DepartmentManagerP
                         type="button"
                         onClick={() => handleDelete(dept.id)}
                         disabled={saving}
-                        className="p-2 text-rose-600 hover:text-rose-700 hover:bg-rose-50 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="icon-button icon-button-danger"
                         title="삭제"
                       >
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -11,7 +11,6 @@ import ManageLayout from "@/components/manage/ManageLayout";
 import { supabase } from "@/lib/supabase";
 import Notice from "@/components/common/Notice";
 import PageHero from "@/components/ui/PageHero";
-import SectionCard from "@/components/ui/SectionCard";
 
 export default function OrganizationSettingsPage() {
   const router = useRouter();
@@ -73,15 +72,11 @@ export default function OrganizationSettingsPage() {
       />
       <OrganizationManager />
       <OrganizationGate>
-        <SectionCard bodyClassName="p-0" className="mb-6">
+        <div className="space-y-6">
           <ApprovalPolicyManager />
-        </SectionCard>
-        <SectionCard bodyClassName="p-0" className="mb-6">
           <OwnershipPolicySettings organizationId={organizationId} />
-        </SectionCard>
-        <SectionCard bodyClassName="p-0">
           <ReturnVerificationPolicySettings organizationId={organizationId} />
-        </SectionCard>
+        </div>
       </OrganizationGate>
     </ManageLayout>
   );

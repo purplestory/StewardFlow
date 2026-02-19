@@ -196,7 +196,7 @@ export default function SpaceAdminPanel() {
 
       {/* 일괄 변경 - 선택된 항목이 있을 때만 표시 */}
       {selectedIds.size > 0 && (
-        <div className="mt-3 flex flex-wrap items-center gap-2 rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-3 text-xs">
+        <div className="mt-3 list-row-muted flex flex-wrap items-center gap-2 text-xs">
           <span className="text-neutral-600 font-medium">
             선택된 항목({selectedIds.size}건):
           </span>
@@ -251,7 +251,7 @@ export default function SpaceAdminPanel() {
         </Notice>
       ) : (
         <div className="space-y-2">
-          <div className="flex items-center gap-2 rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-600">
+          <div className="list-row-muted flex items-center gap-2 text-sm text-neutral-600">
             <input
               type="checkbox"
               checked={
@@ -265,7 +265,7 @@ export default function SpaceAdminPanel() {
           {filteredSpaces.map((space) => (
             <div
               key={space.id}
-              className="flex items-center justify-between rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm"
+              className="list-row justify-between text-sm"
             >
               <label className="flex items-center gap-2 flex-1 min-w-0">
                 <input

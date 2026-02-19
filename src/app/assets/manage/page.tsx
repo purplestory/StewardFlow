@@ -9,7 +9,6 @@ import AssetTransferRequestsBoard from "@/components/assets/AssetTransferRequest
 import SampleDataGenerator from "@/components/settings/SampleDataGenerator";
 import Notice from "@/components/common/Notice";
 import PageHero from "@/components/ui/PageHero";
-import SectionCard from "@/components/ui/SectionCard";
 import { useUserProfile } from "@/hooks/useAssets";
 
 export default function AssetManagePage() {
@@ -47,22 +46,14 @@ export default function AssetManagePage() {
       <CategoryTabs />
       <OrganizationGate>
         <div className="space-y-6">
-          <SectionCard bodyClassName="p-0">
-            <AssetAdminPanel />
-          </SectionCard>
-          <SectionCard bodyClassName="p-0">
-            <ReservationManager />
-          </SectionCard>
-          <SectionCard bodyClassName="p-0">
-            <AssetTransferRequestsBoard />
-          </SectionCard>
+          <AssetAdminPanel />
+          <ReservationManager />
+          <AssetTransferRequestsBoard />
           {organizationId && currentUserId && (
-            <SectionCard bodyClassName="p-0">
-              <SampleDataGenerator
-                organizationId={organizationId}
-                userId={currentUserId}
-              />
-            </SectionCard>
+            <SampleDataGenerator
+              organizationId={organizationId}
+              userId={currentUserId}
+            />
           )}
         </div>
       </OrganizationGate>

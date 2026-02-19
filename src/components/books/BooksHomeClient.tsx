@@ -5,6 +5,7 @@ import Link from "next/link";
 import Notice from "@/components/common/Notice";
 import PageHero from "@/components/ui/PageHero";
 import SectionCard from "@/components/ui/SectionCard";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { supabase } from "@/lib/supabase";
 
 type BookSummary = {
@@ -63,6 +64,14 @@ type BookItem = {
   tags: string[] | null;
 };
 
+type ActiveBookLoan = {
+  id: string;
+  book_item_id: string;
+  status: "approved" | "borrowed" | "overdue";
+  due_at: string | null;
+  return_verification_status: "not_required" | "pending" | "verified" | "rejected";
+};
+
 const BOOK_STATUS_LABEL: Record<BookStatus, string> = {
   available: "대여 가능",
   requested: "요청 처리중",
@@ -90,6 +99,21 @@ export default function BooksHomeClient() {
   const [booksLoadError, setBooksLoadError] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | BookStatus>("all");
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [accessToken, setAccessToken] = useState<string | null>(null);
+  const [myActiveLoansByBookId, setMyActiveLoansByBookId] = useState<Record<string, ActiveBookLoan>>(
+    {}
+  );
+  const [returnTarget, setReturnTarget] = useState<{
+    loanId: string;
+    bookId: string;
+    title: string;
+  } | null>(null);
+  const [returnShelfCode, setReturnShelfCode] = useState("");
+  const [returnNote, setReturnNote] = useState("");
+  const [returnSubmitting, setReturnSubmitting] = useState(false);
+  const [actionMessage, setActionMessage] = useState<string | null>(null);
+  const [reloadTick, setReloadTick] = useState(0);
 
   useEffect(() => {
     let isMounted = true;
@@ -97,6 +121,7 @@ export default function BooksHomeClient() {
     const load = async () => {
       setLoading(true);
       setMessage(null);
+      setActionMessage(null);
 
       const { data: sessionData } = await supabase.auth.getSession();
       const session = sessionData.session;
@@ -111,6 +136,8 @@ export default function BooksHomeClient() {
       }
 
       setIsAuthed(true);
+      setCurrentUserId(user.id);
+      setAccessToken(session.access_token);
 
       const { data: profileData, error: profileError } = await supabase
         .from("profiles")
@@ -151,7 +178,7 @@ export default function BooksHomeClient() {
         return;
       }
 
-      const [summaryResponse, booksResponse] = await Promise.all([
+      const [summaryResponse, booksResponse, loansResponse] = await Promise.all([
         fetch("/api/books/gamification/summary?period=monthly", {
           method: "GET",
           headers: {
@@ -169,6 +196,12 @@ export default function BooksHomeClient() {
           .eq("is_active", true)
           .order("created_at", { ascending: false })
           .limit(200),
+        supabase
+          .from("book_loans")
+          .select("id,book_item_id,status,due_at,return_verification_status")
+          .eq("organization_id", profileData.organization_id)
+          .eq("borrower_id", user.id)
+          .in("status", ["approved", "borrowed", "overdue"]),
       ]);
 
       if (!isMounted) return;
@@ -190,6 +223,20 @@ export default function BooksHomeClient() {
         setBookItems((booksResponse.data ?? []) as BookItem[]);
       }
 
+      if (loansResponse.error) {
+        setActionMessage(`대출 상태 조회 실패: ${loansResponse.error.message}`);
+        setMyActiveLoansByBookId({});
+      } else {
+        const rows = (loansResponse.data ?? []) as ActiveBookLoan[];
+        const nextMap: Record<string, ActiveBookLoan> = {};
+        rows.forEach((loan) => {
+          if (!nextMap[loan.book_item_id]) {
+            nextMap[loan.book_item_id] = loan;
+          }
+        });
+        setMyActiveLoansByBookId(nextMap);
+      }
+
       setLoading(false);
     };
 
@@ -209,7 +256,7 @@ export default function BooksHomeClient() {
         window.removeEventListener("organizationSettingsUpdated", onSettingsChanged);
       }
     };
-  }, []);
+  }, [reloadTick]);
 
   const stats = useMemo(() => {
     const progress = summary?.myProgress;
@@ -251,6 +298,82 @@ export default function BooksHomeClient() {
       return matchesQuery && matchesStatus;
     });
   }, [bookItems, query, statusFilter]);
+
+  const handleReturnSubmit = async () => {
+    if (!returnTarget || !accessToken) {
+      setActionMessage("반납 요청에 필요한 인증 정보가 없습니다.");
+      return;
+    }
+
+    setReturnSubmitting(true);
+    setActionMessage(null);
+
+    try {
+      const response = await fetch("/api/books/loans/return", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: JSON.stringify({
+          accessToken,
+          loanId: returnTarget.loanId,
+          returnMethod: "self_photo",
+          returnShelfCode: returnShelfCode || null,
+          returnNote: returnNote || null,
+        }),
+      });
+
+      const result = (await response.json().catch(() => null)) as
+        | {
+            ok?: boolean;
+            message?: string;
+            result?: {
+              pendingVerification?: boolean;
+              pointsAwarded?: Array<{ ruleKey: string; awardedPoints: number }>;
+            };
+          }
+        | null;
+
+      if (!response.ok || !result?.ok) {
+        setActionMessage(result?.message ?? "반납 처리에 실패했습니다.");
+        return;
+      }
+
+      if (result.result?.pendingVerification) {
+        setActionMessage("반납이 등록되었습니다. 관리자 확인 후 점수가 반영됩니다.");
+      } else {
+        const totalAwarded =
+          (result.result?.pointsAwarded ?? []).reduce(
+            (sum, row) => sum + Number(row.awardedPoints ?? 0),
+            0
+          ) ?? 0;
+        setActionMessage(
+          totalAwarded > 0
+            ? `반납이 완료되었습니다. 총 ${totalAwarded}점이 반영되었습니다.`
+            : "반납이 완료되었습니다."
+        );
+      }
+
+      setReturnTarget(null);
+      setReturnShelfCode("");
+      setReturnNote("");
+      setReloadTick((prev) => prev + 1);
+    } catch (error) {
+      setActionMessage(
+        error instanceof Error ? `반납 처리 오류: ${error.message}` : "반납 처리 중 오류가 발생했습니다."
+      );
+    } finally {
+      setReturnSubmitting(false);
+    }
+  };
+
+  const formatDueDate = (dueAt: string | null) => {
+    if (!dueAt) return null;
+    const date = new Date(dueAt);
+    if (Number.isNaN(date.getTime())) return null;
+    return date.toLocaleDateString("ko-KR");
+  };
 
   if (loading) {
     return <Notice>도서 라운지 정보를 불러오는 중입니다.</Notice>;
@@ -312,6 +435,11 @@ export default function BooksHomeClient() {
       {message && (
         <Notice variant="warning" className="text-left">
           {message}
+        </Notice>
+      )}
+      {actionMessage && (
+        <Notice variant={actionMessage.includes("실패") || actionMessage.includes("오류") ? "warning" : "neutral"} className="text-left">
+          {actionMessage}
         </Notice>
       )}
 
@@ -391,6 +519,30 @@ export default function BooksHomeClient() {
                 {book.shelf_label && (
                   <p className="mt-2 text-xs text-neutral-500">서가: {book.shelf_label}</p>
                 )}
+                {currentUserId && myActiveLoansByBookId[book.id] && (
+                  <div className="mt-3 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2">
+                    <p className="text-xs text-blue-800">
+                      내 대여 건 (
+                      {myActiveLoansByBookId[book.id].status === "overdue" ? "연체" : "대여 중"})
+                      {formatDueDate(myActiveLoansByBookId[book.id].due_at)
+                        ? ` · 반납예정 ${formatDueDate(myActiveLoansByBookId[book.id].due_at)}`
+                        : ""}
+                    </p>
+                    <button
+                      type="button"
+                      className="btn-ghost mt-2 h-9 w-full justify-center"
+                      onClick={() =>
+                        setReturnTarget({
+                          loanId: myActiveLoansByBookId[book.id].id,
+                          bookId: book.id,
+                          title: book.title,
+                        })
+                      }
+                    >
+                      반납하기
+                    </button>
+                  </div>
+                )}
               </article>
             ))}
           </div>
@@ -400,6 +552,71 @@ export default function BooksHomeClient() {
           </Notice>
         )}
       </SectionCard>
+
+      <Dialog
+        open={Boolean(returnTarget)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setReturnTarget(null);
+            setReturnShelfCode("");
+            setReturnNote("");
+          }
+        }}
+      >
+        <DialogContent className="max-w-md p-0">
+          <DialogHeader className="rounded-t-2xl border-b border-neutral-200 px-6 py-4">
+            <DialogTitle>도서 반납</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 px-6 py-5">
+            <div className="rounded-xl border border-neutral-200 bg-neutral-50 px-4 py-3">
+              <p className="text-sm font-medium text-slate-900">{returnTarget?.title}</p>
+              <p className="mt-1 text-xs text-neutral-500">
+                반납 등록 후 검수 정책에 따라 즉시 완료 또는 확인 대기 상태가 됩니다.
+              </p>
+            </div>
+            <label className="flex flex-col gap-2">
+              <span className="text-sm font-medium text-neutral-700">서가 코드(선택)</span>
+              <input
+                className="form-input"
+                value={returnShelfCode}
+                onChange={(event) => setReturnShelfCode(event.target.value)}
+                placeholder="예: B2-A-03"
+              />
+            </label>
+            <label className="flex flex-col gap-2">
+              <span className="text-sm font-medium text-neutral-700">반납 메모(선택)</span>
+              <textarea
+                className="form-input min-h-[96px] resize-y"
+                value={returnNote}
+                onChange={(event) => setReturnNote(event.target.value)}
+                placeholder="책 상태나 특이사항을 남겨주세요."
+              />
+            </label>
+          </div>
+          <div className="flex gap-3 rounded-b-2xl border-t border-neutral-200 bg-neutral-50 px-6 py-4">
+            <button
+              type="button"
+              className="btn-primary flex-1"
+              onClick={() => void handleReturnSubmit()}
+              disabled={returnSubmitting}
+            >
+              {returnSubmitting ? "반납 처리 중..." : "반납 등록"}
+            </button>
+            <button
+              type="button"
+              className="btn-ghost flex-1"
+              onClick={() => {
+                setReturnTarget(null);
+                setReturnShelfCode("");
+                setReturnNote("");
+              }}
+              disabled={returnSubmitting}
+            >
+              취소
+            </button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <SectionCard
         title="월간 리더보드"

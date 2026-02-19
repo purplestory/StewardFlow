@@ -36,6 +36,20 @@ type PendingReturnItem = PendingReturnRow & {
   borrower_department: string | null;
 };
 
+type PendingRequestRow = {
+  id: string;
+  book_item_id: string;
+  borrower_id: string;
+  requested_at: string;
+  note: string | null;
+};
+
+type PendingRequestItem = PendingRequestRow & {
+  book_title: string;
+  borrower_name: string | null;
+  borrower_department: string | null;
+};
+
 export default function BooksManagePage() {
   const [loading, setLoading] = useState(true);
   const [hasPermission, setHasPermission] = useState(false);
@@ -45,6 +59,11 @@ export default function BooksManagePage() {
   const [ruleCount, setRuleCount] = useState(0);
   const [message, setMessage] = useState<string | null>(null);
   const [accessToken, setAccessToken] = useState<string | null>(null);
+  const [pendingRequests, setPendingRequests] = useState<PendingRequestItem[]>([]);
+  const [decisionNoteByLoanId, setDecisionNoteByLoanId] = useState<Record<string, string>>({});
+  const [decisionDueDateByLoanId, setDecisionDueDateByLoanId] = useState<Record<string, string>>({});
+  const [decidingLoanId, setDecidingLoanId] = useState<string | null>(null);
+  const [decisionMessage, setDecisionMessage] = useState<string | null>(null);
   const [pendingReturns, setPendingReturns] = useState<PendingReturnItem[]>([]);
   const [verifyNoteByLoanId, setVerifyNoteByLoanId] = useState<Record<string, string>>({});
   const [verifyingLoanId, setVerifyingLoanId] = useState<string | null>(null);
@@ -109,7 +128,7 @@ export default function BooksManagePage() {
       const enabled = orgData?.features?.books === true;
       setBooksEnabled(enabled);
 
-      const [settingsRes, rulesRes, pendingRes] = await Promise.all([
+      const [settingsRes, rulesRes, pendingReturnRes, pendingRequestRes] = await Promise.all([
         supabase
           .from("book_program_settings")
           .select(
@@ -130,6 +149,12 @@ export default function BooksManagePage() {
           .eq("status", "returned")
           .eq("return_verification_status", "pending")
           .order("returned_at", { ascending: true }),
+        supabase
+          .from("book_loans")
+          .select("id,book_item_id,borrower_id,requested_at,note")
+          .eq("organization_id", profileData.organization_id)
+          .eq("status", "requested")
+          .order("requested_at", { ascending: true }),
       ]);
 
       if (!isMounted) return;
@@ -146,50 +171,78 @@ export default function BooksManagePage() {
         setRuleCount(rulesRes.count ?? 0);
       }
 
-      if (pendingRes.error) {
-        setMessage(`반납 검수 목록 조회 실패: ${pendingRes.error.message}`);
+      if (pendingReturnRes.error) {
+        setMessage(`반납 검수 목록 조회 실패: ${pendingReturnRes.error.message}`);
         setPendingReturns([]);
+      }
+      if (pendingRequestRes.error) {
+        setMessage(`대여 요청 목록 조회 실패: ${pendingRequestRes.error.message}`);
+        setPendingRequests([]);
+      }
+
+      const pendingReturnRows = pendingReturnRes.error
+        ? []
+        : ((pendingReturnRes.data ?? []) as PendingReturnRow[]);
+      const pendingRequestRows = pendingRequestRes.error
+        ? []
+        : ((pendingRequestRes.data ?? []) as PendingRequestRow[]);
+
+      const bookIds = Array.from(
+        new Set(
+          [...pendingReturnRows, ...pendingRequestRows].map((row) => row.book_item_id)
+        )
+      );
+      const borrowerIds = Array.from(
+        new Set(
+          [...pendingReturnRows, ...pendingRequestRows].map((row) => row.borrower_id)
+        )
+      );
+
+      if (bookIds.length === 0 || borrowerIds.length === 0) {
+        setPendingReturns([]);
+        setPendingRequests([]);
       } else {
-        const pendingRows = (pendingRes.data ?? []) as PendingReturnRow[];
-        if (pendingRows.length === 0) {
-          setPendingReturns([]);
-        } else {
-          const bookIds = Array.from(new Set(pendingRows.map((row) => row.book_item_id)));
-          const borrowerIds = Array.from(new Set(pendingRows.map((row) => row.borrower_id)));
+        const [bookItemsRes, borrowersRes] = await Promise.all([
+          supabase
+            .from("book_items")
+            .select("id,title")
+            .in("id", bookIds),
+          supabase
+            .from("profiles")
+            .select("id,name,department")
+            .in("id", borrowerIds),
+        ]);
 
-          const [bookItemsRes, borrowersRes] = await Promise.all([
-            supabase
-              .from("book_items")
-              .select("id,title")
-              .in("id", bookIds),
-            supabase
-              .from("profiles")
-              .select("id,name,department")
-              .in("id", borrowerIds),
-          ]);
+        const bookTitleById = new Map<string, string>();
+        (bookItemsRes.data ?? []).forEach((row) => {
+          bookTitleById.set(row.id, row.title ?? "제목 없음");
+        });
 
-          const bookTitleById = new Map<string, string>();
-          (bookItemsRes.data ?? []).forEach((row) => {
-            bookTitleById.set(row.id, row.title ?? "제목 없음");
+        const borrowerInfoById = new Map<string, { name: string | null; department: string | null }>();
+        (borrowersRes.data ?? []).forEach((row) => {
+          borrowerInfoById.set(row.id, {
+            name: row.name ?? null,
+            department: row.department ?? null,
           });
+        });
 
-          const borrowerInfoById = new Map<string, { name: string | null; department: string | null }>();
-          (borrowersRes.data ?? []).forEach((row) => {
-            borrowerInfoById.set(row.id, {
-              name: row.name ?? null,
-              department: row.department ?? null,
-            });
-          });
+        setPendingReturns(
+          pendingReturnRows.map((row) => ({
+            ...row,
+            book_title: bookTitleById.get(row.book_item_id) ?? "제목 없음",
+            borrower_name: borrowerInfoById.get(row.borrower_id)?.name ?? null,
+            borrower_department: borrowerInfoById.get(row.borrower_id)?.department ?? null,
+          }))
+        );
 
-          setPendingReturns(
-            pendingRows.map((row) => ({
-              ...row,
-              book_title: bookTitleById.get(row.book_item_id) ?? "제목 없음",
-              borrower_name: borrowerInfoById.get(row.borrower_id)?.name ?? null,
-              borrower_department: borrowerInfoById.get(row.borrower_id)?.department ?? null,
-            }))
-          );
-        }
+        setPendingRequests(
+          pendingRequestRows.map((row) => ({
+            ...row,
+            book_title: bookTitleById.get(row.book_item_id) ?? "제목 없음",
+            borrower_name: borrowerInfoById.get(row.borrower_id)?.name ?? null,
+            borrower_department: borrowerInfoById.get(row.borrower_id)?.department ?? null,
+          }))
+        );
       }
 
       setLoading(false);
@@ -201,6 +254,73 @@ export default function BooksManagePage() {
       isMounted = false;
     };
   }, [reloadTick]);
+
+  const handleLoanDecision = async (loanId: string, decision: "approved" | "rejected") => {
+    if (!accessToken) {
+      setDecisionMessage("인증 토큰이 없어 대여 요청 처리를 진행할 수 없습니다.");
+      return;
+    }
+
+    setDecidingLoanId(loanId);
+    setDecisionMessage(null);
+
+    const note = decisionNoteByLoanId[loanId]?.trim() || null;
+    const dueDate = decisionDueDateByLoanId[loanId]?.trim() || null;
+
+    if (decision === "rejected" && !note) {
+      setDecisionMessage("거절 시에는 사유를 입력해주세요.");
+      setDecidingLoanId(null);
+      return;
+    }
+
+    try {
+      const response = await fetch("/api/books/loans/decision", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: JSON.stringify({
+          accessToken,
+          loanId,
+          decision,
+          note,
+          dueAt: decision === "approved" ? dueDate : null,
+        }),
+      });
+
+      const result = (await response.json().catch(() => null)) as
+        | {
+            ok?: boolean;
+            message?: string;
+          }
+        | null;
+
+      if (!response.ok || !result?.ok) {
+        setDecisionMessage(result?.message ?? "대여 요청 처리에 실패했습니다.");
+        return;
+      }
+
+      setDecisionMessage(decision === "approved" ? "대여 요청을 승인했습니다." : "대여 요청을 거절했습니다.");
+      setDecisionNoteByLoanId((prev) => {
+        const next = { ...prev };
+        delete next[loanId];
+        return next;
+      });
+      setDecisionDueDateByLoanId((prev) => {
+        const next = { ...prev };
+        delete next[loanId];
+        return next;
+      });
+      setReloadTick((prev) => prev + 1);
+    } catch (error) {
+      setDecisionMessage(
+        error instanceof Error ? `대여 요청 처리 오류: ${error.message}` : "대여 요청 처리 중 오류가 발생했습니다."
+      );
+    } finally {
+      setDecidingLoanId(null);
+    }
+  };
 
   const handleVerifyReturn = async (loanId: string, decision: "verified" | "rejected") => {
     if (!accessToken) {
@@ -361,6 +481,14 @@ export default function BooksManagePage() {
           {message}
         </Notice>
       )}
+      {decisionMessage && (
+        <Notice
+          variant={decisionMessage.includes("실패") || decisionMessage.includes("오류") ? "warning" : "neutral"}
+          className="text-left"
+        >
+          {decisionMessage}
+        </Notice>
+      )}
       {verifyMessage && (
         <Notice
           variant={verifyMessage.includes("실패") || verifyMessage.includes("오류") ? "warning" : "neutral"}
@@ -368,6 +496,84 @@ export default function BooksManagePage() {
         >
           {verifyMessage}
         </Notice>
+      )}
+
+      {booksEnabled && (
+        <SectionCard
+          title="대여 요청 대기"
+          description="신청 도서를 승인/거절하면 대여 상태가 자동 갱신됩니다."
+        >
+          {pendingRequests.length === 0 ? (
+            <Notice className="p-4">처리 대기중인 대여 요청이 없습니다.</Notice>
+          ) : (
+            <ul className="space-y-3">
+              {pendingRequests.map((item) => (
+                <li key={item.id} className="rounded-xl border border-neutral-200 p-4">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-slate-900">{item.book_title}</p>
+                      <p className="mt-1 text-xs text-neutral-600">
+                        {item.borrower_name ?? item.borrower_id.slice(0, 8)}
+                        {item.borrower_department ? ` (${item.borrower_department})` : ""}
+                      </p>
+                      <p className="mt-1 text-xs text-neutral-500">
+                        신청일: {new Date(item.requested_at).toLocaleString("ko-KR")}
+                      </p>
+                      {item.note && (
+                        <p className="mt-2 rounded-lg bg-neutral-50 px-3 py-2 text-xs text-neutral-600">
+                          {item.note}
+                        </p>
+                      )}
+                    </div>
+                    <span className="inline-flex h-7 items-center rounded-full bg-amber-50 px-2.5 text-xs font-medium text-amber-700">
+                      승인 대기
+                    </span>
+                  </div>
+                  <div className="mt-3 grid gap-2 md:grid-cols-[1fr_220px_auto_auto]">
+                    <input
+                      className="form-input"
+                      placeholder="운영 메모 (거절 시 필수)"
+                      value={decisionNoteByLoanId[item.id] ?? ""}
+                      onChange={(event) =>
+                        setDecisionNoteByLoanId((prev) => ({
+                          ...prev,
+                          [item.id]: event.target.value,
+                        }))
+                      }
+                    />
+                    <input
+                      type="date"
+                      className="form-input"
+                      value={decisionDueDateByLoanId[item.id] ?? ""}
+                      onChange={(event) =>
+                        setDecisionDueDateByLoanId((prev) => ({
+                          ...prev,
+                          [item.id]: event.target.value,
+                        }))
+                      }
+                    />
+                    <button
+                      type="button"
+                      className="btn-primary h-10 px-4"
+                      onClick={() => void handleLoanDecision(item.id, "approved")}
+                      disabled={decidingLoanId === item.id}
+                    >
+                      승인
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-ghost h-10 px-4 text-rose-700 hover:bg-rose-50"
+                      onClick={() => void handleLoanDecision(item.id, "rejected")}
+                      disabled={decidingLoanId === item.id}
+                    >
+                      거절
+                    </button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </SectionCard>
       )}
 
       {booksEnabled && (
@@ -459,9 +665,9 @@ export default function BooksManagePage() {
       {organizationId && (
         <SectionCard title="다음 단계" description="운영 설정 이후 연결할 기능입니다.">
           <ol className="list-decimal space-y-2 pl-5 text-sm text-neutral-700">
-            <li>도서 대여 신청/승인 UI를 붙여 대출 생성 흐름 완성</li>
             <li>도서 상세에서 응원 버튼과 메모 작성 흐름 연결</li>
             <li>월말 리더보드 스냅샷 및 시상 확정 배치 작업 연결</li>
+            <li>반납 사진 업로드/검수 SLA 알림 자동화</li>
           </ol>
         </SectionCard>
       )}

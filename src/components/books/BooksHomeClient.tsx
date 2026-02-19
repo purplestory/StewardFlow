@@ -67,7 +67,7 @@ type BookItem = {
 type ActiveBookLoan = {
   id: string;
   book_item_id: string;
-  status: "approved" | "borrowed" | "overdue";
+  status: "requested" | "approved" | "borrowed" | "overdue";
   due_at: string | null;
   return_verification_status: "not_required" | "pending" | "verified" | "rejected";
 };
@@ -112,6 +112,7 @@ export default function BooksHomeClient() {
   const [returnShelfCode, setReturnShelfCode] = useState("");
   const [returnNote, setReturnNote] = useState("");
   const [returnSubmitting, setReturnSubmitting] = useState(false);
+  const [requestingBookId, setRequestingBookId] = useState<string | null>(null);
   const [actionMessage, setActionMessage] = useState<string | null>(null);
   const [reloadTick, setReloadTick] = useState(0);
 
@@ -201,7 +202,7 @@ export default function BooksHomeClient() {
           .select("id,book_item_id,status,due_at,return_verification_status")
           .eq("organization_id", profileData.organization_id)
           .eq("borrower_id", user.id)
-          .in("status", ["approved", "borrowed", "overdue"]),
+          .in("status", ["requested", "approved", "borrowed", "overdue"]),
       ]);
 
       if (!isMounted) return;
@@ -368,6 +369,58 @@ export default function BooksHomeClient() {
     }
   };
 
+  const handleRequestLoan = async (book: BookItem) => {
+    if (!accessToken) {
+      setActionMessage("대여 신청에 필요한 인증 정보가 없습니다.");
+      return;
+    }
+
+    setRequestingBookId(book.id);
+    setActionMessage(null);
+
+    try {
+      const response = await fetch("/api/books/loans/request", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: JSON.stringify({
+          accessToken,
+          bookItemId: book.id,
+        }),
+      });
+
+      const result = (await response.json().catch(() => null)) as
+        | {
+            ok?: boolean;
+            message?: string;
+            result?: { alreadyExists?: boolean };
+          }
+        | null;
+
+      if (!response.ok || !result?.ok) {
+        setActionMessage(result?.message ?? "대여 신청에 실패했습니다.");
+        return;
+      }
+
+      setActionMessage(
+        result.result?.alreadyExists
+          ? result.message ?? "이미 처리중인 내 대여 건이 있습니다."
+          : "대여 신청이 접수되었습니다. 관리자 승인 후 대여가 시작됩니다."
+      );
+      setReloadTick((prev) => prev + 1);
+    } catch (error) {
+      setActionMessage(
+        error instanceof Error
+          ? `대여 신청 오류: ${error.message}`
+          : "대여 신청 중 오류가 발생했습니다."
+      );
+    } finally {
+      setRequestingBookId(null);
+    }
+  };
+
   const formatDueDate = (dueAt: string | null) => {
     if (!dueAt) return null;
     const date = new Date(dueAt);
@@ -519,30 +572,47 @@ export default function BooksHomeClient() {
                 {book.shelf_label && (
                   <p className="mt-2 text-xs text-neutral-500">서가: {book.shelf_label}</p>
                 )}
-                {currentUserId && myActiveLoansByBookId[book.id] && (
-                  <div className="mt-3 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2">
-                    <p className="text-xs text-blue-800">
-                      내 대여 건 (
-                      {myActiveLoansByBookId[book.id].status === "overdue" ? "연체" : "대여 중"})
-                      {formatDueDate(myActiveLoansByBookId[book.id].due_at)
-                        ? ` · 반납예정 ${formatDueDate(myActiveLoansByBookId[book.id].due_at)}`
-                        : ""}
-                    </p>
-                    <button
-                      type="button"
-                      className="btn-ghost mt-2 h-9 w-full justify-center"
-                      onClick={() =>
-                        setReturnTarget({
-                          loanId: myActiveLoansByBookId[book.id].id,
-                          bookId: book.id,
-                          title: book.title,
-                        })
-                      }
-                    >
-                      반납하기
-                    </button>
-                  </div>
-                )}
+                {currentUserId && myActiveLoansByBookId[book.id] ? (
+                  myActiveLoansByBookId[book.id].status === "requested" ? (
+                    <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2">
+                      <p className="text-xs text-amber-800">
+                        내 신청이 접수되었습니다. 운영자 승인 후 대여가 시작됩니다.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="mt-3 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2">
+                      <p className="text-xs text-blue-800">
+                        내 대여 건 (
+                        {myActiveLoansByBookId[book.id].status === "overdue" ? "연체" : "대여 중"})
+                        {formatDueDate(myActiveLoansByBookId[book.id].due_at)
+                          ? ` · 반납예정 ${formatDueDate(myActiveLoansByBookId[book.id].due_at)}`
+                          : ""}
+                      </p>
+                      <button
+                        type="button"
+                        className="btn-ghost mt-2 h-9 w-full justify-center"
+                        onClick={() =>
+                          setReturnTarget({
+                            loanId: myActiveLoansByBookId[book.id].id,
+                            bookId: book.id,
+                            title: book.title,
+                          })
+                        }
+                      >
+                        반납하기
+                      </button>
+                    </div>
+                  )
+                ) : book.status === "available" ? (
+                  <button
+                    type="button"
+                    className="btn-primary mt-3 h-9 w-full justify-center"
+                    onClick={() => void handleRequestLoan(book)}
+                    disabled={requestingBookId === book.id}
+                  >
+                    {requestingBookId === book.id ? "신청 중..." : "대여 신청"}
+                  </button>
+                ) : null}
               </article>
             ))}
           </div>

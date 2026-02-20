@@ -56,6 +56,7 @@ type BookLookupResult = {
   publisher: string | null;
   publishedYear: number | null;
   coverImageUrl: string | null;
+  description: string | null;
   source: "data4library" | "openlibrary" | "googlebooks";
 };
 

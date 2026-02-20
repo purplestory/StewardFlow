@@ -58,6 +58,7 @@ type BookLookupPayload = {
   publisher: string | null;
   publishedYear: number | null;
   coverImageUrl: string | null;
+  description: string | null;
   source: "data4library" | "openlibrary" | "googlebooks";
 };
 
@@ -361,6 +362,7 @@ export default function BooksManagePage() {
           ? String(result.book.publishedYear)
           : prev.publishedYear,
         coverImageUrl: result.book?.coverImageUrl ?? prev.coverImageUrl,
+        description: result.book?.description ?? prev.description,
       }));
       const sourceLabel =
         result.book.source === "data4library"

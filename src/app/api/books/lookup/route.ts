@@ -7,6 +7,7 @@ type BookLookupPayload = {
   publisher: string | null;
   publishedYear: number | null;
   coverImageUrl: string | null;
+  description: string | null;
   source: "data4library" | "openlibrary" | "googlebooks";
 };
 
@@ -20,6 +21,38 @@ function parseYear(input: string | null | undefined): number | null {
   if (!match) return null;
   const year = Number(match[0]);
   return Number.isNaN(year) ? null : year;
+}
+
+function normalizeText(input: string | null | undefined): string | null {
+  if (!input) return null;
+  const trimmed = input.trim();
+  return trimmed.length > 0 ? trimmed : null;
+}
+
+function normalizeDescription(
+  input: string | { value?: string | null } | null | undefined
+): string | null {
+  if (!input) return null;
+  if (typeof input === "string") return normalizeText(input);
+  if (typeof input === "object") return normalizeText(input.value ?? null);
+  return null;
+}
+
+function mergeBookPayload(
+  primary: BookLookupPayload,
+  supplement: BookLookupPayload | null
+): BookLookupPayload {
+  if (!supplement) return primary;
+  return {
+    ...primary,
+    isbn: primary.isbn || supplement.isbn,
+    title: primary.title || supplement.title,
+    author: primary.author || supplement.author,
+    publisher: primary.publisher || supplement.publisher,
+    publishedYear: primary.publishedYear ?? supplement.publishedYear,
+    coverImageUrl: primary.coverImageUrl || supplement.coverImageUrl,
+    description: primary.description || supplement.description,
+  };
 }
 
 async function lookupByData4Library(isbn: string): Promise<BookLookupPayload | null> {
@@ -63,11 +96,12 @@ async function lookupByData4Library(isbn: string): Promise<BookLookupPayload | n
 
   return {
     isbn: normalizeIsbn(book.isbn13 || isbn),
-    title: book.bookname || null,
-    author: book.authors || null,
-    publisher: book.publisher || null,
+    title: normalizeText(book.bookname),
+    author: normalizeText(book.authors),
+    publisher: normalizeText(book.publisher),
     publishedYear: parseYear(book.publication_year),
-    coverImageUrl: book.bookImageURL || null,
+    coverImageUrl: normalizeText(book.bookImageURL),
+    description: null,
     source: "data4library",
   };
 }
@@ -85,6 +119,7 @@ async function lookupByOpenLibrary(isbn: string): Promise<BookLookupPayload | nu
     | {
         title?: string;
         publish_date?: string;
+        description?: string | { value?: string | null };
         publishers?: Array<string | { name?: string }>;
         authors?: Array<{ key?: string }>;
       }
@@ -118,11 +153,12 @@ async function lookupByOpenLibrary(isbn: string): Promise<BookLookupPayload | nu
 
   return {
     isbn,
-    title: json.title || null,
+    title: normalizeText(json.title),
     author,
-    publisher,
+    publisher: normalizeText(publisher),
     publishedYear: parseYear(json.publish_date),
     coverImageUrl: `https://covers.openlibrary.org/b/isbn/${encodeURIComponent(isbn)}-L.jpg`,
+    description: normalizeDescription(json.description),
     source: "openlibrary",
   };
 }
@@ -147,6 +183,7 @@ async function lookupByGoogleBooks(isbn: string): Promise<BookLookupPayload | nu
             authors?: string[];
             publisher?: string;
             publishedDate?: string;
+            description?: string;
             imageLinks?: {
               thumbnail?: string;
               smallThumbnail?: string;
@@ -170,11 +207,12 @@ async function lookupByGoogleBooks(isbn: string): Promise<BookLookupPayload | nu
 
   return {
     isbn: normalizeIsbn(isbn13),
-    title: volumeInfo.title || null,
-    author: volumeInfo.authors?.join(", ") || null,
-    publisher: volumeInfo.publisher || null,
+    title: normalizeText(volumeInfo.title),
+    author: normalizeText(volumeInfo.authors?.join(", ")),
+    publisher: normalizeText(volumeInfo.publisher),
     publishedYear: parseYear(volumeInfo.publishedDate),
     coverImageUrl,
+    description: normalizeText(volumeInfo.description),
     source: "googlebooks",
   };
 }
@@ -199,19 +237,17 @@ export async function GET(request: Request) {
   }
 
   try {
-    const fromData4Library = await lookupByData4Library(isbn);
-    if (fromData4Library) {
-      return NextResponse.json({ ok: true, book: fromData4Library });
-    }
+    const [fromData4Library, fromOpenLibrary, fromGoogleBooks] = await Promise.all([
+      lookupByData4Library(isbn),
+      lookupByOpenLibrary(isbn),
+      lookupByGoogleBooks(isbn),
+    ]);
 
-    const fromOpenLibrary = await lookupByOpenLibrary(isbn);
-    if (fromOpenLibrary) {
-      return NextResponse.json({ ok: true, book: fromOpenLibrary });
-    }
-
-    const fromGoogleBooks = await lookupByGoogleBooks(isbn);
-    if (fromGoogleBooks) {
-      return NextResponse.json({ ok: true, book: fromGoogleBooks });
+    const primary = fromData4Library ?? fromOpenLibrary ?? fromGoogleBooks;
+    if (primary) {
+      const mergedWithOpen = mergeBookPayload(primary, fromOpenLibrary);
+      const mergedBook = mergeBookPayload(mergedWithOpen, fromGoogleBooks);
+      return NextResponse.json({ ok: true, book: mergedBook });
     }
 
     return NextResponse.json(

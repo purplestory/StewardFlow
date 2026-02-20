@@ -7,7 +7,7 @@ type BookLookupPayload = {
   publisher: string | null;
   publishedYear: number | null;
   coverImageUrl: string | null;
-  source: "data4library" | "openlibrary";
+  source: "data4library" | "openlibrary" | "googlebooks";
 };
 
 function normalizeIsbn(input: string): string {
@@ -127,6 +127,58 @@ async function lookupByOpenLibrary(isbn: string): Promise<BookLookupPayload | nu
   };
 }
 
+async function lookupByGoogleBooks(isbn: string): Promise<BookLookupPayload | null> {
+  const res = await fetch(
+    `https://www.googleapis.com/books/v1/volumes?q=isbn:${encodeURIComponent(isbn)}&maxResults=1`,
+    {
+      method: "GET",
+      headers: { Accept: "application/json" },
+      cache: "no-store",
+    }
+  );
+
+  if (!res.ok) return null;
+
+  const json = (await res.json().catch(() => null)) as
+    | {
+        items?: Array<{
+          volumeInfo?: {
+            title?: string;
+            authors?: string[];
+            publisher?: string;
+            publishedDate?: string;
+            imageLinks?: {
+              thumbnail?: string;
+              smallThumbnail?: string;
+            };
+            industryIdentifiers?: Array<{
+              type?: string;
+              identifier?: string;
+            }>;
+          };
+        }>;
+      }
+    | null;
+
+  const volumeInfo = json?.items?.[0]?.volumeInfo;
+  if (!volumeInfo?.title) return null;
+
+  const isbn13 =
+    volumeInfo.industryIdentifiers?.find((id) => id.type === "ISBN_13")?.identifier ?? isbn;
+  const coverRaw = volumeInfo.imageLinks?.thumbnail || volumeInfo.imageLinks?.smallThumbnail || null;
+  const coverImageUrl = coverRaw ? coverRaw.replace(/^http:\/\//i, "https://") : null;
+
+  return {
+    isbn: normalizeIsbn(isbn13),
+    title: volumeInfo.title || null,
+    author: volumeInfo.authors?.join(", ") || null,
+    publisher: volumeInfo.publisher || null,
+    publishedYear: parseYear(volumeInfo.publishedDate),
+    coverImageUrl,
+    source: "googlebooks",
+  };
+}
+
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const raw = url.searchParams.get("isbn")?.trim();
@@ -157,6 +209,11 @@ export async function GET(request: Request) {
       return NextResponse.json({ ok: true, book: fromOpenLibrary });
     }
 
+    const fromGoogleBooks = await lookupByGoogleBooks(isbn);
+    if (fromGoogleBooks) {
+      return NextResponse.json({ ok: true, book: fromGoogleBooks });
+    }
+
     return NextResponse.json(
       { ok: false, message: "도서 정보를 찾지 못했습니다." },
       { status: 404 }
@@ -172,4 +229,3 @@ export async function GET(request: Request) {
     );
   }
 }
-

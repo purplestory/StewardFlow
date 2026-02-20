@@ -56,7 +56,7 @@ type BookLookupResult = {
   publisher: string | null;
   publishedYear: number | null;
   coverImageUrl: string | null;
-  source: "data4library" | "openlibrary";
+  source: "data4library" | "openlibrary" | "googlebooks";
 };
 
 const BOOK_CATEGORY_PATTERN = /(도서|책|book|북카페|library)/i;
@@ -430,8 +430,14 @@ export default function AssetForm({ asset }: AssetFormProps = {}) {
       if (result.book.author) {
         setModelNameValue(result.book.author);
       }
+      const sourceLabel =
+        result.book.source === "data4library"
+          ? "공공 API"
+          : result.book.source === "openlibrary"
+          ? "Open Library"
+          : "Google Books";
       setIsbnLookupMessage(
-        `도서 정보를 불러왔습니다. (${result.book.source === "data4library" ? "공공 API" : "Open Library"})`
+        `도서 정보를 불러왔습니다. (${sourceLabel})`
       );
     } catch (error) {
       setBookLookupResult(null);

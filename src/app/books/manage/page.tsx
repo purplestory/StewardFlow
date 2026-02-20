@@ -58,7 +58,7 @@ type BookLookupPayload = {
   publisher: string | null;
   publishedYear: number | null;
   coverImageUrl: string | null;
-  source: "data4library" | "openlibrary";
+  source: "data4library" | "openlibrary" | "googlebooks";
 };
 
 type BookManageTab = "register" | "requests" | "returns" | "settings";
@@ -362,8 +362,14 @@ export default function BooksManagePage() {
           : prev.publishedYear,
         coverImageUrl: result.book?.coverImageUrl ?? prev.coverImageUrl,
       }));
+      const sourceLabel =
+        result.book.source === "data4library"
+          ? "도서관정보나루"
+          : result.book.source === "openlibrary"
+          ? "Open Library"
+          : "Google Books";
       setBookRegisterMessage(
-        `ISBN 조회 완료 (${result.book.source === "data4library" ? "도서관정보나루" : "Open Library"})`
+        `ISBN 조회 완료 (${sourceLabel})`
       );
     } catch (error) {
       setBookRegisterMessage(

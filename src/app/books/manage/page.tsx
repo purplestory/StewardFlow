@@ -60,6 +60,8 @@ type BookLookupPayload = {
   source: "data4library" | "openlibrary";
 };
 
+type BookManageTab = "register" | "requests" | "returns" | "settings";
+
 const toBooksDataErrorMessage = (message: string, fallback: string) => {
   if (
     message.includes("Could not find the table") ||
@@ -106,6 +108,9 @@ export default function BooksManagePage() {
   const [verifyingLoanId, setVerifyingLoanId] = useState<string | null>(null);
   const [verifyMessage, setVerifyMessage] = useState<string | null>(null);
   const [reloadTick, setReloadTick] = useState(0);
+  const [activeTab, setActiveTab] = useState<BookManageTab>("register");
+  const [requestSearchKeyword, setRequestSearchKeyword] = useState("");
+  const [returnSearchKeyword, setReturnSearchKeyword] = useState("");
 
   useEffect(() => {
     let isMounted = true;
@@ -591,6 +596,38 @@ export default function BooksManagePage() {
     }
   };
 
+  const requestKeyword = requestSearchKeyword.trim().toLowerCase();
+  const returnKeyword = returnSearchKeyword.trim().toLowerCase();
+
+  const filteredPendingRequests = pendingRequests.filter((item) => {
+    if (!requestKeyword) {
+      return true;
+    }
+    const searchable = [item.book_title, item.borrower_name, item.borrower_department]
+      .filter(Boolean)
+      .join(" ")
+      .toLowerCase();
+    return searchable.includes(requestKeyword);
+  });
+
+  const filteredPendingReturns = pendingReturns.filter((item) => {
+    if (!returnKeyword) {
+      return true;
+    }
+    const searchable = [item.book_title, item.borrower_name, item.borrower_department, item.return_shelf_code]
+      .filter(Boolean)
+      .join(" ")
+      .toLowerCase();
+    return searchable.includes(returnKeyword);
+  });
+
+  const tabs: Array<{ key: BookManageTab; label: string; count?: number }> = [
+    { key: "register", label: "도서 등록" },
+    { key: "requests", label: "대여 요청", count: pendingRequests.length },
+    { key: "returns", label: "반납 검수", count: pendingReturns.length },
+    { key: "settings", label: "운영 설정" },
+  ];
+
   if (loading) {
     return <Notice>도서 운영 설정을 불러오는 중입니다.</Notice>;
   }
@@ -610,9 +647,9 @@ export default function BooksManagePage() {
         description="도서 라운지는 자원관리와 분리된 사용자 경험으로 운영됩니다."
         actions={
           <div className="flex flex-wrap gap-2">
-            <a href="#book-register" className="btn-primary">
+            <button type="button" className="btn-primary" onClick={() => setActiveTab("register")}>
               도서 등록
-            </a>
+            </button>
             <Link href="/books" className="btn-ghost">
               도서 라운지
             </Link>
@@ -633,132 +670,371 @@ export default function BooksManagePage() {
         </Notice>
       ) : (
         <>
-          <SectionCard
-            title="도서 등록"
-            description="ISBN 조회 후 도서 카탈로그에 등록할 수 있습니다."
-          >
-            <form id="book-register" className="space-y-3" onSubmit={handleRegisterBook}>
-              <div className="grid gap-2 md:grid-cols-[1fr_auto]">
-                <input
-                  className="form-input"
-                  placeholder="ISBN (10/13자리)"
-                  value={bookForm.isbn}
-                  onChange={(event) => updateBookForm("isbn", event.target.value)}
-                />
-                <button
-                  type="button"
-                  className="btn-outline h-10 px-4"
-                  onClick={() => void handleLookupByIsbn()}
-                  disabled={bookLookupLoading}
-                >
-                  {bookLookupLoading ? "조회 중..." : "ISBN 조회"}
-                </button>
-              </div>
-              <div className="grid gap-2 md:grid-cols-2">
-                <input
-                  className="form-input"
-                  placeholder="도서 제목 *"
-                  value={bookForm.title}
-                  onChange={(event) => updateBookForm("title", event.target.value)}
-                  required
-                />
-                <input
-                  className="form-input"
-                  placeholder="저자"
-                  value={bookForm.author}
-                  onChange={(event) => updateBookForm("author", event.target.value)}
-                />
-              </div>
-              <div className="grid gap-2 md:grid-cols-2">
-                <input
-                  className="form-input"
-                  placeholder="출판사"
-                  value={bookForm.publisher}
-                  onChange={(event) => updateBookForm("publisher", event.target.value)}
-                />
-                <input
-                  className="form-input"
-                  placeholder="출판연도 (예: 2024)"
-                  value={bookForm.publishedYear}
-                  onChange={(event) => updateBookForm("publishedYear", event.target.value)}
-                />
-              </div>
-              <div className="grid gap-2 md:grid-cols-2">
-                <input
-                  className="form-input"
-                  placeholder="서가 라벨 (예: B2-03)"
-                  value={bookForm.shelfLabel}
-                  onChange={(event) => updateBookForm("shelfLabel", event.target.value)}
-                />
-                <input
-                  className="form-input"
-                  placeholder="태그 (쉼표로 구분)"
-                  value={bookForm.tags}
-                  onChange={(event) => updateBookForm("tags", event.target.value)}
-                />
-              </div>
-              <input
-                className="form-input"
-                placeholder="표지 이미지 URL"
-                value={bookForm.coverImageUrl}
-                onChange={(event) => updateBookForm("coverImageUrl", event.target.value)}
-              />
-              <textarea
-                className="form-textarea min-h-[96px]"
-                placeholder="도서 설명 (선택)"
-                value={bookForm.description}
-                onChange={(event) => updateBookForm("description", event.target.value)}
-              />
-              <div className="flex justify-end">
-                <button type="submit" className="btn-primary px-5" disabled={bookRegistering}>
-                  {bookRegistering ? "등록 중..." : "도서 등록"}
-                </button>
-              </div>
-            </form>
-          </SectionCard>
-
-          <SectionCard
-            title="운영 상태"
-            description="게임화/리더보드/응원/시상 정책의 현재 상태입니다."
-          >
-            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-              <div className="rounded-xl border border-neutral-200 p-4">
-                <p className="text-xs text-neutral-500">게임화</p>
-                <p className="mt-1 text-lg font-semibold">
-                  {programSettings?.gamification_enabled === false ? "비활성" : "활성"}
-                </p>
-              </div>
-              <div className="rounded-xl border border-neutral-200 p-4">
-                <p className="text-xs text-neutral-500">리더보드</p>
-                <p className="mt-1 text-lg font-semibold">
-                  {programSettings?.leaderboard_enabled === false ? "비활성" : "활성"}
-                </p>
-              </div>
-              <div className="rounded-xl border border-neutral-200 p-4">
-                <p className="text-xs text-neutral-500">응원 기능</p>
-                <p className="mt-1 text-lg font-semibold">
-                  {programSettings?.cheer_enabled === false ? "비활성" : "활성"}
-                </p>
-              </div>
-              <div className="rounded-xl border border-neutral-200 p-4">
-                <p className="text-xs text-neutral-500">시상</p>
-                <p className="mt-1 text-lg font-semibold">
-                  {programSettings?.rewards_enabled === true ? "활성" : "비활성(선택형)"}
-                </p>
-              </div>
+          <div className="tab-shell">
+            <div className="tab-scroll">
+              <nav className="tab-nav" aria-label="도서 운영 탭">
+                {tabs.map((tab) => {
+                  const isActive = activeTab === tab.key;
+                  return (
+                    <button
+                      key={tab.key}
+                      type="button"
+                      className={`tab-chip ${isActive ? "tab-chip-active" : ""}`}
+                      onClick={() => setActiveTab(tab.key)}
+                    >
+                      <span>{tab.label}</span>
+                      {typeof tab.count === "number" ? (
+                        <span
+                          className={`ml-2 inline-flex min-w-5 items-center justify-center rounded-full px-1.5 py-0.5 text-[11px] font-semibold ${
+                            isActive ? "bg-white/20 text-white" : "bg-neutral-200 text-neutral-600"
+                          }`}
+                        >
+                          {tab.count}
+                        </span>
+                      ) : null}
+                    </button>
+                  );
+                })}
+              </nav>
             </div>
+          </div>
 
-            <div className="mt-4 grid gap-3 md:grid-cols-2">
-              <div className="rounded-xl border border-neutral-200 p-4">
-                <p className="text-xs text-neutral-500">일일 점수 상한</p>
-                <p className="mt-1 text-lg font-semibold">{programSettings?.daily_point_cap ?? 120}점</p>
+          {activeTab === "register" ? (
+            <SectionCard
+              title="도서 등록"
+              description="ISBN 조회 후 도서 카탈로그에 등록할 수 있습니다."
+            >
+              <form id="book-register" className="space-y-3" onSubmit={handleRegisterBook}>
+                <div className="grid gap-2 md:grid-cols-[1fr_auto]">
+                  <input
+                    className="form-input"
+                    placeholder="ISBN (10/13자리)"
+                    value={bookForm.isbn}
+                    onChange={(event) => updateBookForm("isbn", event.target.value)}
+                  />
+                  <button
+                    type="button"
+                    className="btn-outline h-10 px-4"
+                    onClick={() => void handleLookupByIsbn()}
+                    disabled={bookLookupLoading}
+                  >
+                    {bookLookupLoading ? "조회 중..." : "ISBN 조회"}
+                  </button>
+                </div>
+                <div className="grid gap-2 md:grid-cols-2">
+                  <input
+                    className="form-input"
+                    placeholder="도서 제목 *"
+                    value={bookForm.title}
+                    onChange={(event) => updateBookForm("title", event.target.value)}
+                    required
+                  />
+                  <input
+                    className="form-input"
+                    placeholder="저자"
+                    value={bookForm.author}
+                    onChange={(event) => updateBookForm("author", event.target.value)}
+                  />
+                </div>
+                <div className="grid gap-2 md:grid-cols-2">
+                  <input
+                    className="form-input"
+                    placeholder="출판사"
+                    value={bookForm.publisher}
+                    onChange={(event) => updateBookForm("publisher", event.target.value)}
+                  />
+                  <input
+                    className="form-input"
+                    placeholder="출판연도 (예: 2024)"
+                    value={bookForm.publishedYear}
+                    onChange={(event) => updateBookForm("publishedYear", event.target.value)}
+                  />
+                </div>
+                <div className="grid gap-2 md:grid-cols-2">
+                  <input
+                    className="form-input"
+                    placeholder="서가 라벨 (예: B2-03)"
+                    value={bookForm.shelfLabel}
+                    onChange={(event) => updateBookForm("shelfLabel", event.target.value)}
+                  />
+                  <input
+                    className="form-input"
+                    placeholder="태그 (쉼표로 구분)"
+                    value={bookForm.tags}
+                    onChange={(event) => updateBookForm("tags", event.target.value)}
+                  />
+                </div>
+                <input
+                  className="form-input"
+                  placeholder="표지 이미지 URL"
+                  value={bookForm.coverImageUrl}
+                  onChange={(event) => updateBookForm("coverImageUrl", event.target.value)}
+                />
+                <textarea
+                  className="form-textarea min-h-[96px]"
+                  placeholder="도서 설명 (선택)"
+                  value={bookForm.description}
+                  onChange={(event) => updateBookForm("description", event.target.value)}
+                />
+                <div className="flex justify-end">
+                  <button type="submit" className="btn-primary px-5" disabled={bookRegistering}>
+                    {bookRegistering ? "등록 중..." : "도서 등록"}
+                  </button>
+                </div>
+              </form>
+            </SectionCard>
+          ) : null}
+
+          {activeTab === "requests" ? (
+            <SectionCard
+              title="대여 요청 대기"
+              description="신청 도서를 승인/거절하면 대여 상태가 자동 갱신됩니다."
+            >
+              <div className="module-toolbar mb-4">
+                <div className="module-toolbar-grid">
+                  <input
+                    className="form-input"
+                    placeholder="도서명/신청자/부서 검색"
+                    value={requestSearchKeyword}
+                    onChange={(event) => setRequestSearchKeyword(event.target.value)}
+                  />
+                  <div className="field-static justify-between">
+                    <span>처리 대상</span>
+                    <span className="font-semibold text-slate-900">{filteredPendingRequests.length}건</span>
+                  </div>
+                </div>
               </div>
-              <div className="rounded-xl border border-neutral-200 p-4">
-                <p className="text-xs text-neutral-500">적용된 점수 규칙</p>
-                <p className="mt-1 text-lg font-semibold">{ruleCount}개</p>
+              {filteredPendingRequests.length === 0 ? (
+                <Notice className="p-4">
+                  {requestSearchKeyword ? "검색 결과가 없습니다." : "처리 대기중인 대여 요청이 없습니다."}
+                </Notice>
+              ) : (
+                <ul className="space-y-3">
+                  {filteredPendingRequests.map((item) => (
+                    <li key={item.id} className="rounded-xl border border-neutral-200 p-4">
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold text-slate-900">{item.book_title}</p>
+                          <p className="mt-1 text-xs text-neutral-600">
+                            {item.borrower_name ?? item.borrower_id.slice(0, 8)}
+                            {item.borrower_department ? ` (${item.borrower_department})` : ""}
+                          </p>
+                          <p className="mt-1 text-xs text-neutral-500">
+                            신청일: {new Date(item.requested_at).toLocaleString("ko-KR")}
+                          </p>
+                          {item.note && (
+                            <p className="mt-2 rounded-lg bg-neutral-50 px-3 py-2 text-xs text-neutral-600">
+                              {item.note}
+                            </p>
+                          )}
+                        </div>
+                        <span className="inline-flex h-7 items-center rounded-full bg-amber-50 px-2.5 text-xs font-medium text-amber-700">
+                          승인 대기
+                        </span>
+                      </div>
+                      <div className="mt-3 grid gap-2 md:grid-cols-[1fr_220px_auto_auto]">
+                        <input
+                          className="form-input"
+                          placeholder="운영 메모 (거절 시 필수)"
+                          value={decisionNoteByLoanId[item.id] ?? ""}
+                          onChange={(event) =>
+                            setDecisionNoteByLoanId((prev) => ({
+                              ...prev,
+                              [item.id]: event.target.value,
+                            }))
+                          }
+                        />
+                        <input
+                          type="date"
+                          className="form-input"
+                          value={decisionDueDateByLoanId[item.id] ?? ""}
+                          onChange={(event) =>
+                            setDecisionDueDateByLoanId((prev) => ({
+                              ...prev,
+                              [item.id]: event.target.value,
+                            }))
+                          }
+                        />
+                        <button
+                          type="button"
+                          className="btn-primary h-10 px-4"
+                          onClick={() => void handleLoanDecision(item.id, "approved")}
+                          disabled={decidingLoanId === item.id}
+                        >
+                          승인
+                        </button>
+                        <button
+                          type="button"
+                          className="btn-ghost h-10 px-4 text-rose-700 hover:bg-rose-50"
+                          onClick={() => void handleLoanDecision(item.id, "rejected")}
+                          disabled={decidingLoanId === item.id}
+                        >
+                          거절
+                        </button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </SectionCard>
+          ) : null}
+
+          {activeTab === "returns" ? (
+            <SectionCard
+              title="반납 검수 대기"
+              description="사용자가 등록한 반납을 승인/반려하면 점수가 확정됩니다."
+            >
+              <div className="module-toolbar mb-4">
+                <div className="module-toolbar-grid">
+                  <input
+                    className="form-input"
+                    placeholder="도서명/반납자/서가코드 검색"
+                    value={returnSearchKeyword}
+                    onChange={(event) => setReturnSearchKeyword(event.target.value)}
+                  />
+                  <div className="field-static justify-between">
+                    <span>검수 대상</span>
+                    <span className="font-semibold text-slate-900">{filteredPendingReturns.length}건</span>
+                  </div>
+                </div>
               </div>
-            </div>
-          </SectionCard>
+              {filteredPendingReturns.length === 0 ? (
+                <Notice className="p-4">
+                  {returnSearchKeyword ? "검색 결과가 없습니다." : "검수 대기중인 반납이 없습니다."}
+                </Notice>
+              ) : (
+                <ul className="space-y-3">
+                  {filteredPendingReturns.map((item) => (
+                    <li key={item.id} className="rounded-xl border border-neutral-200 p-4">
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold text-slate-900">{item.book_title}</p>
+                          <p className="mt-1 text-xs text-neutral-600">
+                            {item.borrower_name ?? item.borrower_id.slice(0, 8)}
+                            {item.borrower_department ? ` (${item.borrower_department})` : ""}
+                          </p>
+                          <p className="mt-1 text-xs text-neutral-500">
+                            반납일:{" "}
+                            {item.returned_at ? new Date(item.returned_at).toLocaleString("ko-KR") : "-"}
+                            {item.due_at
+                              ? ` · 반납기한: ${new Date(item.due_at).toLocaleDateString("ko-KR")}`
+                              : ""}
+                          </p>
+                          {item.return_shelf_code && (
+                            <p className="mt-1 text-xs text-neutral-500">서가 코드: {item.return_shelf_code}</p>
+                          )}
+                          {item.return_note && (
+                            <p className="mt-2 rounded-lg bg-neutral-50 px-3 py-2 text-xs text-neutral-600">
+                              {item.return_note}
+                            </p>
+                          )}
+                          {item.return_photo_url && (
+                            <a
+                              href={item.return_photo_url}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="mt-2 inline-flex text-xs text-brand-primary underline"
+                            >
+                              반납 사진 보기
+                            </a>
+                          )}
+                        </div>
+                        <span className="inline-flex h-7 items-center rounded-full bg-amber-50 px-2.5 text-xs font-medium text-amber-700">
+                          확인 대기
+                        </span>
+                      </div>
+                      <div className="mt-3 grid gap-2 sm:grid-cols-[1fr_auto_auto]">
+                        <input
+                          className="form-input"
+                          placeholder="검수 메모 (반려 시 필수)"
+                          value={verifyNoteByLoanId[item.id] ?? ""}
+                          onChange={(event) =>
+                            setVerifyNoteByLoanId((prev) => ({
+                              ...prev,
+                              [item.id]: event.target.value,
+                            }))
+                          }
+                        />
+                        <button
+                          type="button"
+                          className="btn-primary h-10 px-4"
+                          onClick={() => void handleVerifyReturn(item.id, "verified")}
+                          disabled={verifyingLoanId === item.id}
+                        >
+                          승인
+                        </button>
+                        <button
+                          type="button"
+                          className="btn-ghost h-10 px-4 text-rose-700 hover:bg-rose-50"
+                          onClick={() => void handleVerifyReturn(item.id, "rejected")}
+                          disabled={verifyingLoanId === item.id}
+                        >
+                          반려
+                        </button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </SectionCard>
+          ) : null}
+
+          {activeTab === "settings" ? (
+            <>
+              <SectionCard
+                title="운영 상태"
+                description="게임화/리더보드/응원/시상 정책의 현재 상태입니다."
+              >
+                <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                  <div className="rounded-xl border border-neutral-200 p-4">
+                    <p className="text-xs text-neutral-500">게임화</p>
+                    <p className="mt-1 text-lg font-semibold">
+                      {programSettings?.gamification_enabled === false ? "비활성" : "활성"}
+                    </p>
+                  </div>
+                  <div className="rounded-xl border border-neutral-200 p-4">
+                    <p className="text-xs text-neutral-500">리더보드</p>
+                    <p className="mt-1 text-lg font-semibold">
+                      {programSettings?.leaderboard_enabled === false ? "비활성" : "활성"}
+                    </p>
+                  </div>
+                  <div className="rounded-xl border border-neutral-200 p-4">
+                    <p className="text-xs text-neutral-500">응원 기능</p>
+                    <p className="mt-1 text-lg font-semibold">
+                      {programSettings?.cheer_enabled === false ? "비활성" : "활성"}
+                    </p>
+                  </div>
+                  <div className="rounded-xl border border-neutral-200 p-4">
+                    <p className="text-xs text-neutral-500">시상</p>
+                    <p className="mt-1 text-lg font-semibold">
+                      {programSettings?.rewards_enabled === true ? "활성" : "비활성(선택형)"}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="mt-4 grid gap-3 md:grid-cols-2">
+                  <div className="rounded-xl border border-neutral-200 p-4">
+                    <p className="text-xs text-neutral-500">일일 점수 상한</p>
+                    <p className="mt-1 text-lg font-semibold">{programSettings?.daily_point_cap ?? 120}점</p>
+                  </div>
+                  <div className="rounded-xl border border-neutral-200 p-4">
+                    <p className="text-xs text-neutral-500">적용된 점수 규칙</p>
+                    <p className="mt-1 text-lg font-semibold">{ruleCount}개</p>
+                  </div>
+                </div>
+              </SectionCard>
+
+              {organizationId ? (
+                <SectionCard title="다음 단계" description="운영 설정 이후 연결할 기능입니다.">
+                  <ol className="list-decimal space-y-2 pl-5 text-sm text-neutral-700">
+                    <li>도서 상세에서 응원 버튼과 메모 작성 흐름 연결</li>
+                    <li>월말 리더보드 스냅샷 및 시상 확정 배치 작업 연결</li>
+                    <li>반납 사진 업로드/검수 SLA 알림 자동화</li>
+                  </ol>
+                </SectionCard>
+              ) : null}
+            </>
+          ) : null}
         </>
       )}
 
@@ -792,179 +1068,6 @@ export default function BooksManagePage() {
         </Notice>
       )}
 
-      {booksEnabled && (
-        <SectionCard
-          title="대여 요청 대기"
-          description="신청 도서를 승인/거절하면 대여 상태가 자동 갱신됩니다."
-        >
-          {pendingRequests.length === 0 ? (
-            <Notice className="p-4">처리 대기중인 대여 요청이 없습니다.</Notice>
-          ) : (
-            <ul className="space-y-3">
-              {pendingRequests.map((item) => (
-                <li key={item.id} className="rounded-xl border border-neutral-200 p-4">
-                  <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="text-sm font-semibold text-slate-900">{item.book_title}</p>
-                      <p className="mt-1 text-xs text-neutral-600">
-                        {item.borrower_name ?? item.borrower_id.slice(0, 8)}
-                        {item.borrower_department ? ` (${item.borrower_department})` : ""}
-                      </p>
-                      <p className="mt-1 text-xs text-neutral-500">
-                        신청일: {new Date(item.requested_at).toLocaleString("ko-KR")}
-                      </p>
-                      {item.note && (
-                        <p className="mt-2 rounded-lg bg-neutral-50 px-3 py-2 text-xs text-neutral-600">
-                          {item.note}
-                        </p>
-                      )}
-                    </div>
-                    <span className="inline-flex h-7 items-center rounded-full bg-amber-50 px-2.5 text-xs font-medium text-amber-700">
-                      승인 대기
-                    </span>
-                  </div>
-                  <div className="mt-3 grid gap-2 md:grid-cols-[1fr_220px_auto_auto]">
-                    <input
-                      className="form-input"
-                      placeholder="운영 메모 (거절 시 필수)"
-                      value={decisionNoteByLoanId[item.id] ?? ""}
-                      onChange={(event) =>
-                        setDecisionNoteByLoanId((prev) => ({
-                          ...prev,
-                          [item.id]: event.target.value,
-                        }))
-                      }
-                    />
-                    <input
-                      type="date"
-                      className="form-input"
-                      value={decisionDueDateByLoanId[item.id] ?? ""}
-                      onChange={(event) =>
-                        setDecisionDueDateByLoanId((prev) => ({
-                          ...prev,
-                          [item.id]: event.target.value,
-                        }))
-                      }
-                    />
-                    <button
-                      type="button"
-                      className="btn-primary h-10 px-4"
-                      onClick={() => void handleLoanDecision(item.id, "approved")}
-                      disabled={decidingLoanId === item.id}
-                    >
-                      승인
-                    </button>
-                    <button
-                      type="button"
-                      className="btn-ghost h-10 px-4 text-rose-700 hover:bg-rose-50"
-                      onClick={() => void handleLoanDecision(item.id, "rejected")}
-                      disabled={decidingLoanId === item.id}
-                    >
-                      거절
-                    </button>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
-        </SectionCard>
-      )}
-
-      {booksEnabled && (
-        <SectionCard
-          title="반납 검수 대기"
-          description="사용자가 등록한 반납을 승인/반려하면 점수가 확정됩니다."
-        >
-          {pendingReturns.length === 0 ? (
-            <Notice className="p-4">검수 대기중인 반납이 없습니다.</Notice>
-          ) : (
-            <ul className="space-y-3">
-              {pendingReturns.map((item) => (
-                <li key={item.id} className="rounded-xl border border-neutral-200 p-4">
-                  <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="text-sm font-semibold text-slate-900">{item.book_title}</p>
-                      <p className="mt-1 text-xs text-neutral-600">
-                        {item.borrower_name ?? item.borrower_id.slice(0, 8)}
-                        {item.borrower_department ? ` (${item.borrower_department})` : ""}
-                      </p>
-                      <p className="mt-1 text-xs text-neutral-500">
-                        반납일:{" "}
-                        {item.returned_at
-                          ? new Date(item.returned_at).toLocaleString("ko-KR")
-                          : "-"}
-                        {item.due_at
-                          ? ` · 반납기한: ${new Date(item.due_at).toLocaleDateString("ko-KR")}`
-                          : ""}
-                      </p>
-                      {item.return_shelf_code && (
-                        <p className="mt-1 text-xs text-neutral-500">서가 코드: {item.return_shelf_code}</p>
-                      )}
-                      {item.return_note && (
-                        <p className="mt-2 rounded-lg bg-neutral-50 px-3 py-2 text-xs text-neutral-600">
-                          {item.return_note}
-                        </p>
-                      )}
-                      {item.return_photo_url && (
-                        <a
-                          href={item.return_photo_url}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="mt-2 inline-flex text-xs text-brand-primary underline"
-                        >
-                          반납 사진 보기
-                        </a>
-                      )}
-                    </div>
-                    <span className="inline-flex h-7 items-center rounded-full bg-amber-50 px-2.5 text-xs font-medium text-amber-700">
-                      확인 대기
-                    </span>
-                  </div>
-                  <div className="mt-3 grid gap-2 sm:grid-cols-[1fr_auto_auto]">
-                    <input
-                      className="form-input"
-                      placeholder="검수 메모 (반려 시 필수)"
-                      value={verifyNoteByLoanId[item.id] ?? ""}
-                      onChange={(event) =>
-                        setVerifyNoteByLoanId((prev) => ({
-                          ...prev,
-                          [item.id]: event.target.value,
-                        }))
-                      }
-                    />
-                    <button
-                      type="button"
-                      className="btn-primary h-10 px-4"
-                      onClick={() => void handleVerifyReturn(item.id, "verified")}
-                      disabled={verifyingLoanId === item.id}
-                    >
-                      승인
-                    </button>
-                    <button
-                      type="button"
-                      className="btn-ghost h-10 px-4 text-rose-700 hover:bg-rose-50"
-                      onClick={() => void handleVerifyReturn(item.id, "rejected")}
-                      disabled={verifyingLoanId === item.id}
-                    >
-                      반려
-                    </button>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
-        </SectionCard>
-      )}
-
-      {organizationId && (
-        <SectionCard title="다음 단계" description="운영 설정 이후 연결할 기능입니다.">
-          <ol className="list-decimal space-y-2 pl-5 text-sm text-neutral-700">
-            <li>도서 상세에서 응원 버튼과 메모 작성 흐름 연결</li>
-            <li>월말 리더보드 스냅샷 및 시상 확정 배치 작업 연결</li>
-            <li>반납 사진 업로드/검수 SLA 알림 자동화</li>
-          </ol>
-        </SectionCard>
-      )}
     </ManageLayout>
   );
 }

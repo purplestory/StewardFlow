@@ -1,7 +1,7 @@
 # PROJECT STATE
 
 최종 업데이트: 2026-02-20  
-기준 커밋: `84e3ff8` (`feat: 관리자 초대 만료일 설정 및 expires_at 정책 추가`)
+기준 커밋: `c3cb5cf` (`fix: 도서 스키마 부트스트랩 마이그레이션 추가`)
 
 ## 1. 현재 제품 범위
 - 코어: 인증, 사용자/권한, 물품/공간/차량 예약/승인/반납
@@ -16,6 +16,7 @@
 - 도서 내부 도메인/테이블 용어는 `loan` 유지 (`lend`로 변경하지 않음)
 - 카카오 로그인 콜백에서 일시적 실패 화면 깜빡임 완화 로직 반영
 - 관리자 설정에서 초대 링크 만료일(`1/3/7/14/30일`) 선택 가능
+- 원격 Supabase에 도서 스키마 부트스트랩 마이그레이션 실적용 완료
 
 ## 3. 완료 상태(요약)
 - 메뉴 순서 저장 후 새로고침 시 복원되던 버그 수정
@@ -25,9 +26,9 @@
 - 초대 레코드 만료 시각(`organization_invites.expires_at`) 저장/검증 로직 반영
 
 ## 4. 현재 위험/주의사항
-- 일부 환경에서 `book_items`, `book_loans` 테이블 미적용 가능성 존재
-  - 증상: `Could not find the table 'public.book_loans' in the schema cache`
-  - 조치: `docs/DB_MIGRATION_STATUS.md` 기준으로 2026-02-19 도서 마이그레이션 적용 확인
+- 기본 운영 환경에서는 도서 테이블 미적용 이슈 해소됨
+  - 확인: `book_items`, `book_loans` 포함 핵심 도서 테이블 API 응답 확인
+  - 주의: 신규/별도 환경에서는 `20260220103000_bootstrap_books_schema.sql` 적용 필요
 - 일부 환경에서 `invite_expires_days`, `expires_at` 컬럼 미적용 가능성 존재
   - 증상: 초대 만료일 저장/조회 시 `column ... does not exist`
   - 조치: `supabase/migrations/20260219_add_invite_expiration_policy.sql` 적용

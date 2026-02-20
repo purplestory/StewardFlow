@@ -432,6 +432,14 @@ input[type="time"] {
   @apply rounded-xl border border-neutral-200 bg-neutral-50 px-4 py-3;
 }
 
+.module-list .list-row {
+  @apply rounded-none border-0 bg-transparent;
+}
+
+.module-list .list-row-muted {
+  @apply rounded-none border-0 bg-transparent;
+}
+
 /* Manage module primitives */
 .manage-stack {
   @apply space-y-5 md:space-y-6;
@@ -454,7 +462,7 @@ input[type="time"] {
 }
 
 .module-toolbar {
-  @apply rounded-xl border border-slate-200 bg-slate-50/80 p-3 md:p-4;
+  @apply rounded-xl bg-slate-50/70 p-3 md:p-4;
 }
 
 .module-toolbar-grid {

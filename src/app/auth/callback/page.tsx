@@ -25,6 +25,19 @@ function AuthCallbackPageContent() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    const SESSION_RECOVERY_RETRIES = 24;
+    const SESSION_RECOVERY_DELAY_MS = 150;
+    const isRecoverableOAuthError = (message?: string | null) => {
+      const normalized = (message || "").toLowerCase();
+      return (
+        normalized.includes("invalid_grant") ||
+        normalized.includes("code verifier") ||
+        normalized.includes("code") && normalized.includes("used") ||
+        normalized.includes("pkce") ||
+        normalized.includes("exchange")
+      );
+    };
+
     const handleCallback = async () => {
       try {
         const hasOpener = (() => {
@@ -118,7 +131,12 @@ function AuthCallbackPageContent() {
 
         const handleAuthError = async (message: string) => {
           // 콜백이 중복 실행되어 code 재교환 실패가 나도, 이미 세션이 있으면 성공 흐름으로 처리한다.
-          if (await waitForActiveSessionUser(10, 120)) {
+          if (
+            await waitForActiveSessionUser(
+              SESSION_RECOVERY_RETRIES,
+              SESSION_RECOVERY_DELAY_MS
+            )
+          ) {
             await completeSuccess();
             return;
           }
@@ -183,6 +201,17 @@ function AuthCallbackPageContent() {
           const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
 
           if (exchangeError) {
+            if (isRecoverableOAuthError(exchangeError.message)) {
+              if (
+                await waitForActiveSessionUser(
+                  SESSION_RECOVERY_RETRIES,
+                  SESSION_RECOVERY_DELAY_MS
+                )
+              ) {
+                await completeSuccess();
+                return;
+              }
+            }
             await handleAuthError("인증에 실패했습니다.");
             return;
           }
@@ -190,7 +219,10 @@ function AuthCallbackPageContent() {
           return;
         }
 
-        if (await hasActiveSessionUser()) {
+        if (
+          (await hasActiveSessionUser()) ||
+          (await waitForActiveSessionUser(8, 120))
+        ) {
           await completeSuccess();
           return;
         }

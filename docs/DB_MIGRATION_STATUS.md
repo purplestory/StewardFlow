@@ -1,6 +1,6 @@
 # DB MIGRATION STATUS
 
-최종 업데이트: 2026-02-19
+최종 업데이트: 2026-02-20
 
 ## 1. 목적
 - 환경별 DB 스키마 적용 상태를 빠르게 확인
@@ -18,6 +18,19 @@
 2. `supabase/migrations/20260219_create_book_lending_mvp.sql`
 3. `supabase/migrations/20260219_extend_book_lending_self_service.sql`
 4. `supabase/migrations/20260219_add_book_gamification_options.sql`
+
+## 3-1. 운영 반영 결과 (2026-02-20)
+- 원격 Supabase 적용 파일:
+  - `supabase/migrations/20260220103000_bootstrap_books_schema.sql`
+- 적용 방식:
+  - 기존 원격 migration history 불일치 상태에서 도서 영역만 안전 반영하기 위해, 위 부트스트랩 마이그레이션 단건 적용
+- API 검증 결과:
+  - `book_items`: OK (조회 응답)
+  - `book_loans`: OK (조회 응답)
+  - `book_notes`: OK (조회 응답)
+  - `book_user_progress`: OK (조회 응답)
+  - `book_program_settings`: OK (조회 응답)
+  - `book_return_evidences`: OK (조회 응답)
 
 ## 4. 검증 SQL
 아래 쿼리를 Supabase SQL Editor에서 실행:

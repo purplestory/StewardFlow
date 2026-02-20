@@ -4,6 +4,12 @@
 
 ## 2026-02-20
 - 상태: 확정
+- 결정: 카카오 OAuth 콜백에서 `code exchange` 오류 발생 시 세션 복구 대기 후 성공 리다이렉트 우선 처리
+- 이유: 세션 확정 지연으로 인한 일시적 `/login?error=인증에 실패했습니다` 깜빡임을 줄이기 위함
+- 영향: `/src/app/auth/callback/page.tsx` (`P0-3` 회귀 테스트 대상)
+
+## 2026-02-20
+- 상태: 확정
 - 결정: 초대 링크 만료일은 관리자 설정값(`invite_expires_days`)으로 운영하고, 초대 생성 시 `expires_at`을 고정 저장
 - 이유: 운영정책 변경을 즉시 반영하면서도, 기존 초대의 만료 기준을 안정적으로 유지하기 위함
 - 영향: `/src/components/settings/UserRoleManager.tsx`, `/src/actions/invite-actions.ts`, `/src/app/api/invite/generate/route.ts`, `organization_invites` 스키마 (`84e3ff8`)

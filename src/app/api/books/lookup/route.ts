@@ -8,7 +8,34 @@ type BookLookupPayload = {
   publishedYear: number | null;
   coverImageUrl: string | null;
   description: string | null;
-  source: "data4library" | "openlibrary" | "googlebooks";
+  source:
+    | "data4library"
+    | "nationallibrary"
+    | "naverbook"
+    | "openlibrary"
+    | "googlebooks";
+};
+
+type LookupSource =
+  | "data4library"
+  | "nationallibrary"
+  | "naverbook"
+  | "openlibrary"
+  | "googlebooks";
+type AttemptStatus = "hit" | "miss" | "skipped_no_key" | "error";
+type LookupAttempt = {
+  source: LookupSource;
+  status: AttemptStatus;
+  book: BookLookupPayload | null;
+  detail?: string;
+};
+
+const SOURCE_LABELS: Record<LookupSource, string> = {
+  data4library: "도서관정보나루",
+  nationallibrary: "국립중앙도서관",
+  naverbook: "네이버 도서",
+  openlibrary: "Open Library",
+  googlebooks: "Google Books",
 };
 
 function normalizeIsbn(input: string): string {
@@ -38,6 +65,76 @@ function normalizeDescription(
   return null;
 }
 
+function stripHtmlTags(input: string): string {
+  return input.replace(/<[^>]+>/g, "");
+}
+
+function decodeHtmlEntities(input: string): string {
+  return input
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&nbsp;/g, " ");
+}
+
+function normalizeUnknownText(input: unknown): string | null {
+  if (typeof input === "string") return normalizeText(input);
+  if (typeof input === "number") return String(input);
+  return null;
+}
+
+function getCaseInsensitiveField(
+  record: Record<string, unknown>,
+  candidateKeys: string[]
+): string | null {
+  const keySet = new Set(candidateKeys.map((key) => key.toLowerCase()));
+  for (const [key, value] of Object.entries(record)) {
+    if (!keySet.has(key.toLowerCase())) continue;
+    const normalized = normalizeUnknownText(value);
+    if (normalized) return normalized;
+  }
+  return null;
+}
+
+function findNationalLibraryRecord(node: unknown): Record<string, unknown> | null {
+  const queue: unknown[] = [node];
+  while (queue.length > 0) {
+    const current = queue.shift();
+    if (Array.isArray(current)) {
+      queue.push(...current);
+      continue;
+    }
+    if (!current || typeof current !== "object") continue;
+
+    const record = current as Record<string, unknown>;
+    const title = getCaseInsensitiveField(record, [
+      "TITLE",
+      "TITLE_INFO",
+      "title",
+      "bookname",
+      "BOOKNAME",
+    ]);
+    const author = getCaseInsensitiveField(record, ["AUTHOR", "authors", "author"]);
+    const publisher = getCaseInsensitiveField(record, ["PUBLISHER", "publisher"]);
+    const isbn = getCaseInsensitiveField(record, [
+      "EA_ISBN",
+      "SET_ISBN",
+      "ISBN",
+      "isbn",
+      "isbn13",
+    ]);
+
+    if (title || author || publisher || isbn) {
+      return record;
+    }
+
+    queue.push(...Object.values(record));
+  }
+  return null;
+}
+
 function mergeBookPayload(
   primary: BookLookupPayload,
   supplement: BookLookupPayload | null
@@ -53,6 +150,56 @@ function mergeBookPayload(
     coverImageUrl: primary.coverImageUrl || supplement.coverImageUrl,
     description: primary.description || supplement.description,
   };
+}
+
+function buildLookupNotice(attempts: LookupAttempt[], missingFields: string[]): string {
+  const hitLabels = attempts
+    .filter((attempt) => attempt.status === "hit")
+    .map((attempt) => SOURCE_LABELS[attempt.source]);
+  const skippedLabels = attempts
+    .filter((attempt) => attempt.status === "skipped_no_key")
+    .map((attempt) => SOURCE_LABELS[attempt.source]);
+  const missLabels = attempts
+    .filter((attempt) => attempt.status === "miss")
+    .map((attempt) => SOURCE_LABELS[attempt.source]);
+  const errorLabels = attempts
+    .filter((attempt) => attempt.status === "error")
+    .map((attempt) => SOURCE_LABELS[attempt.source]);
+
+  const parts: string[] = [];
+  if (hitLabels.length > 0) parts.push(`조회 소스: ${hitLabels.join(", ")}`);
+  if (skippedLabels.length > 0)
+    parts.push(`키 미설정으로 제외: ${skippedLabels.join(", ")}`);
+  if (missLabels.length > 0) parts.push(`데이터 없음: ${missLabels.join(", ")}`);
+  if (errorLabels.length > 0) parts.push(`조회 오류: ${errorLabels.join(", ")}`);
+  if (missingFields.length > 0) parts.push(`미수집 필드: ${missingFields.join(", ")}`);
+
+  return parts.join(" | ");
+}
+
+async function runLookupAttempt(
+  source: LookupSource,
+  enabled: boolean,
+  lookup: () => Promise<BookLookupPayload | null>
+): Promise<LookupAttempt> {
+  if (!enabled) {
+    return { source, status: "skipped_no_key", book: null };
+  }
+  try {
+    const book = await lookup();
+    return {
+      source,
+      status: book ? "hit" : "miss",
+      book: book ?? null,
+    };
+  } catch (error) {
+    return {
+      source,
+      status: "error",
+      book: null,
+      detail: error instanceof Error ? error.message : "unknown error",
+    };
+  }
 }
 
 async function lookupByData4Library(isbn: string): Promise<BookLookupPayload | null> {
@@ -103,6 +250,67 @@ async function lookupByData4Library(isbn: string): Promise<BookLookupPayload | n
     coverImageUrl: normalizeText(book.bookImageURL),
     description: null,
     source: "data4library",
+  };
+}
+
+async function lookupByNationalLibrary(isbn: string): Promise<BookLookupPayload | null> {
+  const certKey = process.env.NATIONAL_LIBRARY_CERT_KEY?.trim();
+  if (!certKey) return null;
+
+  const url = new URL("https://www.nl.go.kr/seoji/SearchApi.do");
+  url.searchParams.set("cert_key", certKey);
+  url.searchParams.set("result_style", "json");
+  url.searchParams.set("page_no", "1");
+  url.searchParams.set("page_size", "10");
+  url.searchParams.set("isbn", isbn);
+
+  const res = await fetch(url.toString(), {
+    method: "GET",
+    headers: { Accept: "application/json" },
+    cache: "no-store",
+  });
+  if (!res.ok) return null;
+
+  const json = (await res.json().catch(() => null)) as unknown;
+  const record = findNationalLibraryRecord(json);
+  if (!record) return null;
+
+  const title = getCaseInsensitiveField(record, [
+    "TITLE",
+    "TITLE_INFO",
+    "title",
+    "BOOKNAME",
+    "bookname",
+  ]);
+  const author = getCaseInsensitiveField(record, ["AUTHOR", "author", "authors"]);
+  const publisher = getCaseInsensitiveField(record, ["PUBLISHER", "publisher"]);
+  const publicationDate = getCaseInsensitiveField(record, [
+    "PUBLISH_PREDATE",
+    "PUBLISH_DATE",
+    "PUB_DATE",
+    "publication_year",
+    "publish_date",
+  ]);
+  const isbnRaw = getCaseInsensitiveField(record, [
+    "EA_ISBN",
+    "SET_ISBN",
+    "ISBN13",
+    "ISBN",
+    "isbn",
+  ]);
+  const normalized = isbnRaw ? normalizeIsbn(isbnRaw) : isbn;
+
+  if (!title && !author && !publisher) return null;
+
+  return {
+    isbn: normalized,
+    title: normalizeText(title),
+    author: normalizeText(author),
+    publisher: normalizeText(publisher),
+    publishedYear: parseYear(publicationDate),
+    coverImageUrl: null,
+    description: null,
+    source: "nationallibrary",
   };
 }
 
@@ -217,6 +425,70 @@ async function lookupByGoogleBooks(isbn: string): Promise<BookLookupPayload | nu
   };
 }
 
+async function lookupByNaverBook(isbn: string): Promise<BookLookupPayload | null> {
+  const clientId = process.env.NAVER_CLIENT_ID?.trim();
+  const clientSecret = process.env.NAVER_CLIENT_SECRET?.trim();
+  if (!clientId || !clientSecret) return null;
+
+  const url = new URL("https://openapi.naver.com/v1/search/book_adv.json");
+  url.searchParams.set("d_isbn", isbn);
+  url.searchParams.set("display", "1");
+
+  const res = await fetch(url.toString(), {
+    method: "GET",
+    headers: {
+      Accept: "application/json",
+      "X-Naver-Client-Id": clientId,
+      "X-Naver-Client-Secret": clientSecret,
+    },
+    cache: "no-store",
+  });
+  if (!res.ok) return null;
+
+  const json = (await res.json().catch(() => null)) as
+    | {
+        items?: Array<{
+          title?: string;
+          author?: string;
+          publisher?: string;
+          pubdate?: string;
+          isbn?: string;
+          image?: string;
+          description?: string;
+        }>;
+      }
+    | null;
+
+  const item = json?.items?.[0];
+  if (!item?.title) return null;
+
+  const normalizedTitle = normalizeText(decodeHtmlEntities(stripHtmlTags(item.title)));
+  const normalizedAuthor = normalizeText(decodeHtmlEntities(stripHtmlTags(item.author ?? "")));
+  const normalizedPublisher = normalizeText(
+    decodeHtmlEntities(stripHtmlTags(item.publisher ?? ""))
+  );
+  const normalizedDescription = normalizeText(
+    decodeHtmlEntities(stripHtmlTags(item.description ?? ""))
+  );
+
+  const isbnCandidates = (item.isbn ?? "")
+    .split(" ")
+    .map((value) => normalizeIsbn(value))
+    .filter((value) => value.length === 13 || value.length === 10);
+  const isbn13 = isbnCandidates.find((value) => value.length === 13) ?? isbnCandidates[0] ?? isbn;
+
+  return {
+    isbn: isbn13,
+    title: normalizedTitle,
+    author: normalizedAuthor,
+    publisher: normalizedPublisher,
+    publishedYear: parseYear(item.pubdate),
+    coverImageUrl: normalizeText(item.image ?? null),
+    description: normalizedDescription,
+    source: "naverbook",
+  };
+}
+
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const raw = url.searchParams.get("isbn")?.trim();
@@ -237,21 +509,79 @@ export async function GET(request: Request) {
   }
 
   try {
-    const [fromData4Library, fromOpenLibrary, fromGoogleBooks] = await Promise.all([
-      lookupByData4Library(isbn),
-      lookupByOpenLibrary(isbn),
-      lookupByGoogleBooks(isbn),
+    const attempts = await Promise.all([
+      runLookupAttempt(
+        "data4library",
+        Boolean(process.env.DATA4LIBRARY_AUTH_KEY?.trim()),
+        () => lookupByData4Library(isbn)
+      ),
+      runLookupAttempt(
+        "nationallibrary",
+        Boolean(process.env.NATIONAL_LIBRARY_CERT_KEY?.trim()),
+        () => lookupByNationalLibrary(isbn)
+      ),
+      runLookupAttempt(
+        "naverbook",
+        Boolean(process.env.NAVER_CLIENT_ID?.trim() && process.env.NAVER_CLIENT_SECRET?.trim()),
+        () => lookupByNaverBook(isbn)
+      ),
+      runLookupAttempt("openlibrary", true, () => lookupByOpenLibrary(isbn)),
+      runLookupAttempt("googlebooks", true, () => lookupByGoogleBooks(isbn)),
     ]);
 
-    const primary = fromData4Library ?? fromOpenLibrary ?? fromGoogleBooks;
+    const bySource = new Map<LookupSource, LookupAttempt>();
+    attempts.forEach((attempt) => {
+      bySource.set(attempt.source, attempt);
+    });
+
+    const preferredOrder: LookupSource[] = [
+      "data4library",
+      "nationallibrary",
+      "naverbook",
+      "openlibrary",
+      "googlebooks",
+    ];
+
+    const primary =
+      preferredOrder
+        .map((source) => bySource.get(source)?.book ?? null)
+        .find((book): book is BookLookupPayload => Boolean(book)) ?? null;
+
     if (primary) {
-      const mergedWithOpen = mergeBookPayload(primary, fromOpenLibrary);
-      const mergedBook = mergeBookPayload(mergedWithOpen, fromGoogleBooks);
-      return NextResponse.json({ ok: true, book: mergedBook });
+      const mergedBook = preferredOrder.reduce((acc, source) => {
+        const supplement = bySource.get(source)?.book ?? null;
+        return mergeBookPayload(acc, supplement);
+      }, primary);
+
+      const missingFields: string[] = [];
+      if (!mergedBook.publisher) missingFields.push("출판사");
+      if (!mergedBook.coverImageUrl) missingFields.push("표지 이미지");
+      if (!mergedBook.description) missingFields.push("도서 설명");
+
+      const notice = buildLookupNotice(attempts, missingFields);
+      return NextResponse.json({
+        ok: true,
+        book: mergedBook,
+        meta: {
+          notice,
+          missingFields,
+          attempts: attempts.map(({ source, status, detail }) => ({
+            source,
+            status,
+            detail: detail ?? null,
+          })),
+        },
+      });
     }
 
+    const notice = buildLookupNotice(attempts, []);
     return NextResponse.json(
-      { ok: false, message: "도서 정보를 찾지 못했습니다." },
+      {
+        ok: false,
+        message: notice
+          ? `도서 정보를 찾지 못했습니다. ${notice}`
+          : "도서 정보를 찾지 못했습니다.",
+      },
       { status: 404 }
     );
   } catch (error) {

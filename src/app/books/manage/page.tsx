@@ -59,7 +59,12 @@ type BookLookupPayload = {
   publishedYear: number | null;
   coverImageUrl: string | null;
   description: string | null;
-  source: "data4library" | "openlibrary" | "googlebooks";
+  source:
+    | "data4library"
+    | "nationallibrary"
+    | "naverbook"
+    | "openlibrary"
+    | "googlebooks";
 };
 
 type BookManageTab = "register" | "requests" | "returns" | "settings";
@@ -344,7 +349,7 @@ export default function BooksManagePage() {
       );
 
       const result = (await response.json().catch(() => null)) as
-        | { ok?: boolean; message?: string; book?: BookLookupPayload }
+        | { ok?: boolean; message?: string; book?: BookLookupPayload; meta?: { notice?: string } }
         | null;
 
       if (!response.ok || !result?.ok || !result.book) {
@@ -367,11 +372,16 @@ export default function BooksManagePage() {
       const sourceLabel =
         result.book.source === "data4library"
           ? "도서관정보나루"
+          : result.book.source === "nationallibrary"
+          ? "국립중앙도서관"
+          : result.book.source === "naverbook"
+          ? "네이버 도서"
           : result.book.source === "openlibrary"
           ? "Open Library"
           : "Google Books";
+      const noticeSuffix = result.meta?.notice ? ` · ${result.meta.notice}` : "";
       setBookRegisterMessage(
-        `ISBN 조회 완료 (${sourceLabel})`
+        `ISBN 조회 완료 (${sourceLabel})${noticeSuffix}`
       );
     } catch (error) {
       setBookRegisterMessage(

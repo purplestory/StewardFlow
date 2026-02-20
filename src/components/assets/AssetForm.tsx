@@ -57,7 +57,12 @@ type BookLookupResult = {
   publishedYear: number | null;
   coverImageUrl: string | null;
   description: string | null;
-  source: "data4library" | "openlibrary" | "googlebooks";
+  source:
+    | "data4library"
+    | "nationallibrary"
+    | "naverbook"
+    | "openlibrary"
+    | "googlebooks";
 };
 
 const BOOK_CATEGORY_PATTERN = /(도서|책|book|북카페|library)/i;
@@ -417,6 +422,7 @@ export default function AssetForm({ asset }: AssetFormProps = {}) {
             ok?: boolean;
             message?: string;
             book?: BookLookupResult;
+            meta?: { notice?: string };
           }
         | null;
 
@@ -434,11 +440,16 @@ export default function AssetForm({ asset }: AssetFormProps = {}) {
       const sourceLabel =
         result.book.source === "data4library"
           ? "공공 API"
+          : result.book.source === "nationallibrary"
+          ? "국립중앙도서관"
+          : result.book.source === "naverbook"
+          ? "네이버 도서"
           : result.book.source === "openlibrary"
           ? "Open Library"
           : "Google Books";
+      const noticeSuffix = result.meta?.notice ? ` · ${result.meta.notice}` : "";
       setIsbnLookupMessage(
-        `도서 정보를 불러왔습니다. (${sourceLabel})`
+        `도서 정보를 불러왔습니다. (${sourceLabel})${noticeSuffix}`
       );
     } catch (error) {
       setBookLookupResult(null);

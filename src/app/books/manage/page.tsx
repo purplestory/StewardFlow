@@ -50,6 +50,16 @@ type PendingRequestItem = PendingRequestRow & {
   borrower_department: string | null;
 };
 
+type BookLookupPayload = {
+  isbn: string;
+  title: string | null;
+  author: string | null;
+  publisher: string | null;
+  publishedYear: number | null;
+  coverImageUrl: string | null;
+  source: "data4library" | "openlibrary";
+};
+
 const toBooksDataErrorMessage = (message: string, fallback: string) => {
   if (
     message.includes("Could not find the table") ||
@@ -66,10 +76,25 @@ export default function BooksManagePage() {
   const [loading, setLoading] = useState(true);
   const [hasPermission, setHasPermission] = useState(false);
   const [organizationId, setOrganizationId] = useState<string | null>(null);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [booksEnabled, setBooksEnabled] = useState(false);
   const [programSettings, setProgramSettings] = useState<ProgramSettings | null>(null);
   const [ruleCount, setRuleCount] = useState(0);
   const [message, setMessage] = useState<string | null>(null);
+  const [bookRegisterMessage, setBookRegisterMessage] = useState<string | null>(null);
+  const [bookLookupLoading, setBookLookupLoading] = useState(false);
+  const [bookRegistering, setBookRegistering] = useState(false);
+  const [bookForm, setBookForm] = useState({
+    isbn: "",
+    title: "",
+    author: "",
+    publisher: "",
+    publishedYear: "",
+    shelfLabel: "",
+    tags: "",
+    coverImageUrl: "",
+    description: "",
+  });
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [pendingRequests, setPendingRequests] = useState<PendingRequestItem[]>([]);
   const [decisionNoteByLoanId, setDecisionNoteByLoanId] = useState<Record<string, string>>({});
@@ -95,9 +120,11 @@ export default function BooksManagePage() {
       if (!user) {
         if (!isMounted) return;
         setHasPermission(false);
+        setCurrentUserId(null);
         setLoading(false);
         return;
       }
+      setCurrentUserId(user.id);
       setAccessToken(sessionAccessToken);
 
       const { data: profileData, error: profileError } = await supabase
@@ -282,6 +309,149 @@ export default function BooksManagePage() {
     };
   }, [reloadTick]);
 
+  const normalizeIsbn = (input: string) =>
+    input.replace(/[^0-9Xx]/g, "").toUpperCase();
+
+  const updateBookForm = (field: keyof typeof bookForm, value: string) => {
+    setBookForm((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleLookupByIsbn = async () => {
+    const normalizedIsbn = normalizeIsbn(bookForm.isbn);
+    if (!(normalizedIsbn.length === 10 || normalizedIsbn.length === 13)) {
+      setBookRegisterMessage("ISBN 10자리 또는 13자리를 입력해주세요.");
+      return;
+    }
+
+    setBookLookupLoading(true);
+    setBookRegisterMessage(null);
+
+    try {
+      const response = await fetch(
+        `/api/books/lookup?isbn=${encodeURIComponent(normalizedIsbn)}`,
+        {
+          method: "GET",
+          headers: { Accept: "application/json" },
+          cache: "no-store",
+        }
+      );
+
+      const result = (await response.json().catch(() => null)) as
+        | { ok?: boolean; message?: string; book?: BookLookupPayload }
+        | null;
+
+      if (!response.ok || !result?.ok || !result.book) {
+        setBookRegisterMessage(result?.message ?? "ISBN 조회에 실패했습니다.");
+        return;
+      }
+
+      setBookForm((prev) => ({
+        ...prev,
+        isbn: result.book?.isbn ?? prev.isbn,
+        title: result.book?.title ?? prev.title,
+        author: result.book?.author ?? prev.author,
+        publisher: result.book?.publisher ?? prev.publisher,
+        publishedYear: result.book?.publishedYear
+          ? String(result.book.publishedYear)
+          : prev.publishedYear,
+        coverImageUrl: result.book?.coverImageUrl ?? prev.coverImageUrl,
+      }));
+      setBookRegisterMessage(
+        `ISBN 조회 완료 (${result.book.source === "data4library" ? "도서관정보나루" : "Open Library"})`
+      );
+    } catch (error) {
+      setBookRegisterMessage(
+        error instanceof Error ? `ISBN 조회 오류: ${error.message}` : "ISBN 조회 중 오류가 발생했습니다."
+      );
+    } finally {
+      setBookLookupLoading(false);
+    }
+  };
+
+  const handleRegisterBook = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    if (!organizationId || !currentUserId) {
+      setBookRegisterMessage("기관 또는 사용자 정보를 찾을 수 없습니다.");
+      return;
+    }
+
+    const title = bookForm.title.trim();
+    if (!title) {
+      setBookRegisterMessage("도서 제목은 필수입니다.");
+      return;
+    }
+
+    const normalizedIsbn = normalizeIsbn(bookForm.isbn);
+    const publishedYearRaw = bookForm.publishedYear.trim();
+    let publishedYear: number | null = null;
+    if (publishedYearRaw.length > 0) {
+      const parsed = Number(publishedYearRaw);
+      if (!Number.isInteger(parsed) || parsed < 1000 || parsed > 2100) {
+        setBookRegisterMessage("출판연도는 1000~2100 사이의 숫자로 입력해주세요.");
+        return;
+      }
+      publishedYear = parsed;
+    }
+
+    const tags = Array.from(
+      new Set(
+        bookForm.tags
+          .split(",")
+          .map((item) => item.trim())
+          .filter(Boolean)
+      )
+    );
+
+    setBookRegistering(true);
+    setBookRegisterMessage(null);
+
+    const { error } = await supabase.from("book_items").insert({
+      organization_id: organizationId,
+      owner_scope: "organization",
+      owner_profile_id: null,
+      created_by: currentUserId,
+      title,
+      author: bookForm.author.trim() || null,
+      publisher: bookForm.publisher.trim() || null,
+      published_year: publishedYear,
+      isbn: normalizedIsbn || null,
+      shelf_label: bookForm.shelfLabel.trim() || null,
+      tags,
+      cover_image_url: bookForm.coverImageUrl.trim() || null,
+      description: bookForm.description.trim() || null,
+      share_mode: "lend_only",
+      status: "available",
+      is_active: true,
+    });
+
+    if (error) {
+      setBookRegisterMessage(
+        toBooksDataErrorMessage(
+          error.message,
+          `도서 등록 실패: ${error.message}`
+        )
+      );
+      setBookRegistering(false);
+      return;
+    }
+
+    setBookRegisterMessage("도서가 등록되었습니다.");
+    setBookForm({
+      isbn: "",
+      title: "",
+      author: "",
+      publisher: "",
+      publishedYear: "",
+      shelfLabel: "",
+      tags: "",
+      coverImageUrl: "",
+      description: "",
+    });
+    setBookRegistering(false);
+    setReloadTick((prev) => prev + 1);
+  };
+
   const handleLoanDecision = async (loanId: string, decision: "approved" | "rejected") => {
     if (!accessToken) {
       setDecisionMessage("인증 토큰이 없어 대여 요청 처리를 진행할 수 없습니다.");
@@ -434,16 +604,19 @@ export default function BooksManagePage() {
   }
 
   return (
-    <ManageLayout>
+    <ManageLayout showTabs={false}>
       <PageHero
         title="도서 운영 관리"
         description="도서 라운지는 자원관리와 분리된 사용자 경험으로 운영됩니다."
         actions={
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
+            <a href="#book-register" className="btn-primary">
+              도서 등록
+            </a>
             <Link href="/books" className="btn-ghost">
               도서 라운지
             </Link>
-            <Link href="/settings/menu" className="btn-primary">
+            <Link href="/settings/menu" className="btn-outline">
               메뉴 설정
             </Link>
           </div>
@@ -459,53 +632,147 @@ export default function BooksManagePage() {
           에서 `도서`를 활성화하세요.
         </Notice>
       ) : (
-        <SectionCard
-          title="운영 상태"
-          description="게임화/리더보드/응원/시상 정책의 현재 상태입니다."
-        >
-          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-            <div className="rounded-xl border border-neutral-200 p-4">
-              <p className="text-xs text-neutral-500">게임화</p>
-              <p className="mt-1 text-lg font-semibold">
-                {programSettings?.gamification_enabled === false ? "비활성" : "활성"}
-              </p>
-            </div>
-            <div className="rounded-xl border border-neutral-200 p-4">
-              <p className="text-xs text-neutral-500">리더보드</p>
-              <p className="mt-1 text-lg font-semibold">
-                {programSettings?.leaderboard_enabled === false ? "비활성" : "활성"}
-              </p>
-            </div>
-            <div className="rounded-xl border border-neutral-200 p-4">
-              <p className="text-xs text-neutral-500">응원 기능</p>
-              <p className="mt-1 text-lg font-semibold">
-                {programSettings?.cheer_enabled === false ? "비활성" : "활성"}
-              </p>
-            </div>
-            <div className="rounded-xl border border-neutral-200 p-4">
-              <p className="text-xs text-neutral-500">시상</p>
-              <p className="mt-1 text-lg font-semibold">
-                {programSettings?.rewards_enabled === true ? "활성" : "비활성(선택형)"}
-              </p>
-            </div>
-          </div>
+        <>
+          <SectionCard
+            title="도서 등록"
+            description="ISBN 조회 후 도서 카탈로그에 등록할 수 있습니다."
+          >
+            <form id="book-register" className="space-y-3" onSubmit={handleRegisterBook}>
+              <div className="grid gap-2 md:grid-cols-[1fr_auto]">
+                <input
+                  className="form-input"
+                  placeholder="ISBN (10/13자리)"
+                  value={bookForm.isbn}
+                  onChange={(event) => updateBookForm("isbn", event.target.value)}
+                />
+                <button
+                  type="button"
+                  className="btn-outline h-10 px-4"
+                  onClick={() => void handleLookupByIsbn()}
+                  disabled={bookLookupLoading}
+                >
+                  {bookLookupLoading ? "조회 중..." : "ISBN 조회"}
+                </button>
+              </div>
+              <div className="grid gap-2 md:grid-cols-2">
+                <input
+                  className="form-input"
+                  placeholder="도서 제목 *"
+                  value={bookForm.title}
+                  onChange={(event) => updateBookForm("title", event.target.value)}
+                  required
+                />
+                <input
+                  className="form-input"
+                  placeholder="저자"
+                  value={bookForm.author}
+                  onChange={(event) => updateBookForm("author", event.target.value)}
+                />
+              </div>
+              <div className="grid gap-2 md:grid-cols-2">
+                <input
+                  className="form-input"
+                  placeholder="출판사"
+                  value={bookForm.publisher}
+                  onChange={(event) => updateBookForm("publisher", event.target.value)}
+                />
+                <input
+                  className="form-input"
+                  placeholder="출판연도 (예: 2024)"
+                  value={bookForm.publishedYear}
+                  onChange={(event) => updateBookForm("publishedYear", event.target.value)}
+                />
+              </div>
+              <div className="grid gap-2 md:grid-cols-2">
+                <input
+                  className="form-input"
+                  placeholder="서가 라벨 (예: B2-03)"
+                  value={bookForm.shelfLabel}
+                  onChange={(event) => updateBookForm("shelfLabel", event.target.value)}
+                />
+                <input
+                  className="form-input"
+                  placeholder="태그 (쉼표로 구분)"
+                  value={bookForm.tags}
+                  onChange={(event) => updateBookForm("tags", event.target.value)}
+                />
+              </div>
+              <input
+                className="form-input"
+                placeholder="표지 이미지 URL"
+                value={bookForm.coverImageUrl}
+                onChange={(event) => updateBookForm("coverImageUrl", event.target.value)}
+              />
+              <textarea
+                className="form-textarea min-h-[96px]"
+                placeholder="도서 설명 (선택)"
+                value={bookForm.description}
+                onChange={(event) => updateBookForm("description", event.target.value)}
+              />
+              <div className="flex justify-end">
+                <button type="submit" className="btn-primary px-5" disabled={bookRegistering}>
+                  {bookRegistering ? "등록 중..." : "도서 등록"}
+                </button>
+              </div>
+            </form>
+          </SectionCard>
 
-          <div className="mt-4 grid gap-3 md:grid-cols-2">
-            <div className="rounded-xl border border-neutral-200 p-4">
-              <p className="text-xs text-neutral-500">일일 점수 상한</p>
-              <p className="mt-1 text-lg font-semibold">{programSettings?.daily_point_cap ?? 120}점</p>
+          <SectionCard
+            title="운영 상태"
+            description="게임화/리더보드/응원/시상 정책의 현재 상태입니다."
+          >
+            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+              <div className="rounded-xl border border-neutral-200 p-4">
+                <p className="text-xs text-neutral-500">게임화</p>
+                <p className="mt-1 text-lg font-semibold">
+                  {programSettings?.gamification_enabled === false ? "비활성" : "활성"}
+                </p>
+              </div>
+              <div className="rounded-xl border border-neutral-200 p-4">
+                <p className="text-xs text-neutral-500">리더보드</p>
+                <p className="mt-1 text-lg font-semibold">
+                  {programSettings?.leaderboard_enabled === false ? "비활성" : "활성"}
+                </p>
+              </div>
+              <div className="rounded-xl border border-neutral-200 p-4">
+                <p className="text-xs text-neutral-500">응원 기능</p>
+                <p className="mt-1 text-lg font-semibold">
+                  {programSettings?.cheer_enabled === false ? "비활성" : "활성"}
+                </p>
+              </div>
+              <div className="rounded-xl border border-neutral-200 p-4">
+                <p className="text-xs text-neutral-500">시상</p>
+                <p className="mt-1 text-lg font-semibold">
+                  {programSettings?.rewards_enabled === true ? "활성" : "비활성(선택형)"}
+                </p>
+              </div>
             </div>
-            <div className="rounded-xl border border-neutral-200 p-4">
-              <p className="text-xs text-neutral-500">적용된 점수 규칙</p>
-              <p className="mt-1 text-lg font-semibold">{ruleCount}개</p>
+
+            <div className="mt-4 grid gap-3 md:grid-cols-2">
+              <div className="rounded-xl border border-neutral-200 p-4">
+                <p className="text-xs text-neutral-500">일일 점수 상한</p>
+                <p className="mt-1 text-lg font-semibold">{programSettings?.daily_point_cap ?? 120}점</p>
+              </div>
+              <div className="rounded-xl border border-neutral-200 p-4">
+                <p className="text-xs text-neutral-500">적용된 점수 규칙</p>
+                <p className="mt-1 text-lg font-semibold">{ruleCount}개</p>
+              </div>
             </div>
-          </div>
-        </SectionCard>
+          </SectionCard>
+        </>
       )}
 
       {message && (
         <Notice variant="warning" className="text-left">
           {message}
+        </Notice>
+      )}
+      {bookRegisterMessage && (
+        <Notice
+          variant={bookRegisterMessage.includes("실패") || bookRegisterMessage.includes("오류") ? "warning" : "neutral"}
+          className="text-left"
+        >
+          {bookRegisterMessage}
         </Notice>
       )}
       {decisionMessage && (

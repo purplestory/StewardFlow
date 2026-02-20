@@ -55,6 +55,28 @@ ALTER COLUMN email DROP NOT NULL;
 
 ---
 
+### ✅ 4. 초대 만료 정책(관리자 설정)
+**파일**: `supabase/migrations/20260219_add_invite_expiration_policy.sql`
+
+```sql
+ALTER TABLE public.organizations
+ADD COLUMN IF NOT EXISTS invite_expires_days integer NOT NULL DEFAULT 7;
+
+ALTER TABLE public.organization_invites
+ADD COLUMN IF NOT EXISTS expires_at timestamp with time zone;
+```
+
+**기능**:
+- 기관별 초대 만료일 정책(`1~30일`) 저장
+- 초대별 만료 시각(`expires_at`) 저장
+- 관리자 화면에서 만료일 설정 가능
+
+**확인 방법**:
+- 사용자 관리 > 사용자 초대에서 유효기간 선택/저장 가능
+- 새 초대 생성 후 만료 시각이 설정값대로 표시되는지 확인
+
+---
+
 ## 마이그레이션 실행 순서
 
 위의 마이그레이션들은 서로 독립적이므로 순서는 중요하지 않습니다. 하지만 다음 순서를 권장합니다:
@@ -62,6 +84,7 @@ ALTER COLUMN email DROP NOT NULL;
 1. 카테고리 관리 (가장 기본적인 기능)
 2. 부서 순서 관리
 3. 초대 이메일 선택사항
+4. 초대 만료 정책
 
 ## 마이그레이션 실행 확인
 
@@ -85,6 +108,17 @@ SELECT column_name, data_type, is_nullable
 FROM information_schema.columns 
 WHERE table_name = 'organization_invites' 
 AND column_name = 'email';
+
+-- 초대 만료 정책 컬럼 확인
+SELECT column_name, data_type, is_nullable
+FROM information_schema.columns
+WHERE table_name = 'organizations'
+AND column_name = 'invite_expires_days';
+
+SELECT column_name, data_type, is_nullable
+FROM information_schema.columns
+WHERE table_name = 'organization_invites'
+AND column_name = 'expires_at';
 ```
 
 ## 문제 해결

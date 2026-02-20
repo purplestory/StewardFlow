@@ -2,6 +2,18 @@
 
 프로젝트 의사결정 로그 (변경 시 계속 추가)
 
+## 2026-02-20
+- 상태: 확정
+- 결정: 초대 링크 만료일은 관리자 설정값(`invite_expires_days`)으로 운영하고, 초대 생성 시 `expires_at`을 고정 저장
+- 이유: 운영정책 변경을 즉시 반영하면서도, 기존 초대의 만료 기준을 안정적으로 유지하기 위함
+- 영향: `/src/components/settings/UserRoleManager.tsx`, `/src/actions/invite-actions.ts`, `/src/app/api/invite/generate/route.ts`, `organization_invites` 스키마 (`84e3ff8`)
+
+## 2026-02-20
+- 상태: 확정
+- 결정: 새 컬럼 미적용 환경을 위해 `expires_at`/`invite_expires_days` 조회·저장에 fallback 경로를 유지
+- 이유: 마이그레이션 적용 전 환경에서 사용자 플로우가 즉시 깨지지 않도록 하기 위함
+- 영향: 초대 생성/조회/만료 필터링 로직 전반 (`84e3ff8`)
+
 ## 2026-02-19
 - 상태: 확정
 - 결정: 설정/관리 화면을 모듈형 디자인으로 통일 (`surface-card`, `module-list`, `icon-button` 중심)

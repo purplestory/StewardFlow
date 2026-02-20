@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import ManageLayout from "@/components/manage/ManageLayout";
+import ManageSubmenuLayout from "@/components/manage/ManageSubmenuLayout";
 import Notice from "@/components/common/Notice";
 import PageHero from "@/components/ui/PageHero";
 import SectionCard from "@/components/ui/SectionCard";
@@ -670,73 +671,12 @@ export default function BooksManagePage() {
         </Notice>
       ) : (
         <>
-          <div className="tab-shell lg:hidden">
-            <div className="tab-scroll">
-              <nav className="tab-nav" aria-label="도서 운영 탭">
-                {tabs.map((tab) => {
-                  const isActive = activeTab === tab.key;
-                  return (
-                    <button
-                      key={tab.key}
-                      type="button"
-                      className={`tab-chip ${isActive ? "tab-chip-active" : ""}`}
-                      onClick={() => setActiveTab(tab.key)}
-                    >
-                      <span>{tab.label}</span>
-                      {typeof tab.count === "number" ? (
-                        <span
-                          className={`ml-2 inline-flex min-w-5 items-center justify-center rounded-full px-1.5 py-0.5 text-[11px] font-semibold ${
-                            isActive ? "bg-white/20 text-white" : "bg-neutral-200 text-neutral-600"
-                          }`}
-                        >
-                          {tab.count}
-                        </span>
-                      ) : null}
-                    </button>
-                  );
-                })}
-              </nav>
-            </div>
-          </div>
-
-          <div className="grid gap-5 lg:grid-cols-[220px_minmax(0,1fr)]">
-            <aside className="hidden lg:block">
-              <div className="surface-card p-2">
-                <p className="px-3 pb-2 pt-1 text-xs font-semibold uppercase tracking-[0.08em] text-neutral-500">
-                  도서 운영
-                </p>
-                <nav className="space-y-1" aria-label="도서 운영 메뉴">
-                  {tabs.map((tab) => {
-                    const isActive = activeTab === tab.key;
-                    return (
-                      <button
-                        key={tab.key}
-                        type="button"
-                        className={`flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-left text-sm font-medium transition-colors ${
-                          isActive
-                            ? "bg-slate-900 text-white"
-                            : "text-neutral-700 hover:bg-neutral-100 hover:text-neutral-900"
-                        }`}
-                        onClick={() => setActiveTab(tab.key)}
-                      >
-                        <span>{tab.label}</span>
-                        {typeof tab.count === "number" ? (
-                          <span
-                            className={`inline-flex min-w-5 items-center justify-center rounded-full px-1.5 py-0.5 text-[11px] font-semibold ${
-                              isActive ? "bg-white/20 text-white" : "bg-neutral-200 text-neutral-600"
-                            }`}
-                          >
-                            {tab.count}
-                          </span>
-                        ) : null}
-                      </button>
-                    );
-                  })}
-                </nav>
-              </div>
-            </aside>
-
-            <div className="space-y-5">
+          <ManageSubmenuLayout
+            items={tabs}
+            activeKey={activeTab}
+            onChange={setActiveTab}
+            menuTitle="도서 운영"
+          >
               {activeTab === "register" ? (
                 <SectionCard
                   title="도서 등록"
@@ -1073,8 +1013,7 @@ export default function BooksManagePage() {
                   ) : null}
                 </>
               ) : null}
-            </div>
-          </div>
+          </ManageSubmenuLayout>
         </>
       )}
 

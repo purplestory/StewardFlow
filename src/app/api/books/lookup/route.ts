@@ -30,6 +30,10 @@ type LookupAttempt = {
   detail?: string;
 };
 
+type LookupSkipDetails = {
+  detail?: string;
+};
+
 const SOURCE_LABELS: Record<LookupSource, string> = {
   data4library: "도서관정보나루",
   nationallibrary: "국립중앙도서관",
@@ -37,6 +41,16 @@ const SOURCE_LABELS: Record<LookupSource, string> = {
   openlibrary: "Open Library",
   googlebooks: "Google Books",
 };
+
+const NAVER_CLIENT_ID_ENV_KEYS = [
+  "NAVER_CLIENT_ID",
+  "NAVER_SEARCH_CLIENT_ID",
+] as const;
+
+const NAVER_CLIENT_SECRET_ENV_KEYS = [
+  "NAVER_CLIENT_SECRET",
+  "NAVER_SEARCH_CLIENT_SECRET",
+] as const;
 
 function normalizeIsbn(input: string): string {
   return input.replace(/[^0-9Xx]/g, "").toUpperCase();
@@ -158,7 +172,10 @@ function buildLookupNotice(attempts: LookupAttempt[], missingFields: string[]): 
     .map((attempt) => SOURCE_LABELS[attempt.source]);
   const skippedLabels = attempts
     .filter((attempt) => attempt.status === "skipped_no_key")
-    .map((attempt) => SOURCE_LABELS[attempt.source]);
+    .map((attempt) => {
+      const label = SOURCE_LABELS[attempt.source];
+      return attempt.detail ? `${label}(${attempt.detail})` : label;
+    });
   const missLabels = attempts
     .filter((attempt) => attempt.status === "miss")
     .map((attempt) => SOURCE_LABELS[attempt.source]);
@@ -180,10 +197,16 @@ function buildLookupNotice(attempts: LookupAttempt[], missingFields: string[]): 
 async function runLookupAttempt(
   source: LookupSource,
   enabled: boolean,
-  lookup: () => Promise<BookLookupPayload | null>
+  lookup: () => Promise<BookLookupPayload | null>,
+  options?: LookupSkipDetails
 ): Promise<LookupAttempt> {
   if (!enabled) {
-    return { source, status: "skipped_no_key", book: null };
+    return {
+      source,
+      status: "skipped_no_key",
+      book: null,
+      detail: options?.detail,
+    };
   }
   try {
     const book = await lookup();
@@ -200,6 +223,29 @@ async function runLookupAttempt(
       detail: error instanceof Error ? error.message : "unknown error",
     };
   }
+}
+
+function readEnvValue(keys: readonly string[]): string | null {
+  for (const key of keys) {
+    const value = process.env[key]?.trim();
+    if (value) return value;
+  }
+  return null;
+}
+
+function getNaverCredentials(): {
+  clientId: string | null;
+  clientSecret: string | null;
+  missing: string[];
+} {
+  const clientId = readEnvValue(NAVER_CLIENT_ID_ENV_KEYS);
+  const clientSecret = readEnvValue(NAVER_CLIENT_SECRET_ENV_KEYS);
+
+  const missing: string[] = [];
+  if (!clientId) missing.push(NAVER_CLIENT_ID_ENV_KEYS.join(" 또는 "));
+  if (!clientSecret) missing.push(NAVER_CLIENT_SECRET_ENV_KEYS.join(" 또는 "));
+
+  return { clientId, clientSecret, missing };
 }
 
 async function lookupByData4Library(isbn: string): Promise<BookLookupPayload | null> {
@@ -426,8 +472,7 @@ async function lookupByGoogleBooks(isbn: string): Promise<BookLookupPayload | nu
 }
 
 async function lookupByNaverBook(isbn: string): Promise<BookLookupPayload | null> {
-  const clientId = process.env.NAVER_CLIENT_ID?.trim();
-  const clientSecret = process.env.NAVER_CLIENT_SECRET?.trim();
+  const { clientId, clientSecret } = getNaverCredentials();
   if (!clientId || !clientSecret) return null;
 
   const url = new URL("https://openapi.naver.com/v1/search/book_adv.json");
@@ -509,6 +554,8 @@ export async function GET(request: Request) {
   }
 
   try {
+    const naverCredentials = getNaverCredentials();
+
     const attempts = await Promise.all([
       runLookupAttempt(
         "data4library",
@@ -522,8 +569,11 @@ export async function GET(request: Request) {
       ),
       runLookupAttempt(
         "naverbook",
-        Boolean(process.env.NAVER_CLIENT_ID?.trim() && process.env.NAVER_CLIENT_SECRET?.trim()),
-        () => lookupByNaverBook(isbn)
+        Boolean(naverCredentials.clientId && naverCredentials.clientSecret),
+        () => lookupByNaverBook(isbn),
+        naverCredentials.missing.length > 0
+          ? { detail: `키 누락: ${naverCredentials.missing.join(", ")}` }
+          : undefined
       ),
       runLookupAttempt("openlibrary", true, () => lookupByOpenLibrary(isbn)),
       runLookupAttempt("googlebooks", true, () => lookupByGoogleBooks(isbn)),

@@ -22,12 +22,14 @@ export const metadata: Metadata = {
   description: "교회 자원 관리 시스템 StewardFlow",
   icons: {
     icon: [
+      { url: "/favicon.ico", type: "image/x-icon", sizes: "16x16 32x32" },
       { url: "/icon.svg", type: "image/svg+xml" },
     ],
     apple: [
       { url: "/icon.svg", type: "image/svg+xml" },
     ],
     shortcut: [
+      { url: "/favicon.ico", type: "image/x-icon" },
       { url: "/icon.svg", type: "image/svg+xml" },
     ],
   },

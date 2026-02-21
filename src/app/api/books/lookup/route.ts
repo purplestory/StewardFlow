@@ -52,6 +52,9 @@ const NAVER_CLIENT_SECRET_ENV_KEYS = [
   "NAVER_SEARCH_CLIENT_SECRET",
 ] as const;
 
+const DATA4LIBRARY_ENV_KEYS = ["DATA4LIBRARY_AUTH_KEY"] as const;
+const NATIONAL_LIBRARY_ENV_KEYS = ["NATIONAL_LIBRARY_CERT_KEY"] as const;
+
 function normalizeIsbn(input: string): string {
   return input.replace(/[^0-9Xx]/g, "").toUpperCase();
 }
@@ -246,6 +249,17 @@ function getNaverCredentials(): {
   if (!clientSecret) missing.push(NAVER_CLIENT_SECRET_ENV_KEYS.join(" 또는 "));
 
   return { clientId, clientSecret, missing };
+}
+
+function getSingleKeyPresence(keys: readonly string[]): {
+  enabled: boolean;
+  missing: string[];
+} {
+  const value = readEnvValue(keys);
+  return {
+    enabled: Boolean(value),
+    missing: value ? [] : [keys.join(" 또는 ")],
+  };
 }
 
 async function lookupByData4Library(isbn: string): Promise<BookLookupPayload | null> {
@@ -554,18 +568,26 @@ export async function GET(request: Request) {
   }
 
   try {
+    const data4LibraryKey = getSingleKeyPresence(DATA4LIBRARY_ENV_KEYS);
+    const nationalLibraryKey = getSingleKeyPresence(NATIONAL_LIBRARY_ENV_KEYS);
     const naverCredentials = getNaverCredentials();
 
     const attempts = await Promise.all([
       runLookupAttempt(
         "data4library",
-        Boolean(process.env.DATA4LIBRARY_AUTH_KEY?.trim()),
-        () => lookupByData4Library(isbn)
+        data4LibraryKey.enabled,
+        () => lookupByData4Library(isbn),
+        data4LibraryKey.missing.length > 0
+          ? { detail: `키 누락: ${data4LibraryKey.missing.join(", ")}` }
+          : undefined
       ),
       runLookupAttempt(
         "nationallibrary",
-        Boolean(process.env.NATIONAL_LIBRARY_CERT_KEY?.trim()),
-        () => lookupByNationalLibrary(isbn)
+        nationalLibraryKey.enabled,
+        () => lookupByNationalLibrary(isbn),
+        nationalLibraryKey.missing.length > 0
+          ? { detail: `키 누락: ${nationalLibraryKey.missing.join(", ")}` }
+          : undefined
       ),
       runLookupAttempt(
         "naverbook",
@@ -631,6 +653,13 @@ export async function GET(request: Request) {
         message: notice
           ? `도서 정보를 찾지 못했습니다. ${notice}`
           : "도서 정보를 찾지 못했습니다.",
+        meta: {
+          attempts: attempts.map(({ source, status, detail }) => ({
+            source,
+            status,
+            detail: detail ?? null,
+          })),
+        },
       },
       { status: 404 }
     );

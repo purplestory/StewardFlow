@@ -26,6 +26,22 @@ const statusLabel: Record<Space["status"], string> = {
   lost: "사용 불가",
 };
 
+function formatReservationPolicy(space: Space) {
+  const minLabel = space.min_reservation_minutes
+    ? `최소 ${space.min_reservation_minutes}분`
+    : "최소 제한 없음";
+  const maxLabel =
+    space.max_reservation_minutes && space.max_reservation_minutes > 0
+      ? `최대 ${space.max_reservation_minutes}분`
+      : "최대 제한 없음";
+  const bufferLabel =
+    space.reservation_buffer_minutes > 0
+      ? `버퍼 ${space.reservation_buffer_minutes}분`
+      : "버퍼 없음";
+
+  return `${minLabel} · ${maxLabel} · ${bufferLabel}`;
+}
+
 export default function SpaceDetailClient() {
   const params = useParams();
   const id = params.id as string;
@@ -95,6 +111,10 @@ export default function SpaceDetailClient() {
       value: space.note || "미등록",
       multiline: true,
     },
+    {
+      label: "예약 정책",
+      value: formatReservationPolicy(space),
+    },
   ];
 
   return (
@@ -138,6 +158,9 @@ export default function SpaceDetailClient() {
         reservations={reservations}
         spaceStatus={space.status}
         requiredRole={requiredRole}
+        minReservationMinutes={space.min_reservation_minutes}
+        maxReservationMinutes={space.max_reservation_minutes}
+        reservationBufferMinutes={space.reservation_buffer_minutes ?? 0}
       />
     </section>
   );

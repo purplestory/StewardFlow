@@ -104,7 +104,23 @@ create table public.spaces (
   capacity integer,
   status text default 'available',
   note text,
-  managed_by_department text
+  managed_by_department text,
+  min_reservation_minutes integer,
+  max_reservation_minutes integer,
+  reservation_buffer_minutes integer not null default 0,
+  constraint spaces_min_reservation_minutes_nonnegative
+    check (min_reservation_minutes is null or min_reservation_minutes >= 0),
+  constraint spaces_max_reservation_minutes_nonnegative
+    check (max_reservation_minutes is null or max_reservation_minutes >= 0),
+  constraint spaces_reservation_buffer_minutes_nonnegative
+    check (reservation_buffer_minutes >= 0),
+  constraint spaces_max_reservation_minutes_valid
+    check (
+      min_reservation_minutes is null
+      or max_reservation_minutes is null
+      or max_reservation_minutes = 0
+      or max_reservation_minutes >= min_reservation_minutes
+    )
 );
 
 -- Create unique index on short_id for fast lookups

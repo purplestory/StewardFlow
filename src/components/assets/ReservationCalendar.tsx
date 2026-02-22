@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState, useEffect, useRef } from "react";
 import Calendar from "react-calendar";
 import "react-calendar/dist/Calendar.css";
 import { getCurrentYearHolidays, type Holiday } from "@/lib/korean-holidays";
@@ -18,6 +18,7 @@ type ReservationCalendarProps = {
 };
 
 type ViewMode = "month" | "week" | "day";
+type DayFilter = "all" | "saturday" | "sunday" | "weekend";
 
 const statusClassName: Record<ReservationItem["status"], string> = {
   pending: "calendar-pending",
@@ -26,8 +27,28 @@ const statusClassName: Record<ReservationItem["status"], string> = {
   rejected: "calendar-rejected",
 };
 
+const statusLabel: Record<ReservationItem["status"], string> = {
+  pending: "승인 대기",
+  approved: "승인됨",
+  returned: "반납 완료",
+  rejected: "반려",
+};
+
+const dayFilterLabel: Record<DayFilter, string> = {
+  all: "전체 요일",
+  saturday: "토요일만",
+  sunday: "주일만",
+  weekend: "주말(토·주일)",
+};
+
 const startOfDay = (date: Date) =>
   new Date(date.getFullYear(), date.getMonth(), date.getDate());
+
+const addDays = (date: Date, amount: number) => {
+  const next = new Date(date);
+  next.setDate(next.getDate() + amount);
+  return next;
+};
 
 const isWithinRange = (day: Date, start: Date, end: Date) => {
   const target = startOfDay(day).getTime();
@@ -36,11 +57,31 @@ const isWithinRange = (day: Date, start: Date, end: Date) => {
   return target >= startTime && target <= endTime;
 };
 
-const addDays = (date: Date, amount: number) => {
-  const next = new Date(date);
-  next.setDate(next.getDate() + amount);
-  return next;
+const isOverlap = (
+  aStart: Date,
+  aEnd: Date,
+  bStart: Date,
+  bEnd: Date
+) => aStart < bEnd && aEnd > bStart;
+
+const dayMatchesFilter = (date: Date, filter: DayFilter) => {
+  const day = date.getDay();
+  if (filter === "all") return true;
+  if (filter === "saturday") return day === 6;
+  if (filter === "sunday") return day === 0;
+  return day === 6 || day === 0;
 };
+
+const withTime = (date: Date, hours: number, minutes = 0) =>
+  new Date(
+    date.getFullYear(),
+    date.getMonth(),
+    date.getDate(),
+    hours,
+    minutes,
+    0,
+    0
+  );
 
 const formatDateLabel = (date: Date) =>
   date.toLocaleDateString("ko-KR", {
@@ -67,12 +108,12 @@ const formatDateTimeRange = (start: Date, end: Date) => {
   return `${startText} - ${endText}`;
 };
 
-const statusLabel: Record<ReservationItem["status"], string> = {
-  pending: "승인 대기",
-  approved: "승인됨",
-  returned: "반납 완료",
-  rejected: "반려",
-};
+const formatTime = (date: Date) =>
+  date.toLocaleTimeString("ko-KR", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
+  });
 
 export default function ReservationCalendar({
   reservations,
@@ -81,9 +122,10 @@ export default function ReservationCalendar({
 }: ReservationCalendarProps) {
   const [holidays, setHolidays] = useState<Holiday[]>([]);
   const [viewMode, setViewMode] = useState<ViewMode>("month");
+  const [dayFilter, setDayFilter] = useState<DayFilter>("all");
   const [focusDate, setFocusDate] = useState(() => startOfDay(new Date()));
+  const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // 공휴일 데이터 로드
   useEffect(() => {
     const loadHolidays = async () => {
       try {
@@ -93,9 +135,15 @@ export default function ReservationCalendar({
         console.error("공휴일 로드 오류:", error);
       }
     };
-
     loadHolidays();
   }, []);
+
+  useEffect(
+    () => () => {
+      if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
+    },
+    []
+  );
 
   const normalized = useMemo(
     () =>
@@ -117,6 +165,21 @@ export default function ReservationCalendar({
     [weekStart]
   );
 
+  const visibleWeekDays = useMemo(
+    () => weekDays.filter((date) => dayMatchesFilter(date, dayFilter)),
+    [dayFilter, weekDays]
+  );
+
+  const weekReservationsMap = useMemo(() => {
+    if (viewMode !== "week") return [];
+    return visibleWeekDays.map((date) => ({
+      date,
+      reservations: normalized.filter((reservation) =>
+        isWithinRange(date, reservation.start, reservation.end)
+      ),
+    }));
+  }, [normalized, viewMode, visibleWeekDays]);
+
   const dayReservations = useMemo(() => {
     if (viewMode !== "day") return [];
     return normalized.filter((reservation) =>
@@ -124,46 +187,57 @@ export default function ReservationCalendar({
     );
   }, [focusDate, normalized, viewMode]);
 
-  const weekReservationsMap = useMemo(() => {
-    if (viewMode !== "week") return [];
-    return weekDays.map((date) => ({
+  const dayQuickSlots = useMemo(() => {
+    if (viewMode !== "day") return [];
+    return Array.from({ length: 15 }, (_, index) => {
+      const start = withTime(focusDate, 7 + index, 0);
+      const end = withTime(focusDate, 8 + index, 0);
+      const overlaps = normalized.filter((reservation) =>
+        isOverlap(start, end, reservation.start, reservation.end)
+      );
+      const blocked = overlaps.some((reservation) =>
+        disabledStatuses.includes(reservation.status)
+      );
+
+      return {
+        start,
+        end,
+        blocked,
+        overlaps,
+      };
+    });
+  }, [disabledStatuses, focusDate, normalized, viewMode]);
+
+  const repeatedWeekdayList = useMemo(() => {
+    if (dayFilter === "all") return [];
+    const first = new Date(focusDate.getFullYear(), focusDate.getMonth(), 1);
+    const last = new Date(focusDate.getFullYear(), focusDate.getMonth() + 1, 0);
+    const dates: Date[] = [];
+    for (let cursor = new Date(first); cursor <= last; cursor = addDays(cursor, 1)) {
+      if (dayMatchesFilter(cursor, dayFilter)) {
+        dates.push(startOfDay(cursor));
+      }
+    }
+    return dates.map((date) => ({
       date,
       reservations: normalized.filter((reservation) =>
         isWithinRange(date, reservation.start, reservation.end)
       ),
     }));
-  }, [normalized, viewMode, weekDays]);
+  }, [dayFilter, focusDate, normalized]);
 
-  // 요일 포맷: '일' 대신 '주일'로 표시
-  // en-US locale을 사용하면 일요일부터 시작하므로, date.getDay()는 0=일요일, 1=월요일, ..., 6=토요일
-  const formatShortWeekday = (_locale: string | undefined, date: Date) => {
-    const day = date.getDay();
-    const weekdays = ["주일", "월", "화", "수", "목", "금", "토"];
-    return weekdays[day];
+  const scheduleLongPress = (start: Date, end: Date) => {
+    if (!onRangeSelect) return;
+    if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
+    longPressTimerRef.current = setTimeout(() => {
+      onRangeSelect(start, end);
+    }, 450);
   };
 
-  // 날짜 포맷: 한글 '일' 제거, 숫자만 표시
-  const formatDay = (_locale: string | undefined, date: Date) => {
-    return date.getDate().toString();
-  };
-
-  // 월/년도 포맷: 한국어로 "년도 월" 형식으로 표시
-  const formatMonthYear = (_locale: string | undefined, date: Date) => {
-    const year = date.getFullYear();
-    const month = date.getMonth() + 1;
-    const monthNames = [
-      "1월", "2월", "3월", "4월", "5월", "6월",
-      "7월", "8월", "9월", "10월", "11월", "12월"
-    ];
-    return `${year}년 ${monthNames[month - 1]}`;
-  };
-
-  const formatMonth = (_locale: string | undefined, date: Date) => {
-    return `${date.getMonth() + 1}월`;
-  };
-
-  const formatYear = (_locale: string | undefined, date: Date) => {
-    return `${date.getFullYear()}년`;
+  const cancelLongPress = () => {
+    if (!longPressTimerRef.current) return;
+    clearTimeout(longPressTimerRef.current);
+    longPressTimerRef.current = null;
   };
 
   const movePeriod = (direction: "prev" | "next") => {
@@ -185,6 +259,28 @@ export default function ReservationCalendar({
   };
 
   const goToday = () => setFocusDate(startOfDay(new Date()));
+
+  // 요일 포맷: '일' 대신 '주일'로 표시
+  const formatShortWeekday = (_locale: string | undefined, date: Date) => {
+    const day = date.getDay();
+    const weekdays = ["주일", "월", "화", "수", "목", "금", "토"];
+    return weekdays[day];
+  };
+
+  const formatDay = (_locale: string | undefined, date: Date) =>
+    date.getDate().toString();
+
+  const formatMonthYear = (_locale: string | undefined, date: Date) => {
+    const year = date.getFullYear();
+    const month = date.getMonth() + 1;
+    return `${year}년 ${month}월`;
+  };
+
+  const formatMonth = (_locale: string | undefined, date: Date) =>
+    `${date.getMonth() + 1}월`;
+
+  const formatYear = (_locale: string | undefined, date: Date) =>
+    `${date.getFullYear()}년`;
 
   return (
     <div className="space-y-3">
@@ -225,14 +321,25 @@ export default function ReservationCalendar({
         </div>
       </div>
 
+      <div className="flex flex-wrap gap-2">
+        {(Object.keys(dayFilterLabel) as DayFilter[]).map((filter) => (
+          <button
+            key={filter}
+            type="button"
+            onClick={() => setDayFilter(filter)}
+            className={`filter-pill h-8 text-xs ${
+              dayFilter === filter ? "filter-pill-active" : ""
+            }`}
+          >
+            {dayFilterLabel[filter]}
+          </button>
+        ))}
+      </div>
+
       {viewMode === "month" ? (
         <div className="overflow-x-auto">
           <Calendar
-            activeStartDate={new Date(
-              focusDate.getFullYear(),
-              focusDate.getMonth(),
-              1
-            )}
+            activeStartDate={new Date(focusDate.getFullYear(), focusDate.getMonth(), 1)}
             onActiveStartDateChange={({ activeStartDate }) => {
               if (activeStartDate) {
                 setFocusDate(startOfDay(activeStartDate));
@@ -252,10 +359,10 @@ export default function ReservationCalendar({
               if (Array.isArray(value)) {
                 const [start, end] = value;
                 if (start && end) {
-                  onRangeSelect(start, end);
+                  onRangeSelect(withTime(start, 9, 0), withTime(end, 18, 0));
                 }
               } else if (value instanceof Date) {
-                onRangeSelect(value, value);
+                onRangeSelect(withTime(value, 9, 0), withTime(value, 18, 0));
               }
             }}
             tileDisabled={({ date }) =>
@@ -276,7 +383,6 @@ export default function ReservationCalendar({
               if (dayOfWeek === 0) {
                 classes.push("calendar-holiday");
               }
-
               if (holidays.some((holiday) => holiday.date === dateString)) {
                 classes.push("calendar-holiday");
               }
@@ -284,10 +390,7 @@ export default function ReservationCalendar({
               const matched = normalized.find((reservation) =>
                 isWithinRange(date, reservation.start, reservation.end)
               );
-              if (matched) {
-                classes.push(statusClassName[matched.status]);
-              }
-
+              if (matched) classes.push(statusClassName[matched.status]);
               return classes.length > 0 ? classes.join(" ") : null;
             }}
             className="w-full max-w-full"
@@ -305,17 +408,28 @@ export default function ReservationCalendar({
               <button
                 key={date.toISOString()}
                 type="button"
-                onClick={() => onRangeSelect?.(date, date)}
+                onClick={() => onRangeSelect?.(withTime(date, 9), withTime(date, 18))}
+                onTouchStart={() => scheduleLongPress(withTime(date, 9), withTime(date, 18))}
+                onTouchEnd={cancelLongPress}
+                onTouchCancel={cancelLongPress}
                 className="rounded-lg border border-neutral-200 bg-neutral-50 p-2 text-left transition-colors hover:bg-neutral-100"
               >
-                <p className="text-xs font-semibold text-neutral-800">{formatDateLabel(date)}</p>
+                <div className="flex items-start justify-between gap-2">
+                  <p className="text-xs font-semibold text-neutral-800">{formatDateLabel(date)}</p>
+                  <span className="rounded-md border border-neutral-300 px-1.5 py-0.5 text-[10px] text-neutral-600">
+                    + 예약
+                  </span>
+                </div>
                 <div className="mt-2 space-y-1">
                   {dateReservations.length === 0 ? (
                     <p className="text-xs text-neutral-400">예약 없음</p>
                   ) : (
                     dateReservations.slice(0, 3).map((reservation, index) => (
-                      <p key={`${date.toISOString()}-${reservation.start_date}-${reservation.end_date}-${index}`} className="text-xs text-neutral-700">
-                        {statusLabel[reservation.status]} · {reservation.start.toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit", hour12: true })}
+                      <p
+                        key={`${date.toISOString()}-${reservation.start_date}-${reservation.end_date}-${index}`}
+                        className="text-xs text-neutral-700"
+                      >
+                        {statusLabel[reservation.status]} · {formatTime(reservation.start)}
                       </p>
                     ))
                   )}
@@ -332,21 +446,92 @@ export default function ReservationCalendar({
       {viewMode === "day" ? (
         <div className="rounded-xl border border-neutral-200 bg-white p-3">
           <p className="mb-3 text-sm font-medium text-neutral-700">{formatDateLabel(focusDate)}</p>
-          <div className="space-y-2">
+          <div className="grid gap-2 md:grid-cols-2">
+            {dayQuickSlots.map((slot) => (
+              <button
+                key={`${slot.start.toISOString()}-${slot.end.toISOString()}`}
+                type="button"
+                disabled={slot.blocked}
+                onClick={() => onRangeSelect?.(slot.start, slot.end)}
+                onTouchStart={() => scheduleLongPress(slot.start, slot.end)}
+                onTouchEnd={cancelLongPress}
+                onTouchCancel={cancelLongPress}
+                className={`rounded-lg border p-2 text-left transition-colors ${
+                  slot.blocked
+                    ? "cursor-not-allowed border-neutral-200 bg-neutral-100 text-neutral-400"
+                    : "border-neutral-200 bg-neutral-50 hover:bg-neutral-100"
+                }`}
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-xs font-semibold">
+                    {formatTime(slot.start)} - {formatTime(slot.end)}
+                  </p>
+                  <span className="rounded-md border border-neutral-300 px-1.5 py-0.5 text-[10px]">
+                    {slot.blocked ? "예약 불가" : "+ 예약"}
+                  </span>
+                </div>
+                {slot.overlaps.length > 0 ? (
+                  <p className="mt-1 text-[11px] text-neutral-500">
+                    {slot.overlaps.length}건 예약 존재
+                  </p>
+                ) : (
+                  <p className="mt-1 text-[11px] text-neutral-400">빈 시간대</p>
+                )}
+              </button>
+            ))}
+          </div>
+          <div className="mt-3 space-y-2">
             {dayReservations.length === 0 ? (
-              <p className="rounded-lg border border-dashed border-neutral-200 bg-neutral-50 px-3 py-6 text-center text-sm text-neutral-500">
+              <p className="rounded-lg border border-dashed border-neutral-200 bg-neutral-50 px-3 py-4 text-center text-sm text-neutral-500">
                 선택한 날짜에 예약이 없습니다.
               </p>
             ) : (
               dayReservations.map((reservation, index) => (
-                <button
+                <div
                   key={`${reservation.start_date}-${reservation.end_date}-${index}`}
-                  type="button"
-                  onClick={() => onRangeSelect?.(focusDate, focusDate)}
-                  className="w-full rounded-lg border border-neutral-200 bg-neutral-50 p-3 text-left transition-colors hover:bg-neutral-100"
+                  className="w-full rounded-lg border border-neutral-200 bg-neutral-50 p-3 text-left"
                 >
                   <p className="text-sm font-medium text-neutral-800">{statusLabel[reservation.status]}</p>
-                  <p className="mt-1 text-xs text-neutral-600">{formatDateTimeRange(reservation.start, reservation.end)}</p>
+                  <p className="mt-1 text-xs text-neutral-600">
+                    {formatDateTimeRange(reservation.start, reservation.end)}
+                  </p>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      ) : null}
+
+      {dayFilter !== "all" ? (
+        <div className="rounded-xl border border-neutral-200 bg-white p-3">
+          <p className="mb-2 text-sm font-medium text-neutral-700">
+            {dayFilterLabel[dayFilter]} 반복 리스트
+          </p>
+          <div className="space-y-2">
+            {repeatedWeekdayList.length === 0 ? (
+              <p className="text-xs text-neutral-500">선택한 요일이 없습니다.</p>
+            ) : (
+              repeatedWeekdayList.map(({ date, reservations: dateReservations }) => (
+                <button
+                  key={`repeat-${date.toISOString()}`}
+                  type="button"
+                  onClick={() => onRangeSelect?.(withTime(date, 9), withTime(date, 18))}
+                  onTouchStart={() => scheduleLongPress(withTime(date, 9), withTime(date, 18))}
+                  onTouchEnd={cancelLongPress}
+                  onTouchCancel={cancelLongPress}
+                  className="w-full rounded-lg border border-neutral-200 bg-neutral-50 p-3 text-left transition-colors hover:bg-neutral-100"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-sm font-medium text-neutral-800">{formatDateLabel(date)}</p>
+                    <span className="rounded-md border border-neutral-300 px-2 py-0.5 text-[10px] text-neutral-600">
+                      + 예약
+                    </span>
+                  </div>
+                  <p className="mt-1 text-xs text-neutral-500">
+                    {dateReservations.length === 0
+                      ? "예약 없음"
+                      : `${dateReservations.length}건 예약`}
+                  </p>
                 </button>
               ))
             )}
@@ -355,9 +540,7 @@ export default function ReservationCalendar({
       ) : null}
 
       <div className="text-center text-xs text-neutral-500">
-        {viewMode === "month"
-          ? "월간: 드래그로 기간 선택"
-          : "주간/일간: 날짜 또는 항목을 눌러 신청 날짜를 반영"}
+        월간: 기간 드래그 선택 | 주간/일간: + 버튼 또는 빈 공간 길게 눌러 예약 시간 반영
       </div>
       <div className="flex flex-wrap justify-center gap-2 text-xs text-neutral-600">
         <span className="chip-muted gap-2">

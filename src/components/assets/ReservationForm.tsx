@@ -31,6 +31,9 @@ type ReservationFormProps = {
   presetEndDate?: string;
   isDisabled?: boolean;
   disabledReason?: string;
+  minReservationMinutes?: number | null;
+  maxReservationMinutes?: number | null;
+  reservationBufferMinutes?: number;
 };
 
 export default function ReservationForm({
@@ -40,11 +43,15 @@ export default function ReservationForm({
   presetEndDate,
   isDisabled = false,
   disabledReason,
+  minReservationMinutes = null,
+  maxReservationMinutes = null,
+  reservationBufferMinutes = 0,
 }: ReservationFormProps) {
   const queryClient = useQueryClient();
   const [state, formAction, isPending] = useActionState(createReservation, initialState);
   const [authAccessToken, setAuthAccessToken] = useState<string | null>(null);
   const [dismissedSuccessMessage, setDismissedSuccessMessage] = useState<string | null>(null);
+  const [clientValidationMessage, setClientValidationMessage] = useState<string | null>(null);
   
   // 시스템 날짜를 기본값으로 설정
   const getDefaultDate = () => {
@@ -134,11 +141,54 @@ export default function ReservationForm({
     });
   }, [state.ok, state.message, reservationQueryKey, assetId, queryClient]);
 
+  const validateSpaceDuration = () => {
+    if (resourceType !== "space") return null;
+    if (!startDate || !startTime || !endDate || !endTime) return null;
+
+    const start = new Date(`${startDate}T${startTime}:00`);
+    const end = new Date(`${endDate}T${endTime}:00`);
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+      return "예약 시간 형식이 올바르지 않습니다.";
+    }
+
+    const durationMinutes = Math.floor((end.getTime() - start.getTime()) / (1000 * 60));
+    if (durationMinutes <= 0) {
+      return "예약 종료 시간은 시작 시간보다 늦어야 합니다.";
+    }
+
+    if (
+      minReservationMinutes !== null &&
+      minReservationMinutes > 0 &&
+      durationMinutes < minReservationMinutes
+    ) {
+      return `최소 ${minReservationMinutes}분 이상 예약해야 합니다.`;
+    }
+
+    if (
+      maxReservationMinutes !== null &&
+      maxReservationMinutes > 0 &&
+      durationMinutes > maxReservationMinutes
+    ) {
+      return `최대 ${maxReservationMinutes}분까지만 예약할 수 있습니다.`;
+    }
+
+    return null;
+  };
+
   return (
     <form
       action={formAction}
       className="space-y-5"
-      onSubmit={() => setDismissedSuccessMessage(null)}
+      onSubmit={(event) => {
+        setDismissedSuccessMessage(null);
+        setClientValidationMessage(null);
+
+        const message = validateSpaceDuration();
+        if (message) {
+          event.preventDefault();
+          setClientValidationMessage(message);
+        }
+      }}
     >
       {resourceType === "space" ? (
         <input type="hidden" name="space_id" value={assetId} />
@@ -151,6 +201,13 @@ export default function ReservationForm({
       {authAccessToken && (
         <input type="hidden" name="auth_access_token" value={authAccessToken} />
       )}
+      {resourceType === "space" ? (
+        <div className="rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-2 text-xs text-neutral-600">
+          최소 {minReservationMinutes && minReservationMinutes > 0 ? `${minReservationMinutes}분` : "제한 없음"} ·
+          최대 {maxReservationMinutes && maxReservationMinutes > 0 ? `${maxReservationMinutes}분` : "제한 없음"} ·
+          버퍼 {reservationBufferMinutes > 0 ? `${reservationBufferMinutes}분` : "없음"}
+        </div>
+      ) : null}
       <fieldset disabled={formDisabled} className="space-y-4">
         <div className="space-y-3">
           <div className="grid w-full grid-cols-1 gap-4 md:grid-cols-3">
@@ -382,6 +439,14 @@ export default function ReservationForm({
           </Notice>
         </div>
       )}
+
+      {clientValidationMessage ? (
+        <div role="status">
+          <Notice variant="error" className="p-3 text-left">
+            {clientValidationMessage}
+          </Notice>
+        </div>
+      ) : null}
 
       <div className="flex justify-end">
         <button

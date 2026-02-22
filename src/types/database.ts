@@ -90,6 +90,9 @@ export type Space = {
   status: "available" | "rented" | "repair" | "lost";
   note: string | null;
   managed_by_department: string | null;
+  min_reservation_minutes: number | null;
+  max_reservation_minutes: number | null;
+  reservation_buffer_minutes: number;
 };
 
 export type Vehicle = {

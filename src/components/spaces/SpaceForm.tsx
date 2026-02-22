@@ -25,6 +25,9 @@ type SpaceFormProps = {
     location: string | null;
     capacity: number | null;
     note: string | null;
+    min_reservation_minutes: number | null;
+    max_reservation_minutes: number | null;
+    reservation_buffer_minutes: number;
   };
 };
 
@@ -255,6 +258,16 @@ export default function SpaceForm({ space }: SpaceFormProps = {}) {
       : ownerDepartment;
     
     const managedByDepartmentInput = formData.get("managed_by_department")?.toString().trim() || null;
+    const minReservationMinutesRaw = formData.get("min_reservation_minutes")?.toString().trim() ?? "";
+    const maxReservationMinutesRaw = formData.get("max_reservation_minutes")?.toString().trim() ?? "";
+    const reservationBufferMinutesRaw = formData.get("reservation_buffer_minutes")?.toString().trim() ?? "";
+
+    const minReservationMinutes =
+      minReservationMinutesRaw === "" ? null : Number(minReservationMinutesRaw);
+    const maxReservationMinutes =
+      maxReservationMinutesRaw === "" ? null : Number(maxReservationMinutesRaw);
+    const reservationBufferMinutes =
+      reservationBufferMinutesRaw === "" ? 0 : Number(reservationBufferMinutesRaw);
 
     if (!organizationId) {
       setMessage("기관 설정이 필요합니다. 기관 설정에서 생성해주세요.");
@@ -263,6 +276,26 @@ export default function SpaceForm({ space }: SpaceFormProps = {}) {
 
     if (!name) {
       setMessage("공간명을 입력해주세요.");
+      return;
+    }
+
+    if (
+      (minReservationMinutes !== null && (!Number.isFinite(minReservationMinutes) || minReservationMinutes < 0)) ||
+      (maxReservationMinutes !== null && (!Number.isFinite(maxReservationMinutes) || maxReservationMinutes < 0)) ||
+      !Number.isFinite(reservationBufferMinutes) ||
+      reservationBufferMinutes < 0
+    ) {
+      setMessage("예약 정책 시간은 0 이상의 숫자로 입력해주세요.");
+      return;
+    }
+
+    if (
+      minReservationMinutes !== null &&
+      maxReservationMinutes !== null &&
+      maxReservationMinutes !== 0 &&
+      maxReservationMinutes < minReservationMinutes
+    ) {
+      setMessage("최대 예약 시간은 최소 예약 시간보다 크거나 같아야 합니다.");
       return;
     }
     
@@ -334,6 +367,9 @@ export default function SpaceForm({ space }: SpaceFormProps = {}) {
             location: formData.get("location")?.toString() || null,
             capacity: Number(formData.get("capacity")?.toString() || 0) || null,
             note: formData.get("note")?.toString() || null,
+            min_reservation_minutes: minReservationMinutes,
+            max_reservation_minutes: maxReservationMinutes,
+            reservation_buffer_minutes: reservationBufferMinutes,
           })
           .eq("id", space.id);
 
@@ -353,6 +389,9 @@ export default function SpaceForm({ space }: SpaceFormProps = {}) {
               owner_scope: ownerScopeInput,
               owner_department: ownerDepartmentInput,
               managed_by_department: managedByDepartmentInput,
+              min_reservation_minutes: minReservationMinutes,
+              max_reservation_minutes: maxReservationMinutes,
+              reservation_buffer_minutes: reservationBufferMinutes,
             },
           });
         }
@@ -378,6 +417,9 @@ export default function SpaceForm({ space }: SpaceFormProps = {}) {
             location: formData.get("location")?.toString() || null,
             capacity: Number(formData.get("capacity")?.toString() || 0) || null,
             note: formData.get("note")?.toString() || null,
+            min_reservation_minutes: minReservationMinutes,
+            max_reservation_minutes: maxReservationMinutes,
+            reservation_buffer_minutes: reservationBufferMinutes,
           })
           .select("id")
           .maybeSingle();
@@ -398,6 +440,9 @@ export default function SpaceForm({ space }: SpaceFormProps = {}) {
               owner_scope: ownerScopeInput,
               owner_department: ownerDepartmentInput,
               managed_by_department: managedByDepartmentInput,
+              min_reservation_minutes: minReservationMinutes,
+              max_reservation_minutes: maxReservationMinutes,
+              reservation_buffer_minutes: reservationBufferMinutes,
             },
           });
         }
@@ -551,6 +596,51 @@ export default function SpaceForm({ space }: SpaceFormProps = {}) {
             defaultValue={space?.capacity || ""}
             type="number"
             min={0}
+            className="form-input"
+            placeholder="예: 30"
+          />
+        </label>
+        <label className="form-grid-item">
+          <span className="form-label">
+            최소 예약 시간(분)
+            <span className="form-label-optional">(선택)</span>
+          </span>
+          <input
+            name="min_reservation_minutes"
+            defaultValue={space?.min_reservation_minutes ?? ""}
+            type="number"
+            min={0}
+            step={5}
+            className="form-input"
+            placeholder="예: 60"
+          />
+        </label>
+        <label className="form-grid-item">
+          <span className="form-label">
+            최대 예약 시간(분)
+            <span className="form-label-optional">(0=무제한)</span>
+          </span>
+          <input
+            name="max_reservation_minutes"
+            defaultValue={space?.max_reservation_minutes ?? ""}
+            type="number"
+            min={0}
+            step={5}
+            className="form-input"
+            placeholder="예: 240"
+          />
+        </label>
+        <label className="form-grid-item">
+          <span className="form-label">
+            준비/정리 버퍼(분)
+            <span className="form-label-optional">(기본 0)</span>
+          </span>
+          <input
+            name="reservation_buffer_minutes"
+            defaultValue={space?.reservation_buffer_minutes ?? 0}
+            type="number"
+            min={0}
+            step={5}
             className="form-input"
             placeholder="예: 30"
           />

@@ -69,6 +69,24 @@ const createNotification = async (params: {
   }
 };
 
+const formatLocalDateTime = (date: Date) => {
+  const year = date.getFullYear();
+  const month = `${date.getMonth() + 1}`.padStart(2, "0");
+  const day = `${date.getDate()}`.padStart(2, "0");
+  const hours = `${date.getHours()}`.padStart(2, "0");
+  const minutes = `${date.getMinutes()}`.padStart(2, "0");
+  const seconds = `${date.getSeconds()}`.padStart(2, "0");
+  return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
+};
+
+const addMinutesToLocalDateTime = (value: string, minutes: number) => {
+  if (!minutes) return value;
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return value;
+  parsed.setMinutes(parsed.getMinutes() + minutes);
+  return formatLocalDateTime(parsed);
+};
+
 export async function createReservation(
   _prevState: ReservationActionState,
   formData: FormData
@@ -151,12 +169,17 @@ export async function createReservation(
   let resourceName: string | null = null;
   let resourceImageUrl: string | null = null;
   let actualResourceUuid: string | null = null; // 실제 UUID 저장
+  let spaceMinReservationMinutes: number | null = null;
+  let spaceMaxReservationMinutes: number | null = null;
+  let spaceReservationBufferMinutes = 0;
 
   if (resourceType === "space") {
     const isUuid = isUUID(resourceId);
     let spaceQuery = supabase
       .from("spaces")
-      .select("id,name,image_url,organization_id");
+      .select(
+        "id,name,image_url,organization_id,min_reservation_minutes,max_reservation_minutes,reservation_buffer_minutes"
+      );
     
     if (isUuid) {
       spaceQuery = spaceQuery.eq("id", resourceId);
@@ -179,6 +202,9 @@ export async function createReservation(
     resourceImageUrl = data.image_url ?? null;
     organizationId = data.organization_id ?? null;
     actualResourceUuid = data.id ?? null;
+    spaceMinReservationMinutes = data.min_reservation_minutes ?? null;
+    spaceMaxReservationMinutes = data.max_reservation_minutes ?? null;
+    spaceReservationBufferMinutes = data.reservation_buffer_minutes ?? 0;
   } else if (resourceType === "vehicle") {
     // vehicle ID가 UUID인지 short_id인지 확인
     const isUuid = isUUID(resourceId);
@@ -272,8 +298,45 @@ export async function createReservation(
     return { ok: false, message: "같은 기관 내에서만 예약할 수 있습니다." };
   }
 
-  if (new Date(startDate) > new Date(endDate)) {
+  const startAt = new Date(startDate);
+  const endAt = new Date(endDate);
+  if (Number.isNaN(startAt.getTime()) || Number.isNaN(endAt.getTime())) {
+    return { ok: false, message: "예약 시간 형식이 올바르지 않습니다." };
+  }
+
+  if (startAt > endAt) {
     return { ok: false, message: "종료일은 시작일 이후여야 합니다." };
+  }
+
+  const reservationDurationMinutes = Math.floor(
+    (endAt.getTime() - startAt.getTime()) / (1000 * 60)
+  );
+  if (reservationDurationMinutes <= 0) {
+    return { ok: false, message: "예약 종료 시간은 시작 시간보다 늦어야 합니다." };
+  }
+
+  if (resourceType === "space") {
+    if (
+      spaceMinReservationMinutes !== null &&
+      spaceMinReservationMinutes > 0 &&
+      reservationDurationMinutes < spaceMinReservationMinutes
+    ) {
+      return {
+        ok: false,
+        message: `최소 ${spaceMinReservationMinutes}분 이상 예약해야 합니다.`,
+      };
+    }
+
+    if (
+      spaceMaxReservationMinutes !== null &&
+      spaceMaxReservationMinutes > 0 &&
+      reservationDurationMinutes > spaceMaxReservationMinutes
+    ) {
+      return {
+        ok: false,
+        message: `최대 ${spaceMaxReservationMinutes}분까지만 예약할 수 있습니다.`,
+      };
+    }
   }
 
   const reservationTable =
@@ -286,6 +349,14 @@ export async function createReservation(
     : "asset_id";
   // 실제 UUID 사용 (short_id가 전달된 경우 조회한 UUID 사용)
   const finalResourceId = actualResourceUuid || resourceId;
+  const conflictStartBoundary =
+    resourceType === "space" && spaceReservationBufferMinutes > 0
+      ? addMinutesToLocalDateTime(startDate, -spaceReservationBufferMinutes)
+      : startDate;
+  const conflictEndBoundary =
+    resourceType === "space" && spaceReservationBufferMinutes > 0
+      ? addMinutesToLocalDateTime(endDate, spaceReservationBufferMinutes)
+      : endDate;
   
   // 차량 대여 시 초기 주행거리 파싱
   const startOdometerReading = resourceType === "vehicle" 
@@ -299,8 +370,8 @@ export async function createReservation(
     .eq("organization_id", organizationId)
     .eq(resourceColumn, finalResourceId)
     .in("status", ["pending", "approved"])
-    .lte("start_date", endDate)
-    .gte("end_date", startDate);
+    .lte("start_date", conflictEndBoundary)
+    .gte("end_date", conflictStartBoundary);
 
   if (conflictError) {
     return { ok: false, message: conflictError.message };
@@ -321,6 +392,18 @@ export async function createReservation(
     for (const instance of instances) {
       const instanceStart = instance.start.toISOString();
       const instanceEnd = instance.end.toISOString();
+      const instanceConflictStart =
+        resourceType === "space" && spaceReservationBufferMinutes > 0
+          ? new Date(
+              instance.start.getTime() - spaceReservationBufferMinutes * 60 * 1000
+            ).toISOString()
+          : instanceStart;
+      const instanceConflictEnd =
+        resourceType === "space" && spaceReservationBufferMinutes > 0
+          ? new Date(
+              instance.end.getTime() + spaceReservationBufferMinutes * 60 * 1000
+            ).toISOString()
+          : instanceEnd;
 
       const { data: instanceConflicts, error: instanceConflictError } = await supabase
         .from(reservationTable)
@@ -328,8 +411,8 @@ export async function createReservation(
         .eq("organization_id", organizationId)
         .eq(resourceColumn, finalResourceId)
         .in("status", ["pending", "approved"])
-        .lte("start_date", instanceEnd)
-        .gte("end_date", instanceStart);
+        .lte("start_date", instanceConflictEnd)
+        .gte("end_date", instanceConflictStart);
 
       if (instanceConflictError) {
         return { ok: false, message: instanceConflictError.message };
@@ -338,7 +421,10 @@ export async function createReservation(
       if (instanceConflicts && instanceConflicts.length > 0) {
         return {
           ok: false,
-          message: `${instance.start.toLocaleDateString("ko-KR")}에 이미 예약이 존재합니다.`,
+          message:
+            spaceReservationBufferMinutes > 0
+              ? `${instance.start.toLocaleDateString("ko-KR")}에 이미 예약이 존재합니다. (버퍼 ${spaceReservationBufferMinutes}분 적용)`
+              : `${instance.start.toLocaleDateString("ko-KR")}에 이미 예약이 존재합니다.`,
         };
       }
     }
@@ -440,7 +526,13 @@ export async function createReservation(
 
   // 단일 예약 생성 (기존 로직)
   if (conflicts && conflicts.length > 0) {
-    return { ok: false, message: "해당 기간에 이미 예약이 존재합니다." };
+    return {
+      ok: false,
+      message:
+        resourceType === "space" && spaceReservationBufferMinutes > 0
+          ? `해당 기간에 이미 예약이 존재합니다. (버퍼 ${spaceReservationBufferMinutes}분 적용)`
+          : "해당 기간에 이미 예약이 존재합니다.",
+    };
   }
 
   const reservationData: Record<string, unknown> = {

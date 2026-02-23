@@ -157,15 +157,15 @@ export default function AssetsListClient() {
         }
       >
         <div className="space-y-4">
-          <div className="grid gap-3 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,0.8fr)_auto]">
+          <div className="flex flex-wrap items-center gap-2">
             <input
-              className="form-input"
+              className="form-input min-w-0 flex-1 basis-52"
               placeholder="자산명, 부서, 태그로 검색"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
             />
             <select
-              className="form-select"
+              className="form-select w-full sm:w-52"
               value={category}
               onChange={(event) => setCategory(event.target.value)}
             >
@@ -176,7 +176,7 @@ export default function AssetsListClient() {
               ))}
             </select>
 
-            <div className="inline-flex h-10 items-center rounded-xl border border-neutral-200 bg-white p-1">
+            <div className="flex shrink-0 items-center gap-1">
               {listViewOptions.map((option) => (
                 <button
                   key={option.value}
@@ -184,8 +184,8 @@ export default function AssetsListClient() {
                   onClick={() => setViewMode(option.value)}
                   className={
                     option.value === viewMode
-                      ? "inline-flex h-8 items-center justify-center rounded-lg bg-slate-900 px-3 text-xs font-semibold text-white"
-                      : "inline-flex h-8 items-center justify-center rounded-lg px-3 text-xs font-semibold text-neutral-600 hover:bg-neutral-100"
+                      ? "inline-flex h-10 items-center justify-center rounded-xl border border-slate-900 bg-slate-900 px-3 text-sm font-semibold text-white"
+                      : "inline-flex h-10 items-center justify-center rounded-xl border border-neutral-200 bg-white px-3 text-sm font-semibold text-neutral-600 hover:bg-neutral-100"
                   }
                 >
                   {option.label}
@@ -265,13 +265,13 @@ export default function AssetsListClient() {
                     : asset.image_url;
 
                 return (
-                  <div key={asset.id} className="surface-card p-4">
-                    <div className="flex flex-col gap-4 md:flex-row md:items-stretch">
+                  <div key={asset.id} className="surface-card p-3 sm:p-4">
+                    <div className="flex items-start gap-3 sm:gap-4">
                       <Link
                         href={detailUrl}
-                        className="group block md:w-56 md:shrink-0"
+                        className="group block w-24 shrink-0 sm:w-36 md:w-44"
                       >
-                        <div className="relative aspect-[4/3] w-full overflow-hidden rounded-xl border border-neutral-200 bg-neutral-100">
+                        <div className="relative aspect-square w-full overflow-hidden rounded-xl border border-neutral-200 bg-neutral-100 sm:aspect-[4/3]">
                           {firstImage ? (
                             <Image
                               src={firstImage}
@@ -293,7 +293,7 @@ export default function AssetsListClient() {
                         <div className="flex flex-wrap items-center justify-between gap-2">
                           <Link
                             href={detailUrl}
-                            className="line-clamp-1 text-lg font-semibold text-neutral-900 hover:text-slate-800"
+                            className="line-clamp-1 text-base font-semibold text-neutral-900 hover:text-slate-800 sm:text-lg"
                           >
                             {asset.name}
                           </Link>
@@ -323,7 +323,7 @@ export default function AssetsListClient() {
 
                         <Link
                           href={detailUrl}
-                          className="btn-secondary mt-3 h-9 w-full max-w-32 px-3 text-sm font-semibold"
+                          className="btn-secondary mt-2 inline-flex h-9 items-center px-3 text-sm font-semibold"
                         >
                           상세 보기
                         </Link>

@@ -237,9 +237,9 @@ export function ReservationWorkspace({
         </div>
       </header>
 
-      <div className={showCalendar ? "grid xl:grid-cols-[minmax(0,1.45fr)_minmax(360px,1fr)]" : "grid"}>
+      <div className={showCalendar ? "grid 2xl:grid-cols-[minmax(0,1.2fr)_minmax(540px,1fr)]" : "grid"}>
         {showCalendar ? (
-          <div className="border-b border-neutral-200 p-4 md:p-6 xl:border-b-0 xl:border-r">
+          <div className="border-b border-neutral-200 p-4 md:p-6 2xl:border-b-0 2xl:border-r">
             <ReservationCalendar
               reservations={calendarReservations}
               onRangeSelect={onRangeSelect}

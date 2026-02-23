@@ -19,6 +19,7 @@ type ReservationCalendarProps = {
 
 type ViewMode = "month" | "week" | "day";
 type DayFilter = "all" | "saturday" | "sunday" | "weekend";
+type MonthDisplayMode = "compact" | "full";
 type WeekDragState = {
   dayIndex: number;
   startSlot: number;
@@ -134,6 +135,8 @@ export default function ReservationCalendar({
 }: ReservationCalendarProps) {
   const [holidays, setHolidays] = useState<Holiday[]>([]);
   const [viewMode, setViewMode] = useState<ViewMode>("month");
+  const [monthDisplayMode, setMonthDisplayMode] = useState<MonthDisplayMode>("compact");
+  const [showMonthCalendar, setShowMonthCalendar] = useState(true);
   const [dayFilter, setDayFilter] = useState<DayFilter>("all");
   const [focusDate, setFocusDate] = useState(() => startOfDay(new Date()));
   const [weekDragState, setWeekDragState] = useState<WeekDragState | null>(null);
@@ -442,83 +445,127 @@ export default function ReservationCalendar({
             </button>
           </div>
         </div>
+        {viewMode === "month" ? (
+          <div className="mt-2 flex flex-wrap items-center justify-end gap-2">
+            <button
+              type="button"
+              onClick={() =>
+                setMonthDisplayMode((prev) => (prev === "compact" ? "full" : "compact"))
+              }
+              className="btn-ghost h-8 px-3 text-xs"
+            >
+              {monthDisplayMode === "compact" ? "전체 달력" : "미니 달력"}
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowMonthCalendar((prev) => !prev)}
+              className="btn-ghost h-8 px-3 text-xs"
+            >
+              {showMonthCalendar ? "달력 숨기기" : "달력 보이기"}
+            </button>
+          </div>
+        ) : null}
       </div>
 
-      <div className="flex flex-wrap gap-2">
-        {(Object.keys(dayFilterLabel) as DayFilter[]).map((filter) => (
-          <button
-            key={filter}
-            type="button"
-            onClick={() => setDayFilter(filter)}
-            className={`filter-pill h-8 text-xs ${
-              dayFilter === filter ? "filter-pill-active" : ""
-            }`}
-          >
-            {dayFilterLabel[filter]}
-          </button>
-        ))}
-      </div>
+      {viewMode !== "month" ? (
+        <div className="flex flex-wrap gap-2">
+          {(Object.keys(dayFilterLabel) as DayFilter[]).map((filter) => (
+            <button
+              key={filter}
+              type="button"
+              onClick={() => setDayFilter(filter)}
+              className={`filter-pill h-8 text-xs ${
+                dayFilter === filter ? "filter-pill-active" : ""
+              }`}
+            >
+              {dayFilterLabel[filter]}
+            </button>
+          ))}
+        </div>
+      ) : null}
 
       {viewMode === "month" ? (
-        <div className="overflow-x-auto">
-          <Calendar
-            activeStartDate={new Date(focusDate.getFullYear(), focusDate.getMonth(), 1)}
-            onActiveStartDateChange={({ activeStartDate }) => {
-              if (activeStartDate) {
-                setFocusDate(startOfDay(activeStartDate));
-              }
-            }}
-            onClickDay={(date) => setFocusDate(startOfDay(date))}
-            locale="ko-KR"
-            calendarType="gregory"
-            formatShortWeekday={formatShortWeekday}
-            formatDay={formatDay}
-            formatMonthYear={formatMonthYear}
-            formatMonth={formatMonth}
-            formatYear={formatYear}
-            selectRange
-            onChange={(value) => {
-              if (!onRangeSelect) return;
-              if (Array.isArray(value)) {
-                const [start, end] = value;
-                if (start && end) {
-                  onRangeSelect(withTime(start, 9, 0), withTime(end, 18, 0));
+        showMonthCalendar ? (
+          <div className={monthDisplayMode === "compact" ? "max-w-[360px]" : "overflow-x-auto"}>
+            <Calendar
+              activeStartDate={new Date(focusDate.getFullYear(), focusDate.getMonth(), 1)}
+              onActiveStartDateChange={({ activeStartDate }) => {
+                if (activeStartDate) {
+                  setFocusDate(startOfDay(activeStartDate));
                 }
-              } else if (value instanceof Date) {
-                onRangeSelect(withTime(value, 9, 0), withTime(value, 18, 0));
+              }}
+              onClickDay={(date) => setFocusDate(startOfDay(date))}
+              locale="ko-KR"
+              calendarType="gregory"
+              formatShortWeekday={formatShortWeekday}
+              formatDay={formatDay}
+              formatMonthYear={formatMonthYear}
+              formatMonth={formatMonth}
+              formatYear={formatYear}
+              selectRange={monthDisplayMode === "full"}
+              onChange={(value) => {
+                if (!onRangeSelect) return;
+
+                if (monthDisplayMode === "full" && Array.isArray(value)) {
+                  const [start, end] = value;
+                  if (start && end) {
+                    onRangeSelect(withTime(start, 9, 0), withTime(end, 18, 0));
+                  }
+                  return;
+                }
+
+                if (value instanceof Date) {
+                  onRangeSelect(withTime(value, 9, 0), withTime(value, 18, 0));
+                }
+              }}
+              tileDisabled={({ date }) =>
+                normalized.some(
+                  (reservation) =>
+                    disabledStatuses.includes(reservation.status) &&
+                    isWithinRange(date, reservation.start, reservation.end)
+                )
               }
-            }}
-            tileDisabled={({ date }) =>
-              normalized.some(
-                (reservation) =>
-                  disabledStatuses.includes(reservation.status) &&
+              tileClassName={({ date }) => {
+                const classes: string[] = [];
+                const year = date.getFullYear();
+                const month = date.getMonth() + 1;
+                const day = date.getDate();
+                const dayOfWeek = date.getDay();
+                const dateString = `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+
+                if (dayOfWeek === 0) {
+                  classes.push("calendar-holiday");
+                }
+                if (holidays.some((holiday) => holiday.date === dateString)) {
+                  classes.push("calendar-holiday");
+                }
+
+                const matched = normalized.find((reservation) =>
                   isWithinRange(date, reservation.start, reservation.end)
-              )
-            }
-            tileClassName={({ date }) => {
-              const classes: string[] = [];
-              const year = date.getFullYear();
-              const month = date.getMonth() + 1;
-              const day = date.getDate();
-              const dayOfWeek = date.getDay();
-              const dateString = `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-
-              if (dayOfWeek === 0) {
-                classes.push("calendar-holiday");
-              }
-              if (holidays.some((holiday) => holiday.date === dateString)) {
-                classes.push("calendar-holiday");
-              }
-
-              const matched = normalized.find((reservation) =>
-                isWithinRange(date, reservation.start, reservation.end)
-              );
-              if (matched) classes.push(statusClassName[matched.status]);
-              return classes.length > 0 ? classes.join(" ") : null;
-            }}
-            className="w-full max-w-full"
-          />
-        </div>
+                );
+                if (matched && monthDisplayMode === "full") {
+                  classes.push(statusClassName[matched.status]);
+                }
+                return classes.length > 0 ? classes.join(" ") : null;
+              }}
+              className={`w-full ${monthDisplayMode === "compact" ? "calendar-compact-picker" : "max-w-full"}`}
+            />
+          </div>
+        ) : (
+          <div className="rounded-xl border border-dashed border-neutral-300 bg-neutral-50 px-4 py-5">
+            <p className="text-sm text-neutral-600">
+              월간 달력을 숨긴 상태입니다. 현재 선택 날짜:{" "}
+              <span className="font-semibold text-neutral-900">{formatDateLabel(focusDate)}</span>
+            </p>
+            <button
+              type="button"
+              onClick={() => setShowMonthCalendar(true)}
+              className="btn-ghost mt-3 h-8 px-3 text-xs"
+            >
+              달력 다시 열기
+            </button>
+          </div>
+        )
       ) : null}
 
       {viewMode === "week" ? (
@@ -651,7 +698,7 @@ export default function ReservationCalendar({
         </div>
       ) : null}
 
-      {dayFilter !== "all" ? (
+      {viewMode !== "month" && dayFilter !== "all" ? (
         <div className="rounded-xl border border-neutral-200 bg-white p-3">
           <p className="mb-2 text-sm font-medium text-neutral-700">
             {dayFilterLabel[dayFilter]} 반복 리스트
@@ -689,7 +736,7 @@ export default function ReservationCalendar({
       ) : null}
 
       <div className="text-center text-xs text-neutral-500">
-        월간: 기간 드래그 선택 | 주간: 빈 시간 드래그(데스크톱)/길게 누르기(모바일) | 일간: + 버튼 또는 길게 누르기
+        월간: 미니 달력 날짜 선택(필요 시 전체 달력) | 주간: 빈 시간 드래그(데스크톱)/길게 누르기(모바일) | 일간: + 버튼 또는 길게 누르기
       </div>
       <div className="flex flex-wrap justify-center gap-2 text-xs text-neutral-600">
         <span className="chip-muted gap-2">

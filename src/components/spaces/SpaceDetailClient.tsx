@@ -140,7 +140,7 @@ export default function SpaceDetailClient() {
     <section className="space-y-6">
       <PageHero
         title={
-          <div className="flex flex-wrap items-start justify-between gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <span>{space.name}</span>
             <ResourceStatusBadge
               status={space.status as "available" | "rented" | "repair" | "lost"}
@@ -151,6 +151,19 @@ export default function SpaceDetailClient() {
         description={`위치: ${space.location || "미등록"} · 수용 인원: ${
           space.capacity ? `${space.capacity}명` : "미등록"
         }`}
+        actions={
+          editHref ? (
+            <Link
+              href={editHref}
+              className="btn-secondary h-9 gap-1.5 px-3 text-sm"
+              title="수정"
+              aria-label="수정"
+            >
+              <EditIcon />
+              <span>수정</span>
+            </Link>
+          ) : undefined
+        }
       />
 
       <SectionCard bodyClassName="p-5 md:p-6">
@@ -169,14 +182,6 @@ export default function SpaceDetailClient() {
           </div>
 
           <div className="w-full space-y-4 md:w-1/2">
-            {editHref ? (
-              <div className="flex justify-end">
-                <Link href={editHref} className="icon-button" title="수정" aria-label="수정">
-                  <EditIcon />
-                </Link>
-              </div>
-            ) : null}
-
             <ResourceInfoGrid items={infoItems} />
           </div>
         </div>

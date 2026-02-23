@@ -207,7 +207,7 @@ export default function AssetDetailClient() {
     <section className="space-y-6">
       <PageHero
         title={
-          <div className="flex flex-wrap items-start justify-between gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <span>{asset.name}</span>
             <ResourceStatusBadge
               status={statusTone as "available" | "rented" | "repair" | "lost" | "retired"}
@@ -218,6 +218,19 @@ export default function AssetDetailClient() {
         description={`보관 위치: ${asset.location || "미등록"} · 소유: ${
           asset.owner_scope === "organization" ? "기관 공용" : asset.owner_department || "미등록"
         }`}
+        actions={
+          editHref ? (
+            <Link
+              href={editHref}
+              className="btn-secondary h-9 gap-1.5 px-3 text-sm"
+              title="수정"
+              aria-label="수정"
+            >
+              <EditIcon />
+              <span>수정</span>
+            </Link>
+          ) : undefined
+        }
       />
 
       <SectionCard bodyClassName="p-5 md:p-6">
@@ -236,14 +249,6 @@ export default function AssetDetailClient() {
           </div>
 
           <div className="w-full space-y-4 md:w-1/2">
-            {editHref ? (
-              <div className="flex justify-end">
-                <Link href={editHref} className="icon-button" title="수정" aria-label="수정">
-                  <EditIcon />
-                </Link>
-              </div>
-            ) : null}
-
             <ResourceInfoGrid items={infoItems} />
 
             {tags.length > 0 ? (

@@ -139,7 +139,7 @@ export default function VehicleDetailClient() {
     <section className="space-y-6">
       <PageHero
         title={
-          <div className="flex flex-wrap items-start justify-between gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <span>{vehicle.name}</span>
             <ResourceStatusBadge
               status={vehicle.status as "available" | "rented" | "repair" | "lost"}
@@ -150,6 +150,19 @@ export default function VehicleDetailClient() {
         description={`주차 위치: ${vehicle.location || "미등록"} · 번호판: ${
           vehicle.license_plate || "미등록"
         }`}
+        actions={
+          editHref ? (
+            <Link
+              href={editHref}
+              className="btn-secondary h-9 gap-1.5 px-3 text-sm"
+              title="수정"
+              aria-label="수정"
+            >
+              <EditIcon />
+              <span>수정</span>
+            </Link>
+          ) : undefined
+        }
       />
 
       <SectionCard bodyClassName="p-5 md:p-6">
@@ -168,14 +181,6 @@ export default function VehicleDetailClient() {
           </div>
 
           <div className="w-full space-y-4 md:w-1/2">
-            {editHref ? (
-              <div className="flex justify-end">
-                <Link href={editHref} className="icon-button" title="수정" aria-label="수정">
-                  <EditIcon />
-                </Link>
-              </div>
-            ) : null}
-
             <ResourceInfoGrid items={infoItems} />
           </div>
         </div>

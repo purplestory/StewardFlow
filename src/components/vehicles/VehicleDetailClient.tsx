@@ -139,12 +139,12 @@ export default function VehicleDetailClient() {
     <section className="space-y-6">
       <PageHero
         title={
-          <div className="space-y-2">
+          <div className="flex flex-wrap items-start justify-between gap-2">
+            <span>{vehicle.name}</span>
             <ResourceStatusBadge
               status={vehicle.status as "available" | "rented" | "repair" | "lost"}
               label={vehicleStatusLabel[vehicle.status]}
             />
-            <span>{vehicle.name}</span>
           </div>
         }
         description={`주차 위치: ${vehicle.location || "미등록"} · 번호판: ${

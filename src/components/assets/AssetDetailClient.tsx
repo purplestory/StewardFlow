@@ -207,12 +207,12 @@ export default function AssetDetailClient() {
     <section className="space-y-6">
       <PageHero
         title={
-          <div className="space-y-2">
+          <div className="flex flex-wrap items-start justify-between gap-2">
+            <span>{asset.name}</span>
             <ResourceStatusBadge
               status={statusTone as "available" | "rented" | "repair" | "lost" | "retired"}
               label={statusLabel}
             />
-            <span>{asset.name}</span>
           </div>
         }
         description={`보관 위치: ${asset.location || "미등록"} · 소유: ${

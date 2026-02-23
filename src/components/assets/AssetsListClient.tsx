@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import Notice from "@/components/common/Notice";
 import type { Asset } from "@/types/database";
 import AssetCard from "@/components/assets/AssetCard";
@@ -10,6 +11,7 @@ import { useAssets, useUserProfile, useApprovalPolicies } from "@/hooks/useAsset
 import PageHero from "@/components/ui/PageHero";
 import SectionCard from "@/components/ui/SectionCard";
 import StatusFilterPills from "@/components/ui/StatusFilterPills";
+import ResourceStatusBadge from "@/components/ui/ResourceStatusBadge";
 
 const categoryOptions = [
   { value: "", label: "전체" },
@@ -29,11 +31,35 @@ const statusOptions: Array<{ value: Asset["status"] | ""; label: string }> = [
   { value: "retired", label: "불용품" },
 ];
 
+const listViewOptions = [
+  { value: "grid", label: "그리드" },
+  { value: "list", label: "리스트" },
+] as const;
+
+type ListViewMode = (typeof listViewOptions)[number]["value"];
+
+const statusLabel: Record<Asset["status"], string> = {
+  available: "대여 가능",
+  rented: "대여 중",
+  repair: "수리 중",
+  lost: "분실",
+  retired: "불용품",
+};
+
+const categoryLabel: Record<NonNullable<Asset["category"]>, string> = {
+  sound: "음향",
+  video: "영상",
+  kitchen: "조리",
+  furniture: "가구",
+  etc: "기타",
+};
+
 export default function AssetsListClient() {
   const [showRegisterForm, setShowRegisterForm] = useState(false);
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("");
   const [status, setStatus] = useState<Asset["status"] | "">("");
+  const [viewMode, setViewMode] = useState<ListViewMode>("grid");
 
   // React Query를 사용한 데이터 페칭
   const { data: assets = [], isLoading: assetsLoading, error: assetsError } = useAssets();
@@ -107,6 +133,12 @@ export default function AssetsListClient() {
     });
   }, [assets, query, category, status]);
 
+  const clearFilters = () => {
+    setQuery("");
+    setCategory("");
+    setStatus("");
+  };
+
   return (
     <div className="space-y-6">
       <PageHero
@@ -125,7 +157,7 @@ export default function AssetsListClient() {
         }
       >
         <div className="space-y-4">
-          <div className="grid gap-3 lg:grid-cols-[1.5fr_1fr]">
+          <div className="grid gap-3 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,0.8fr)_auto]">
             <input
               className="form-input"
               placeholder="자산명, 부서, 태그로 검색"
@@ -143,6 +175,23 @@ export default function AssetsListClient() {
                 </option>
               ))}
             </select>
+
+            <div className="inline-flex h-10 items-center rounded-xl border border-neutral-200 bg-white p-1">
+              {listViewOptions.map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => setViewMode(option.value)}
+                  className={
+                    option.value === viewMode
+                      ? "inline-flex h-8 items-center justify-center rounded-lg bg-slate-900 px-3 text-xs font-semibold text-white"
+                      : "inline-flex h-8 items-center justify-center rounded-lg px-3 text-xs font-semibold text-neutral-600 hover:bg-neutral-100"
+                  }
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
           </div>
 
           <StatusFilterPills
@@ -150,9 +199,7 @@ export default function AssetsListClient() {
             value={status}
             onChange={(next) => {
               if (next === "") {
-                setQuery("");
-                setCategory("");
-                setStatus("");
+                clearFilters();
                 return;
               }
               setStatus(next);
@@ -188,26 +235,106 @@ export default function AssetsListClient() {
           <p>조건에 맞는 자산이 없습니다.</p>
           <button
             type="button"
-            onClick={() => {
-              setQuery("");
-              setCategory("");
-              setStatus("");
-            }}
+            onClick={clearFilters}
             className="btn-ghost mt-3"
           >
             필터 초기화
           </button>
         </Notice>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {filteredAssets.map((asset) => (
-            <AssetCard
-              key={asset.id}
-              asset={asset}
-              requiredRoleLabel={policyLabels[asset.id]}
-            />
-          ))}
-        </div>
+        <>
+          {viewMode === "grid" ? (
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {filteredAssets.map((asset) => (
+                <AssetCard
+                  key={asset.id}
+                  asset={asset}
+                  requiredRoleLabel={policyLabels[asset.id]}
+                />
+              ))}
+            </div>
+          ) : null}
+
+          {viewMode === "list" ? (
+            <div className="space-y-3">
+              {filteredAssets.map((asset) => {
+                const detailUrl = `/assets/${asset.short_id ?? asset.id}`;
+                const firstImage =
+                  asset.image_urls && asset.image_urls.length > 0
+                    ? asset.image_urls[0]
+                    : asset.image_url;
+
+                return (
+                  <div key={asset.id} className="surface-card p-4">
+                    <div className="flex flex-col gap-4 md:flex-row md:items-stretch">
+                      <Link
+                        href={detailUrl}
+                        className="group block md:w-56 md:shrink-0"
+                      >
+                        <div className="relative aspect-[4/3] w-full overflow-hidden rounded-xl border border-neutral-200 bg-neutral-100">
+                          {firstImage ? (
+                            <Image
+                              src={firstImage}
+                              alt={asset.name}
+                              fill
+                              sizes="(max-width: 768px) 100vw, 224px"
+                              className="h-full w-full object-cover transition-transform duration-200 group-hover:scale-[1.02]"
+                              unoptimized
+                            />
+                          ) : (
+                            <div className="flex h-full items-center justify-center text-xs text-neutral-400">
+                              이미지 없음
+                            </div>
+                          )}
+                        </div>
+                      </Link>
+
+                      <div className="min-w-0 flex-1 space-y-2">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <Link
+                            href={detailUrl}
+                            className="line-clamp-1 text-lg font-semibold text-neutral-900 hover:text-slate-800"
+                          >
+                            {asset.name}
+                          </Link>
+                          <ResourceStatusBadge
+                            status={asset.status}
+                            label={statusLabel[asset.status]}
+                          />
+                        </div>
+
+                        <div className="space-y-1 text-sm text-neutral-600">
+                          <p>
+                            {asset.model_name ? `모델 ${asset.model_name}` : "모델 미등록"}
+                          </p>
+                          <p>
+                            {asset.category
+                              ? `카테고리 ${categoryLabel[asset.category] ?? asset.category}`
+                              : "카테고리 미등록"}
+                          </p>
+                          <p>
+                            {asset.owner_scope === "organization"
+                              ? "기관 공용"
+                              : asset.owner_department || "소유 부서 미등록"}
+                            {" · "}
+                            {asset.location || "보관 위치 미등록"}
+                          </p>
+                        </div>
+
+                        <Link
+                          href={detailUrl}
+                          className="btn-secondary mt-3 h-9 w-full max-w-32 px-3 text-sm font-semibold"
+                        >
+                          상세 보기
+                        </Link>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : null}
+        </>
       )}
     </div>
   );

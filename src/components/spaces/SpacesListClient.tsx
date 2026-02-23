@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import Notice from "@/components/common/Notice";
 import type { Space } from "@/types/database";
 import SpaceCard from "@/components/spaces/SpaceCard";
@@ -21,9 +22,8 @@ const statusOptions: Array<{ value: Space["status"] | ""; label: string }> = [
 ];
 
 const listViewOptions = [
-  { value: "thumbnail", label: "썸네일" },
-  { value: "text", label: "텍스트" },
-  { value: "compact", label: "컴팩트" },
+  { value: "grid", label: "그리드" },
+  { value: "list", label: "리스트" },
 ] as const;
 
 type ListViewMode = (typeof listViewOptions)[number]["value"];
@@ -39,7 +39,7 @@ export default function SpacesListClient() {
   const [showRegisterForm, setShowRegisterForm] = useState(false);
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState<Space["status"] | "">("");
-  const [viewMode, setViewMode] = useState<ListViewMode>("thumbnail");
+  const [viewMode, setViewMode] = useState<ListViewMode>("grid");
 
   // React Query를 사용한 데이터 페칭
   const { data: spaces = [], isLoading: spacesLoading, error: spacesError } = useSpaces();
@@ -192,7 +192,7 @@ export default function SpacesListClient() {
         </Notice>
       ) : (
         <>
-          {viewMode === "thumbnail" ? (
+          {viewMode === "grid" ? (
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {filteredSpaces.map((space) => (
                 <SpaceCard
@@ -204,74 +204,75 @@ export default function SpacesListClient() {
             </div>
           ) : null}
 
-          {viewMode === "text" ? (
+          {viewMode === "list" ? (
             <div className="space-y-3">
               {filteredSpaces.map((space) => {
                 const detailUrl = `/spaces/${space.short_id ?? space.id}`;
+                const firstImage =
+                  space.image_urls && space.image_urls.length > 0
+                    ? space.image_urls[0]
+                    : space.image_url;
                 return (
                   <div key={space.id} className="surface-card p-4">
-                    <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                      <div className="min-w-0 space-y-1">
+                    <div className="flex flex-col gap-4 md:flex-row md:items-stretch">
+                      <Link
+                        href={detailUrl}
+                        className="group block md:w-56 md:shrink-0"
+                      >
+                        <div className="relative aspect-[4/3] w-full overflow-hidden rounded-xl border border-neutral-200 bg-neutral-100">
+                          {firstImage ? (
+                            <Image
+                              src={firstImage}
+                              alt={space.name}
+                              fill
+                              sizes="(max-width: 768px) 100vw, 224px"
+                              className="h-full w-full object-cover transition-transform duration-200 group-hover:scale-[1.02]"
+                              unoptimized
+                            />
+                          ) : (
+                            <div className="flex h-full items-center justify-center text-xs text-neutral-400">
+                              이미지 없음
+                            </div>
+                          )}
+                        </div>
+                      </Link>
+
+                      <div className="min-w-0 flex-1 space-y-2">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <Link
+                            href={detailUrl}
+                            className="line-clamp-1 text-lg font-semibold text-neutral-900 hover:text-slate-800"
+                          >
+                            {space.name}
+                          </Link>
+                          <ResourceStatusBadge
+                            status={space.status}
+                            label={statusLabel[space.status]}
+                          />
+                        </div>
+
+                        <div className="space-y-1 text-sm text-neutral-600">
+                          <p>
+                            {space.location ? `위치 ${space.location}` : "위치 미등록"}
+                          </p>
+                          <p>
+                            {space.capacity ? `수용 ${space.capacity}명` : "수용 인원 미등록"}
+                          </p>
+                          <p>
+                            {space.owner_scope === "organization"
+                              ? "기관 공용"
+                              : space.owner_department || "소유 부서 미등록"}
+                          </p>
+                        </div>
+
                         <Link
                           href={detailUrl}
-                          className="line-clamp-1 text-base font-semibold text-neutral-900 hover:text-slate-800"
+                          className="btn-secondary mt-3 h-9 w-full max-w-32 px-3 text-sm font-semibold"
                         >
-                          {space.name}
-                        </Link>
-                        <p className="text-sm text-neutral-600">
-                          {space.location ? `위치 ${space.location}` : "위치 미등록"}
-                          {" · "}
-                          {space.capacity ? `수용 ${space.capacity}명` : "수용 인원 미등록"}
-                          {" · "}
-                          {space.owner_scope === "organization"
-                            ? "기관 공용"
-                            : space.owner_department || "소유 부서 미등록"}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <ResourceStatusBadge
-                          status={space.status}
-                          label={statusLabel[space.status]}
-                        />
-                        <Link href={detailUrl} className="btn-secondary h-9 px-3 text-sm font-semibold">
                           상세 보기
                         </Link>
                       </div>
                     </div>
-                  </div>
-                );
-              })}
-            </div>
-          ) : null}
-
-          {viewMode === "compact" ? (
-            <div className="module-list">
-              {filteredSpaces.map((space) => {
-                const detailUrl = `/spaces/${space.short_id ?? space.id}`;
-                return (
-                  <div key={space.id} className="list-row px-4 py-3 md:px-5">
-                    <div className="min-w-0 flex-1">
-                      <Link
-                        href={detailUrl}
-                        className="line-clamp-1 text-sm font-semibold text-neutral-900 hover:text-slate-800"
-                      >
-                        {space.name}
-                      </Link>
-                      <p className="mt-0.5 line-clamp-1 text-xs text-neutral-500">
-                        {space.location || "위치 미등록"} ·{" "}
-                        {space.owner_scope === "organization"
-                          ? "기관 공용"
-                          : space.owner_department || "소유 부서 미등록"}
-                      </p>
-                    </div>
-                    <ResourceStatusBadge
-                      status={space.status}
-                      label={statusLabel[space.status]}
-                      className="shrink-0"
-                    />
-                    <Link href={detailUrl} className="btn-secondary h-8 px-2.5 text-xs font-semibold">
-                      보기
-                    </Link>
                   </div>
                 );
               })}

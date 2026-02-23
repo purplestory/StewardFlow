@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import type { ReactNode } from "react";
 import ReservationCalendar from "@/components/assets/ReservationCalendar";
 import Notice from "@/components/common/Notice";
@@ -211,25 +212,41 @@ export function ReservationWorkspace({
   requestTitle = "예약 신청",
   requestDescription = "캘린더에서 시간대를 선택하면 자동으로 입력됩니다.",
 }: ReservationWorkspaceProps) {
+  const [showCalendar, setShowCalendar] = useState(false);
+
   return (
     <section className="surface-card overflow-hidden">
-      <div className="grid xl:grid-cols-[minmax(0,1.6fr)_minmax(360px,1fr)]">
-        <div className="border-b border-neutral-200 p-4 md:p-6 xl:border-b-0 xl:border-r">
-          <div className="mb-4 space-y-1">
-            <h2 className="text-xl font-semibold tracking-tight text-slate-900">예약 캘린더</h2>
+      <header className="border-b border-neutral-200 bg-gradient-to-r from-white to-slate-50/70 px-4 py-4 md:px-6">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="space-y-1">
+            <h2 className="text-lg font-semibold tracking-tight text-slate-900">예약 워크스페이스</h2>
             <p className="text-sm text-neutral-600">
-              {resourceLabel} 예약을 월/주/일 단위로 확인하고 바로 시간대를 선택할 수 있습니다.
-            </p>
-            <p className="chip-muted mt-2">
-              승인 필요 권한: {roleLabel[requiredRole]}
+              기본은 직접 입력 모드이며, 필요할 때만 캘린더를 열어 빠르게 시간대를 선택하세요.
             </p>
           </div>
-          <ReservationCalendar
-            reservations={calendarReservations}
-            onRangeSelect={onRangeSelect}
-            disabledStatuses={["pending", "approved"]}
-          />
+          <div className="flex items-center gap-2">
+            <p className="chip-muted">승인 필요 권한: {roleLabel[requiredRole]}</p>
+            <button
+              type="button"
+              onClick={() => setShowCalendar((prev) => !prev)}
+              className="btn-ghost h-9 px-3 text-xs"
+            >
+              {showCalendar ? "캘린더 숨기기" : "캘린더 보기"}
+            </button>
+          </div>
         </div>
+      </header>
+
+      <div className={showCalendar ? "grid xl:grid-cols-[minmax(0,1.45fr)_minmax(360px,1fr)]" : "grid"}>
+        {showCalendar ? (
+          <div className="border-b border-neutral-200 p-4 md:p-6 xl:border-b-0 xl:border-r">
+            <ReservationCalendar
+              reservations={calendarReservations}
+              onRangeSelect={onRangeSelect}
+              disabledStatuses={["pending", "approved"]}
+            />
+          </div>
+        ) : null}
 
         <aside className="space-y-4 bg-gradient-to-b from-slate-50/80 to-white p-4 md:p-6">
           <section className="rounded-2xl border border-neutral-200 bg-white">

@@ -23,6 +23,11 @@ import {
 } from "@/components/ui/select";
 
 const initialState = { ok: false, message: "" };
+const timeOptions = Array.from({ length: 48 }, (_, index) => {
+  const hour = String(Math.floor(index / 2)).padStart(2, "0");
+  const minute = index % 2 === 0 ? "00" : "30";
+  return `${hour}:${minute}`;
+});
 
 type ReservationFormProps = {
   assetId: string;
@@ -210,10 +215,10 @@ export default function ReservationForm({
       ) : null}
       <fieldset disabled={formDisabled} className="space-y-4">
         <div className="space-y-3">
-          <div className="grid w-full grid-cols-1 gap-4 xl:grid-cols-3">
+          <div className="grid w-full grid-cols-1 gap-4">
             <div className="min-w-0 space-y-2">
               <label className="form-label">시작일시</label>
-              <div className="grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_112px]">
+              <div className="grid grid-cols-1 gap-2">
                 <input
                   type="date"
                   value={startDate}
@@ -223,19 +228,24 @@ export default function ReservationForm({
                   required
                   disabled={formDisabled}
                 />
-                <input
-                  type="time"
+                <select
                   value={startTime}
-                  onChange={(e) => setStartTime(e.target.value)}
-                  className="form-input min-w-0 text-base md:text-sm"
+                  onChange={(event) => setStartTime(event.target.value)}
+                  className="form-select min-w-0 text-base md:text-sm"
                   required
                   disabled={formDisabled}
-                />
+                >
+                  {timeOptions.map((option) => (
+                    <option key={`start-${option}`} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
             <div className="min-w-0 space-y-2">
               <label className="form-label">종료일시</label>
-              <div className="grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_112px]">
+              <div className="grid grid-cols-1 gap-2">
                 <input
                   type="date"
                   value={endDate}
@@ -245,14 +255,19 @@ export default function ReservationForm({
                   required
                   disabled={formDisabled}
                 />
-                <input
-                  type="time"
+                <select
                   value={endTime}
-                  onChange={(e) => setEndTime(e.target.value)}
-                  className="form-input min-w-0 text-base md:text-sm"
+                  onChange={(event) => setEndTime(event.target.value)}
+                  className="form-select min-w-0 text-base md:text-sm"
                   required
                   disabled={formDisabled}
-                />
+                >
+                  {timeOptions.map((option) => (
+                    <option key={`end-${option}`} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
             <div className="min-w-0 space-y-2">

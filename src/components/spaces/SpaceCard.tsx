@@ -24,7 +24,7 @@ export default function SpaceCard({ space }: SpaceCardProps) {
       : space.image_url;
 
   return (
-    <div className="surface-card p-4">
+    <div className="surface-card flex h-full flex-col p-4">
       <Link href={detailUrl} className="block">
         <div className="relative aspect-[4/3] w-full overflow-hidden rounded-xl bg-neutral-100 transition-opacity hover:opacity-90 cursor-pointer">
           {firstImage ? (
@@ -117,12 +117,14 @@ export default function SpaceCard({ space }: SpaceCardProps) {
         )}
       </div>
 
-      <Link
-        href={detailUrl}
-        className="btn-secondary mt-4 w-full font-semibold"
-      >
-        상세 보기
-      </Link>
+      <div className="mt-auto pt-4">
+        <Link
+          href={detailUrl}
+          className="btn-secondary w-full font-semibold"
+        >
+          상세 보기
+        </Link>
+      </div>
     </div>
   );
 }

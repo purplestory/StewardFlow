@@ -40,7 +40,7 @@ export default function AssetCard({ asset }: AssetCardProps) {
       : asset.image_url;
 
   return (
-    <div className="surface-card p-4">
+    <div className="surface-card flex h-full flex-col p-4">
       <Link href={detailUrl} className="block">
         <div className="relative aspect-[4/3] w-full cursor-pointer overflow-hidden rounded-xl bg-neutral-100 transition-opacity hover:opacity-90">
           {firstImage ? (
@@ -162,12 +162,14 @@ export default function AssetCard({ asset }: AssetCardProps) {
         </div>
       )}
 
-      <Link
-        href={`/assets/${asset.short_id ?? asset.id}`}
-        className="btn-secondary mt-4 w-full font-semibold"
-      >
-        상세 보기
-      </Link>
+      <div className="mt-auto pt-4">
+        <Link
+          href={`/assets/${asset.short_id ?? asset.id}`}
+          className="btn-secondary w-full font-semibold"
+        >
+          상세 보기
+        </Link>
+      </div>
     </div>
   );
 }

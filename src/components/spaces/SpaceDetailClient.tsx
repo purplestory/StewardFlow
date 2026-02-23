@@ -119,7 +119,12 @@ export default function SpaceDetailClient() {
 
   return (
     <section className="space-y-6">
-      <PageHero title="공간 상세" description="공간 정보와 예약 현황을 확인할 수 있습니다." />
+      <PageHero
+        title={space.name}
+        description={`위치: ${space.location || "미등록"} · 수용 인원: ${
+          space.capacity ? `${space.capacity}명` : "미등록"
+        }`}
+      />
 
       <SectionCard bodyClassName="p-5 md:p-6">
         <div className="flex flex-col gap-6 md:flex-row">

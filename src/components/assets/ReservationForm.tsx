@@ -23,11 +23,177 @@ import {
 } from "@/components/ui/select";
 
 const initialState = { ok: false, message: "" };
-const timeOptions = Array.from({ length: 48 }, (_, index) => {
-  const hour = String(Math.floor(index / 2)).padStart(2, "0");
-  const minute = index % 2 === 0 ? "00" : "30";
-  return `${hour}:${minute}`;
-});
+
+const MINUTES_PER_DAY = 24 * 60;
+
+const parseTimeValue = (value: string, fallback = "09:00") => {
+  const source = value || fallback;
+  const [rawHour = "09", rawMinute = "00"] = source.split(":");
+  const hour = Number.parseInt(rawHour, 10);
+  const minute = Number.parseInt(rawMinute, 10);
+  const safeHour = Number.isNaN(hour) ? 9 : Math.min(Math.max(hour, 0), 23);
+  const safeMinute = Number.isNaN(minute) ? 0 : Math.min(Math.max(minute, 0), 59);
+
+  return { hour24: safeHour, minute: safeMinute };
+};
+
+const formatTimeValue = (hour24: number, minute: number) =>
+  `${String(hour24).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
+
+const normalizeTotalMinutes = (totalMinutes: number) =>
+  ((totalMinutes % MINUTES_PER_DAY) + MINUTES_PER_DAY) % MINUTES_PER_DAY;
+
+type TimeStepperFieldProps = {
+  value: string;
+  onChange: (value: string) => void;
+  disabled?: boolean;
+  name: string;
+};
+
+function TimeStepperField({
+  value,
+  onChange,
+  disabled = false,
+  name,
+}: TimeStepperFieldProps) {
+  const { hour24, minute } = parseTimeValue(value);
+  const isPm = hour24 >= 12;
+  const hour12 = hour24 % 12 === 0 ? 12 : hour24 % 12;
+
+  const setTime = (nextHour24: number, nextMinute: number) => {
+    const safeHour = ((nextHour24 % 24) + 24) % 24;
+    const safeMinute = ((nextMinute % 60) + 60) % 60;
+    onChange(formatTimeValue(safeHour, safeMinute));
+  };
+
+  const shiftMinutes = (delta: number) => {
+    const currentTotal = hour24 * 60 + minute;
+    const normalized = normalizeTotalMinutes(currentTotal + delta);
+    setTime(Math.floor(normalized / 60), normalized % 60);
+  };
+
+  const setPeriod = (nextPm: boolean) => {
+    const baseHour = hour12 % 12;
+    const nextHour24 = nextPm ? baseHour + 12 : baseHour;
+    setTime(nextHour24, minute);
+  };
+
+  const setHour12 = (nextHour12: number) => {
+    const clamped = Math.min(Math.max(nextHour12, 1), 12);
+    const nextHour24 = (clamped % 12) + (isPm ? 12 : 0);
+    setTime(nextHour24, minute);
+  };
+
+  const setMinute = (nextMinute: number) => {
+    const clamped = Math.min(Math.max(nextMinute, 0), 59);
+    setTime(hour24, clamped);
+  };
+
+  return (
+    <div className="space-y-2 rounded-xl border border-neutral-200 bg-white p-3">
+      <input type="hidden" name={name} value={formatTimeValue(hour24, minute)} />
+      <div className="inline-flex rounded-lg border border-neutral-200 bg-neutral-50 p-1">
+        <button
+          type="button"
+          onClick={() => setPeriod(false)}
+          disabled={disabled}
+          className={`h-8 rounded-md px-3 text-sm font-medium transition-colors ${
+            !isPm ? "bg-slate-900 text-white" : "text-neutral-700 hover:bg-white"
+          }`}
+        >
+          오전
+        </button>
+        <button
+          type="button"
+          onClick={() => setPeriod(true)}
+          disabled={disabled}
+          className={`h-8 rounded-md px-3 text-sm font-medium transition-colors ${
+            isPm ? "bg-slate-900 text-white" : "text-neutral-700 hover:bg-white"
+          }`}
+        >
+          오후
+        </button>
+      </div>
+
+      <div className="grid grid-cols-2 gap-2">
+        <div className="space-y-1">
+          <p className="text-xs font-medium text-neutral-600">시간</p>
+          <div className="grid grid-cols-[36px_1fr_36px] items-center gap-1">
+            <button
+              type="button"
+              onClick={() => shiftMinutes(60)}
+              disabled={disabled}
+              className="btn-secondary h-9 px-0 text-sm"
+              aria-label="시간 증가"
+            >
+              ▲
+            </button>
+            <input
+              type="number"
+              min={1}
+              max={12}
+              value={hour12}
+              onChange={(event) => {
+                const next = Number.parseInt(event.target.value, 10);
+                if (Number.isNaN(next)) return;
+                setHour12(next);
+              }}
+              className="form-input h-9 px-2 text-center tabular-nums"
+              disabled={disabled}
+            />
+            <button
+              type="button"
+              onClick={() => shiftMinutes(-60)}
+              disabled={disabled}
+              className="btn-secondary h-9 px-0 text-sm"
+              aria-label="시간 감소"
+            >
+              ▼
+            </button>
+          </div>
+        </div>
+
+        <div className="space-y-1">
+          <p className="text-xs font-medium text-neutral-600">분</p>
+          <div className="grid grid-cols-[36px_1fr_36px] items-center gap-1">
+            <button
+              type="button"
+              onClick={() => shiftMinutes(10)}
+              disabled={disabled}
+              className="btn-secondary h-9 px-0 text-sm"
+              aria-label="분 증가"
+            >
+              ▲
+            </button>
+            <input
+              type="number"
+              min={0}
+              max={59}
+              step={10}
+              value={minute}
+              onChange={(event) => {
+                const next = Number.parseInt(event.target.value, 10);
+                if (Number.isNaN(next)) return;
+                setMinute(next);
+              }}
+              className="form-input h-9 px-2 text-center tabular-nums"
+              disabled={disabled}
+            />
+            <button
+              type="button"
+              onClick={() => shiftMinutes(-10)}
+              disabled={disabled}
+              className="btn-secondary h-9 px-0 text-sm"
+              aria-label="분 감소"
+            >
+              ▼
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 type ReservationFormProps = {
   assetId: string;
@@ -228,19 +394,12 @@ export default function ReservationForm({
                   required
                   disabled={formDisabled}
                 />
-                <select
+                <TimeStepperField
                   value={startTime}
-                  onChange={(event) => setStartTime(event.target.value)}
-                  className="form-select min-w-0 text-base md:text-sm"
-                  required
+                  onChange={setStartTime}
                   disabled={formDisabled}
-                >
-                  {timeOptions.map((option) => (
-                    <option key={`start-${option}`} value={option}>
-                      {option}
-                    </option>
-                  ))}
-                </select>
+                  name="start_time"
+                />
               </div>
             </div>
             <div className="min-w-0 space-y-2">
@@ -255,19 +414,12 @@ export default function ReservationForm({
                   required
                   disabled={formDisabled}
                 />
-                <select
+                <TimeStepperField
                   value={endTime}
-                  onChange={(event) => setEndTime(event.target.value)}
-                  className="form-select min-w-0 text-base md:text-sm"
-                  required
+                  onChange={setEndTime}
                   disabled={formDisabled}
-                >
-                  {timeOptions.map((option) => (
-                    <option key={`end-${option}`} value={option}>
-                      {option}
-                    </option>
-                  ))}
-                </select>
+                  name="end_time"
+                />
               </div>
             </div>
             <div className="min-w-0 space-y-2">

@@ -4,9 +4,7 @@ import { useMemo, useState } from "react";
 import ReservationForm from "@/components/assets/ReservationForm";
 import type { AssetReservationSummary } from "@/actions/booking-actions";
 import {
-  ReservationCalendarCard,
-  ReservationListCard,
-  ReservationRequestCard,
+  ReservationWorkspace,
 } from "@/components/ui/ReservationSectionBlocks";
 
 type AssetReservationSectionProps = {
@@ -18,12 +16,13 @@ type AssetReservationSectionProps = {
   usableUntil?: string | null;
 };
 
-const toLocalDateTimeValue = (date: Date, hours: number) => {
+const toLocalDateTimeValue = (date: Date) => {
   const year = date.getFullYear();
   const month = `${date.getMonth() + 1}`.padStart(2, "0");
   const day = `${date.getDate()}`.padStart(2, "0");
-  const hour = `${hours}`.padStart(2, "0");
-  return `${year}-${month}-${day}T${hour}:00`;
+  const hour = `${date.getHours()}`.padStart(2, "0");
+  const minute = `${date.getMinutes()}`.padStart(2, "0");
+  return `${year}-${month}-${day}T${hour}:${minute}`;
 };
 
 export default function AssetReservationSection({
@@ -38,8 +37,22 @@ export default function AssetReservationSection({
   const [endDate, setEndDate] = useState<string>("");
 
   const onRangeSelect = (start: Date, end: Date) => {
-    setStartDate(toLocalDateTimeValue(start, 9));
-    setEndDate(toLocalDateTimeValue(end, 18));
+    const startHasTime = start.getHours() !== 0 || start.getMinutes() !== 0;
+    const endHasTime = end.getHours() !== 0 || end.getMinutes() !== 0;
+
+    const normalizedStart = startHasTime
+      ? start
+      : new Date(start.getFullYear(), start.getMonth(), start.getDate(), 9, 0, 0, 0);
+    let normalizedEnd = endHasTime
+      ? end
+      : new Date(end.getFullYear(), end.getMonth(), end.getDate(), 18, 0, 0, 0);
+
+    if (normalizedEnd.getTime() <= normalizedStart.getTime()) {
+      normalizedEnd = new Date(normalizedStart.getTime() + 60 * 60 * 1000);
+    }
+
+    setStartDate(toLocalDateTimeValue(normalizedStart));
+    setEndDate(toLocalDateTimeValue(normalizedEnd));
   };
 
   const existingReservations = useMemo(
@@ -78,21 +91,15 @@ export default function AssetReservationSection({
   }, [reservations]);
 
   return (
-    <div className="space-y-6">
-      <div className="grid gap-6 lg:grid-cols-[1fr_1fr]">
-        <ReservationCalendarCard
-          requiredRole={requiredRole}
-          reservations={existingReservations}
-          onRangeSelect={onRangeSelect}
-        />
-
-        <ReservationListCard resourceLabel="물품" reservations={sortedReservations} />
-      </div>
-
-      <ReservationRequestCard
-        title="대여 신청"
-        description="날짜 선택 후 대여 목적을 입력해 신청합니다."
-      >
+    <ReservationWorkspace
+      requiredRole={requiredRole}
+      resourceLabel="물품"
+      reservations={sortedReservations}
+      calendarReservations={existingReservations}
+      onRangeSelect={onRangeSelect}
+      requestTitle="대여 신청"
+      requestDescription="캘린더에서 시간대를 선택한 뒤, 대여 목적을 입력해 신청합니다."
+      requestForm={
         <ReservationForm
           assetId={assetId}
           presetStartDate={startDate}
@@ -100,8 +107,8 @@ export default function AssetReservationSection({
           isDisabled={isDisabled}
           disabledReason={disabledReason}
         />
-      </ReservationRequestCard>
-    </div>
+      }
+    />
   );
 }
 

@@ -381,40 +381,66 @@ export default function ReservationCalendar({
 
   return (
     <div className="space-y-3">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="flex flex-wrap gap-2">
-          <button
-            type="button"
-            onClick={() => setViewMode("month")}
-            className={`filter-pill h-9 ${viewMode === "month" ? "filter-pill-active" : ""}`}
-          >
-            월간
-          </button>
-          <button
-            type="button"
-            onClick={() => setViewMode("week")}
-            className={`filter-pill h-9 ${viewMode === "week" ? "filter-pill-active" : ""}`}
-          >
-            주간
-          </button>
-          <button
-            type="button"
-            onClick={() => setViewMode("day")}
-            className={`filter-pill h-9 ${viewMode === "day" ? "filter-pill-active" : ""}`}
-          >
-            일간
-          </button>
-        </div>
-        <div className="flex items-center gap-2">
-          <button type="button" onClick={() => movePeriod("prev")} className="btn-ghost h-9 px-3 text-xs">
-            이전
-          </button>
-          <button type="button" onClick={goToday} className="btn-ghost h-9 px-3 text-xs">
-            오늘
-          </button>
-          <button type="button" onClick={() => movePeriod("next")} className="btn-ghost h-9 px-3 text-xs">
-            다음
-          </button>
+      <div className="rounded-2xl border border-neutral-200 bg-neutral-50/80 p-2">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="inline-flex items-center rounded-xl border border-neutral-200 bg-white p-1">
+            <button
+              type="button"
+              onClick={() => setViewMode("month")}
+              className={`h-8 rounded-lg px-3 text-xs font-semibold transition-colors ${
+                viewMode === "month"
+                  ? "bg-slate-900 text-white"
+                  : "text-neutral-600 hover:bg-neutral-100"
+              }`}
+            >
+              월
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode("week")}
+              className={`h-8 rounded-lg px-3 text-xs font-semibold transition-colors ${
+                viewMode === "week"
+                  ? "bg-slate-900 text-white"
+                  : "text-neutral-600 hover:bg-neutral-100"
+              }`}
+            >
+              주
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode("day")}
+              className={`h-8 rounded-lg px-3 text-xs font-semibold transition-colors ${
+                viewMode === "day"
+                  ? "bg-slate-900 text-white"
+                  : "text-neutral-600 hover:bg-neutral-100"
+              }`}
+            >
+              일
+            </button>
+          </div>
+          <div className="inline-flex items-center rounded-xl border border-neutral-200 bg-white p-1">
+            <button
+              type="button"
+              onClick={() => movePeriod("prev")}
+              className="h-8 rounded-lg px-3 text-xs font-medium text-neutral-700 transition-colors hover:bg-neutral-100"
+            >
+              이전
+            </button>
+            <button
+              type="button"
+              onClick={goToday}
+              className="h-8 rounded-lg px-3 text-xs font-semibold text-slate-900 transition-colors hover:bg-neutral-100"
+            >
+              오늘
+            </button>
+            <button
+              type="button"
+              onClick={() => movePeriod("next")}
+              className="h-8 rounded-lg px-3 text-xs font-medium text-neutral-700 transition-colors hover:bg-neutral-100"
+            >
+              다음
+            </button>
+          </div>
         </div>
       </div>
 
@@ -502,7 +528,7 @@ export default function ReservationCalendar({
           </p>
           <div className="overflow-x-auto">
             <div
-              className="grid min-w-[820px] gap-1"
+              className="grid min-w-full gap-1 md:min-w-[820px]"
               style={{
                 gridTemplateColumns: `70px repeat(${weekReservationsMap.length}, minmax(96px, 1fr))`,
               }}

@@ -4,9 +4,7 @@ import { useMemo, useState } from "react";
 import ReservationForm from "@/components/assets/ReservationForm";
 import type { SpaceReservationSummary } from "@/actions/booking-actions";
 import {
-  ReservationCalendarCard,
-  ReservationListCard,
-  ReservationRequestCard,
+  ReservationWorkspace,
 } from "@/components/ui/ReservationSectionBlocks";
 
 type SpaceReservationSectionProps = {
@@ -77,21 +75,15 @@ export default function SpaceReservationSection({
   }, [reservations]);
 
   return (
-    <div className="space-y-6">
-      <div className="grid gap-6 lg:grid-cols-[1fr_1fr]">
-        <ReservationCalendarCard
-          requiredRole={requiredRole}
-          reservations={existingReservations}
-          onRangeSelect={onRangeSelect}
-        />
-
-        <ReservationListCard resourceLabel="공간" reservations={sortedReservations} />
-      </div>
-
-      <ReservationRequestCard
-        title="예약 신청"
-        description="날짜 선택 후 사용 목적을 입력해 예약합니다."
-      >
+    <ReservationWorkspace
+      requiredRole={requiredRole}
+      resourceLabel="공간"
+      reservations={sortedReservations}
+      calendarReservations={existingReservations}
+      onRangeSelect={onRangeSelect}
+      requestTitle="예약 신청"
+      requestDescription="캘린더에서 시간대를 선택한 뒤, 사용 목적을 입력해 신청합니다."
+      requestForm={
         <ReservationForm
           assetId={spaceId}
           resourceType="space"
@@ -111,7 +103,7 @@ export default function SpaceReservationSection({
               : undefined
           }
         />
-      </ReservationRequestCard>
-    </div>
+      }
+    />
   );
 }

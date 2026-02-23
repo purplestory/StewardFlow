@@ -2,8 +2,8 @@
 
 import type { ReactNode } from "react";
 import ReservationCalendar from "@/components/assets/ReservationCalendar";
-import SectionCard from "@/components/ui/SectionCard";
 import Notice from "@/components/common/Notice";
+import SectionCard from "@/components/ui/SectionCard";
 
 type ReservationStatus = "pending" | "approved" | "returned" | "rejected";
 
@@ -81,17 +81,20 @@ type ReservationCalendarCardProps = {
   requiredRole: Role;
   reservations: CalendarReservationItem[];
   onRangeSelect: (start: Date, end: Date) => void;
+  className?: string;
 };
 
 export function ReservationCalendarCard({
   requiredRole,
   reservations,
   onRangeSelect,
+  className,
 }: ReservationCalendarCardProps) {
   return (
     <SectionCard
       title="예약 캘린더"
       description="날짜를 선택하면 예약 신청 폼에 자동 반영됩니다."
+      className={className}
     >
       <p className="chip-muted mt-1">
         승인 필요 권한: {roleLabel[requiredRole]}
@@ -110,16 +113,19 @@ export function ReservationCalendarCard({
 type ReservationListCardProps = {
   resourceLabel: string;
   reservations: ReservationListItem[];
+  className?: string;
 };
 
 export function ReservationListCard({
   resourceLabel,
   reservations,
+  className,
 }: ReservationListCardProps) {
   return (
     <SectionCard
       title="예약 현황"
       description={`이 ${resourceLabel}의 예약 내역을 확인할 수 있습니다.`}
+      className={className}
     >
       <div className="mt-4 max-h-[500px] space-y-2 overflow-y-auto">
         {reservations.length === 0 ? (
@@ -164,19 +170,121 @@ type ReservationRequestCardProps = {
   children: ReactNode;
   title?: string;
   description?: string;
+  className?: string;
 };
 
 export function ReservationRequestCard({
   children,
   title = "예약 신청",
   description = "날짜 선택 및 사유 입력 후 신청합니다.",
+  className,
 }: ReservationRequestCardProps) {
   return (
     <SectionCard
       title={title}
       description={description}
+      className={className}
     >
       <div className="mt-4">{children}</div>
     </SectionCard>
+  );
+}
+
+type ReservationWorkspaceProps = {
+  requiredRole: Role;
+  resourceLabel: string;
+  reservations: ReservationListItem[];
+  calendarReservations: CalendarReservationItem[];
+  onRangeSelect: (start: Date, end: Date) => void;
+  requestForm: ReactNode;
+  requestTitle?: string;
+  requestDescription?: string;
+};
+
+export function ReservationWorkspace({
+  requiredRole,
+  resourceLabel,
+  reservations,
+  calendarReservations,
+  onRangeSelect,
+  requestForm,
+  requestTitle = "예약 신청",
+  requestDescription = "캘린더에서 시간대를 선택하면 자동으로 입력됩니다.",
+}: ReservationWorkspaceProps) {
+  return (
+    <section className="surface-card overflow-hidden">
+      <div className="grid xl:grid-cols-[minmax(0,1.6fr)_minmax(360px,1fr)]">
+        <div className="border-b border-neutral-200 p-4 md:p-6 xl:border-b-0 xl:border-r">
+          <div className="mb-4 space-y-1">
+            <h2 className="text-xl font-semibold tracking-tight text-slate-900">예약 캘린더</h2>
+            <p className="text-sm text-neutral-600">
+              {resourceLabel} 예약을 월/주/일 단위로 확인하고 바로 시간대를 선택할 수 있습니다.
+            </p>
+            <p className="chip-muted mt-2">
+              승인 필요 권한: {roleLabel[requiredRole]}
+            </p>
+          </div>
+          <ReservationCalendar
+            reservations={calendarReservations}
+            onRangeSelect={onRangeSelect}
+            disabledStatuses={["pending", "approved"]}
+          />
+        </div>
+
+        <aside className="space-y-4 bg-gradient-to-b from-slate-50/80 to-white p-4 md:p-6">
+          <section className="rounded-2xl border border-neutral-200 bg-white">
+            <header className="border-b border-neutral-200 px-4 py-3">
+              <h3 className="text-base font-semibold text-slate-900">예약 현황</h3>
+              <p className="mt-0.5 text-xs text-neutral-600">
+                이 {resourceLabel}의 예약 내역을 시간순으로 표시합니다.
+              </p>
+            </header>
+            <div className="max-h-[280px] space-y-2 overflow-y-auto p-3">
+              {reservations.length === 0 ? (
+                <Notice className="py-6 text-sm">예약 내역이 없습니다.</Notice>
+              ) : (
+                reservations.map((reservation) => (
+                  <article
+                    key={reservation.id}
+                    className="rounded-xl border border-neutral-200 bg-neutral-50/80 p-3"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-neutral-900">
+                          {formatDateRange(reservation.start_date, reservation.end_date)}
+                        </p>
+                        {reservation.borrower?.department ? (
+                          <p className="mt-1 text-xs text-neutral-600">
+                            신청 부서: {reservation.borrower.department}
+                          </p>
+                        ) : null}
+                        {reservation.borrower?.name ? (
+                          <p className="mt-0.5 text-xs text-neutral-500">
+                            신청자: {reservation.borrower.name}
+                          </p>
+                        ) : null}
+                      </div>
+                      <span
+                        className={`shrink-0 rounded-full px-2 py-1 text-[11px] font-medium ${statusBadgeClass[reservation.status]}`}
+                      >
+                        {statusLabel[reservation.status]}
+                      </span>
+                    </div>
+                  </article>
+                ))
+              )}
+            </div>
+          </section>
+
+          <section className="rounded-2xl border border-neutral-200 bg-white">
+            <header className="border-b border-neutral-200 px-4 py-3">
+              <h3 className="text-base font-semibold text-slate-900">{requestTitle}</h3>
+              <p className="mt-0.5 text-xs text-neutral-600">{requestDescription}</p>
+            </header>
+            <div className="p-3 md:p-4">{requestForm}</div>
+          </section>
+        </aside>
+      </div>
+    </section>
   );
 }

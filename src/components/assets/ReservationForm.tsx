@@ -210,7 +210,7 @@ export default function ReservationForm({
       ) : null}
       <fieldset disabled={formDisabled} className="space-y-4">
         <div className="space-y-3">
-          <div className="grid w-full grid-cols-1 gap-4 md:grid-cols-3">
+          <div className="grid w-full grid-cols-1 gap-4 xl:grid-cols-3">
             <div className="min-w-0 space-y-2">
               <label className="form-label">시작일시</label>
               <div className="grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_112px]">

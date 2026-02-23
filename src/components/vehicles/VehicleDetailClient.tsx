@@ -138,6 +138,8 @@ export default function VehicleDetailClient() {
   return (
     <section className="space-y-6">
       <PageHero
+        backHref="/vehicles"
+        backLabel="차량 목록"
         title={
           <div className="flex flex-wrap items-center gap-2">
             <span>{vehicle.name}</span>

@@ -139,6 +139,8 @@ export default function SpaceDetailClient() {
   return (
     <section className="space-y-6">
       <PageHero
+        backHref="/spaces"
+        backLabel="공간 목록"
         title={
           <div className="flex flex-wrap items-center gap-2">
             <span>{space.name}</span>

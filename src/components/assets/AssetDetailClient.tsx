@@ -206,6 +206,8 @@ export default function AssetDetailClient() {
   return (
     <section className="space-y-6">
       <PageHero
+        backHref="/assets"
+        backLabel="물품 목록"
         title={
           <div className="flex flex-wrap items-center gap-2">
             <span>{asset.name}</span>

@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
+import Link from "next/link";
 
 type PageHeroProps = {
   title: ReactNode;
@@ -8,6 +9,8 @@ type PageHeroProps = {
   actions?: ReactNode;
   children?: ReactNode;
   className?: string;
+  backHref?: string;
+  backLabel?: string;
 };
 
 const cx = (...classes: Array<string | false | null | undefined>) =>
@@ -19,9 +22,20 @@ export default function PageHero({
   actions,
   children,
   className,
+  backHref,
+  backLabel = "목록으로",
 }: PageHeroProps) {
   return (
     <div className={cx("surface-panel p-5 md:p-7", className)}>
+      {backHref ? (
+        <Link
+          href={backHref}
+          className="btn-ghost mb-3 h-8 w-fit gap-1.5 px-2.5 text-xs text-neutral-600"
+        >
+          <span aria-hidden>←</span>
+          <span>{backLabel}</span>
+        </Link>
+      ) : null}
       <div className="module-head">
         <div>
           <h1 className="module-title">{title}</h1>

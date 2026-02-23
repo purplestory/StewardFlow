@@ -11,6 +11,7 @@ import { useUserProfile } from "@/hooks/useAssets";
 import PageHero from "@/components/ui/PageHero";
 import SectionCard from "@/components/ui/SectionCard";
 import StatusFilterPills from "@/components/ui/StatusFilterPills";
+import ResourceStatusBadge from "@/components/ui/ResourceStatusBadge";
 
 const statusOptions: Array<{ value: Space["status"] | ""; label: string }> = [
   { value: "", label: "전체" },
@@ -19,10 +20,26 @@ const statusOptions: Array<{ value: Space["status"] | ""; label: string }> = [
   { value: "repair", label: "수리 중" },
 ];
 
+const listViewOptions = [
+  { value: "thumbnail", label: "썸네일" },
+  { value: "text", label: "텍스트" },
+  { value: "compact", label: "컴팩트" },
+] as const;
+
+type ListViewMode = (typeof listViewOptions)[number]["value"];
+
+const statusLabel: Record<Space["status"], string> = {
+  available: "사용 가능",
+  rented: "예약 중",
+  repair: "수리 중",
+  lost: "사용 불가",
+};
+
 export default function SpacesListClient() {
   const [showRegisterForm, setShowRegisterForm] = useState(false);
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState<Space["status"] | "">("");
+  const [viewMode, setViewMode] = useState<ListViewMode>("thumbnail");
 
   // React Query를 사용한 데이터 페칭
   const { data: spaces = [], isLoading: spacesLoading, error: spacesError } = useSpaces();
@@ -77,6 +94,11 @@ export default function SpacesListClient() {
     });
   }, [spaces, query, status]);
 
+  const clearFilters = () => {
+    setQuery("");
+    setStatus("");
+  };
+
   return (
     <div className="space-y-6">
       <PageHero
@@ -95,13 +117,30 @@ export default function SpacesListClient() {
         }
       >
         <div className="space-y-4">
-          <div>
+          <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto]">
             <input
               className="form-input"
               placeholder="공간명 또는 부서를 검색하세요"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
             />
+
+            <div className="inline-flex h-10 items-center rounded-xl border border-neutral-200 bg-white p-1">
+              {listViewOptions.map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => setViewMode(option.value)}
+                  className={
+                    option.value === viewMode
+                      ? "inline-flex h-8 items-center justify-center rounded-lg bg-slate-900 px-3 text-xs font-semibold text-white"
+                      : "inline-flex h-8 items-center justify-center rounded-lg px-3 text-xs font-semibold text-neutral-600 hover:bg-neutral-100"
+                  }
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
           </div>
 
           <StatusFilterPills
@@ -109,8 +148,7 @@ export default function SpacesListClient() {
             value={status}
             onChange={(next) => {
               if (next === "") {
-                setQuery("");
-                setStatus("");
+                clearFilters();
                 return;
               }
               setStatus(next);
@@ -146,25 +184,100 @@ export default function SpacesListClient() {
           <p>조건에 맞는 공간이 없습니다.</p>
           <button
             type="button"
-            onClick={() => {
-              setQuery("");
-              setStatus("");
-            }}
+            onClick={clearFilters}
             className="btn-ghost mt-3"
           >
             필터 초기화
           </button>
         </Notice>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {filteredSpaces.map((space) => (
-            <SpaceCard
-              key={space.id}
-              space={space}
-              requiredRoleLabel={policyLabels[space.id]}
-            />
-          ))}
-        </div>
+        <>
+          {viewMode === "thumbnail" ? (
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {filteredSpaces.map((space) => (
+                <SpaceCard
+                  key={space.id}
+                  space={space}
+                  requiredRoleLabel={policyLabels[space.id]}
+                />
+              ))}
+            </div>
+          ) : null}
+
+          {viewMode === "text" ? (
+            <div className="space-y-3">
+              {filteredSpaces.map((space) => {
+                const detailUrl = `/spaces/${space.short_id ?? space.id}`;
+                return (
+                  <div key={space.id} className="surface-card p-4">
+                    <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                      <div className="min-w-0 space-y-1">
+                        <Link
+                          href={detailUrl}
+                          className="line-clamp-1 text-base font-semibold text-neutral-900 hover:text-slate-800"
+                        >
+                          {space.name}
+                        </Link>
+                        <p className="text-sm text-neutral-600">
+                          {space.location ? `위치 ${space.location}` : "위치 미등록"}
+                          {" · "}
+                          {space.capacity ? `수용 ${space.capacity}명` : "수용 인원 미등록"}
+                          {" · "}
+                          {space.owner_scope === "organization"
+                            ? "기관 공용"
+                            : space.owner_department || "소유 부서 미등록"}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <ResourceStatusBadge
+                          status={space.status}
+                          label={statusLabel[space.status]}
+                        />
+                        <Link href={detailUrl} className="btn-secondary h-9 px-3 text-sm font-semibold">
+                          상세 보기
+                        </Link>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : null}
+
+          {viewMode === "compact" ? (
+            <div className="module-list">
+              {filteredSpaces.map((space) => {
+                const detailUrl = `/spaces/${space.short_id ?? space.id}`;
+                return (
+                  <div key={space.id} className="list-row px-4 py-3 md:px-5">
+                    <div className="min-w-0 flex-1">
+                      <Link
+                        href={detailUrl}
+                        className="line-clamp-1 text-sm font-semibold text-neutral-900 hover:text-slate-800"
+                      >
+                        {space.name}
+                      </Link>
+                      <p className="mt-0.5 line-clamp-1 text-xs text-neutral-500">
+                        {space.location || "위치 미등록"} ·{" "}
+                        {space.owner_scope === "organization"
+                          ? "기관 공용"
+                          : space.owner_department || "소유 부서 미등록"}
+                      </p>
+                    </div>
+                    <ResourceStatusBadge
+                      status={space.status}
+                      label={statusLabel[space.status]}
+                      className="shrink-0"
+                    />
+                    <Link href={detailUrl} className="btn-secondary h-8 px-2.5 text-xs font-semibold">
+                      보기
+                    </Link>
+                  </div>
+                );
+              })}
+            </div>
+          ) : null}
+        </>
       )}
     </div>
   );

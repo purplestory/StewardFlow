@@ -669,7 +669,7 @@ export default function BooksManagePage() {
             <button type="button" className="btn-primary" onClick={() => setActiveTab("register")}>
               도서 등록
             </button>
-            <Link href="/books" className="btn-ghost">
+            <Link href="/books" className="btn-secondary">
               도서 라운지
             </Link>
             <Link href="/settings/menu" className="btn-outline">

@@ -119,7 +119,7 @@ export default function SpaceCard({ space }: SpaceCardProps) {
 
       <Link
         href={detailUrl}
-        className="btn-ghost mt-4 w-full"
+        className="btn-secondary mt-4 w-full font-semibold"
       >
         상세 보기
       </Link>

@@ -164,7 +164,7 @@ export default function AssetCard({ asset }: AssetCardProps) {
 
       <Link
         href={`/assets/${asset.short_id ?? asset.id}`}
-        className="btn-ghost mt-4 w-full"
+        className="btn-secondary mt-4 w-full font-semibold"
       >
         상세 보기
       </Link>

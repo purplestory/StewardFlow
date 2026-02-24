@@ -12,7 +12,7 @@ import {
   useSpaceApprovalPolicies,
 } from "@/hooks/useSpaces";
 import { useUserRole } from "@/hooks/useAssets";
-import PageHero from "@/components/ui/PageHero";
+import BreadcrumbBar from "@/components/ui/BreadcrumbBar";
 import SectionCard from "@/components/ui/SectionCard";
 import ResourceStatusBadge from "@/components/ui/ResourceStatusBadge";
 import ResourceInfoGrid, {
@@ -138,54 +138,55 @@ export default function SpaceDetailClient() {
 
   return (
     <section className="space-y-6">
-      <PageHero
-        backHref="/spaces"
-        backLabel="공간 목록"
-        title={
-          <div className="flex flex-wrap items-center gap-2">
-            <span>{space.name}</span>
-            <ResourceStatusBadge
-              status={space.status as "available" | "rented" | "repair" | "lost"}
-              label={statusLabel[space.status]}
-            />
-          </div>
-        }
-        description={`위치: ${space.location || "미등록"} · 수용 인원: ${
-          space.capacity ? `${space.capacity}명` : "미등록"
-        }`}
-        actions={
-          editHref ? (
-            <Link
-              href={editHref}
-              className="btn-secondary h-9 gap-1.5 px-3 text-sm"
-              title="수정"
-              aria-label="수정"
-            >
-              <EditIcon />
-              <span>수정</span>
-            </Link>
-          ) : undefined
-        }
+      <BreadcrumbBar
+        items={[
+          { label: "홈", href: "/" },
+          { label: "공간예약", href: "/spaces" },
+          { label: space.name },
+        ]}
       />
 
       <SectionCard bodyClassName="p-5 md:p-6">
-        <div className="flex flex-col gap-6 md:flex-row">
-          <div className="w-full md:w-1/2">
-            <ImageSlider
-              images={
-                space.image_urls && space.image_urls.length > 0
-                  ? space.image_urls
-                  : space.image_url
-                    ? [space.image_url]
-                    : []
-              }
-              alt={space.name}
-            />
+        <div className="space-y-5">
+          <ImageSlider
+            images={
+              space.image_urls && space.image_urls.length > 0
+                ? space.image_urls
+                : space.image_url
+                  ? [space.image_url]
+                  : []
+            }
+            alt={space.name}
+          />
+
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="min-w-0 space-y-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <h1 className="break-words text-2xl font-bold text-neutral-900">{space.name}</h1>
+                <ResourceStatusBadge
+                  status={space.status as "available" | "rented" | "repair" | "lost"}
+                  label={statusLabel[space.status]}
+                />
+              </div>
+              <p className="text-sm text-neutral-600">
+                위치: {space.location || "미등록"} · 수용 인원:{" "}
+                {space.capacity ? `${space.capacity}명` : "미등록"}
+              </p>
+            </div>
+            {editHref ? (
+              <Link
+                href={editHref}
+                className="btn-secondary h-9 gap-1.5 px-3 text-sm"
+                title="수정"
+                aria-label="수정"
+              >
+                <EditIcon />
+                <span>수정</span>
+              </Link>
+            ) : null}
           </div>
 
-          <div className="w-full space-y-4 md:w-1/2">
-            <ResourceInfoGrid items={infoItems} />
-          </div>
+          <ResourceInfoGrid items={infoItems} />
         </div>
       </SectionCard>
 

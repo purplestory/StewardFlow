@@ -14,7 +14,7 @@ import {
   useApprovalPolicies,
 } from "@/hooks/useAssets";
 import Notice from "@/components/common/Notice";
-import PageHero from "@/components/ui/PageHero";
+import BreadcrumbBar from "@/components/ui/BreadcrumbBar";
 import SectionCard from "@/components/ui/SectionCard";
 import ResourceStatusBadge from "@/components/ui/ResourceStatusBadge";
 import ResourceInfoGrid, {
@@ -205,64 +205,67 @@ export default function AssetDetailClient() {
 
   return (
     <section className="space-y-6">
-      <PageHero
-        backHref="/assets"
-        backLabel="물품 목록"
-        title={
-          <div className="flex flex-wrap items-center gap-2">
-            <span>{asset.name}</span>
-            <ResourceStatusBadge
-              status={statusTone as "available" | "rented" | "repair" | "lost" | "retired"}
-              label={statusLabel}
-            />
-          </div>
-        }
-        description={`보관 위치: ${asset.location || "미등록"} · 소유: ${
-          asset.owner_scope === "organization" ? "기관 공용" : asset.owner_department || "미등록"
-        }`}
-        actions={
-          editHref ? (
-            <Link
-              href={editHref}
-              className="btn-secondary h-9 gap-1.5 px-3 text-sm"
-              title="수정"
-              aria-label="수정"
-            >
-              <EditIcon />
-              <span>수정</span>
-            </Link>
-          ) : undefined
-        }
+      <BreadcrumbBar
+        items={[
+          { label: "홈", href: "/" },
+          { label: "물품예약", href: "/assets" },
+          { label: asset.name },
+        ]}
       />
 
       <SectionCard bodyClassName="p-5 md:p-6">
-        <div className="flex flex-col gap-6 md:flex-row">
-          <div className="w-full md:w-1/2">
-            <ImageSlider
-              images={
-                asset.image_urls && asset.image_urls.length > 0
-                  ? asset.image_urls
-                  : asset.image_url
-                    ? [asset.image_url]
-                    : []
-              }
-              alt={asset.name}
-            />
-          </div>
+        <div className="space-y-5">
+          <ImageSlider
+            images={
+              asset.image_urls && asset.image_urls.length > 0
+                ? asset.image_urls
+                : asset.image_url
+                  ? [asset.image_url]
+                  : []
+            }
+            alt={asset.name}
+          />
 
-          <div className="w-full space-y-4 md:w-1/2">
-            <ResourceInfoGrid items={infoItems} />
-
-            {tags.length > 0 ? (
-              <div className="flex flex-wrap gap-1.5">
-                {tags.map((tag) => (
-                  <span key={tag} className="chip-muted">
-                    {tag}
-                  </span>
-                ))}
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="min-w-0 space-y-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <h1 className="break-words text-2xl font-bold text-neutral-900">{asset.name}</h1>
+                <ResourceStatusBadge
+                  status={statusTone as "available" | "rented" | "repair" | "lost" | "retired"}
+                  label={statusLabel}
+                />
               </div>
+              <p className="text-sm text-neutral-600">
+                보관 위치: {asset.location || "미등록"} · 소유:{" "}
+                {asset.owner_scope === "organization"
+                  ? "기관 공용"
+                  : asset.owner_department || "미등록"}
+              </p>
+            </div>
+            {editHref ? (
+              <Link
+                href={editHref}
+                className="btn-secondary h-9 gap-1.5 px-3 text-sm"
+                title="수정"
+                aria-label="수정"
+              >
+                <EditIcon />
+                <span>수정</span>
+              </Link>
             ) : null}
           </div>
+
+          <ResourceInfoGrid items={infoItems} />
+
+          {tags.length > 0 ? (
+            <div className="flex flex-wrap gap-1.5">
+              {tags.map((tag) => (
+                <span key={tag} className="chip-muted">
+                  {tag}
+                </span>
+              ))}
+            </div>
+          ) : null}
         </div>
       </SectionCard>
 

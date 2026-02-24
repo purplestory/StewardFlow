@@ -206,6 +206,7 @@ export default function ReturnVerificationForm({
                   : resourceType === "space"
                   ? (info.space_id ?? null)
                   : (info.vehicle_id ?? null),
+              borrower_name: borrowerProfile.name ?? null,
               verification_status: verificationStatus,
               status: verificationStatus,
             };

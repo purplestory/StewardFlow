@@ -17,7 +17,14 @@ const cx = (...classes: Array<string | false | null | undefined>) =>
 
 export default function BreadcrumbBar({ items, className }: BreadcrumbBarProps) {
   return (
-    <nav aria-label="브레드크럼" className={cx("surface-panel px-4 py-3 md:px-5", className)}>
+    <nav
+      aria-label="브레드크럼"
+      className={cx(
+        "rounded-2xl border border-slate-200/90 bg-white/95 px-4 py-2 md:px-5 md:py-2.5",
+        "shadow-[0_2px_10px_rgba(15,23,42,0.04)]",
+        className
+      )}
+    >
       <ol className="flex items-center gap-2 overflow-x-auto whitespace-nowrap text-sm text-neutral-500">
         {items.map((item, index) => {
           const isLast = index === items.length - 1;

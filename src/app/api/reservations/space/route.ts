@@ -156,7 +156,8 @@ export async function PATCH(request: Request) {
               reservationDetail.start_date,
               reservationDetail.end_date,
               reservationDetail.end_date, // 반납 기한
-              "space"
+              "space",
+              reservation.space_id
             );
           }
         }

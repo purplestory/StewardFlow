@@ -97,7 +97,7 @@ export default function NotificationBadge() {
   return (
     <Link
       href="/notifications"
-      className="relative inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-neutral-700 transition-colors hover:bg-slate-50 hover:text-slate-900"
+      className="header-icon-button relative"
       aria-label={`알림 ${count}개`}
     >
       <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

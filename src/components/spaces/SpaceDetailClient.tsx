@@ -147,46 +147,50 @@ export default function SpaceDetailClient() {
       />
 
       <SectionCard bodyClassName="p-5 md:p-6">
-        <div className="space-y-5">
-          <ImageSlider
-            images={
-              space.image_urls && space.image_urls.length > 0
-                ? space.image_urls
-                : space.image_url
-                  ? [space.image_url]
-                  : []
-            }
-            alt={space.name}
-          />
-
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div className="min-w-0 space-y-1">
-              <div className="flex flex-wrap items-center gap-2">
-                <h1 className="break-words text-2xl font-bold text-neutral-900">{space.name}</h1>
-                <ResourceStatusBadge
-                  status={space.status as "available" | "rented" | "repair" | "lost"}
-                  label={statusLabel[space.status]}
-                />
-              </div>
-              <p className="text-sm text-neutral-600">
-                위치: {space.location || "미등록"} · 수용 인원:{" "}
-                {space.capacity ? `${space.capacity}명` : "미등록"}
-              </p>
-            </div>
-            {editHref ? (
-              <Link
-                href={editHref}
-                className="btn-secondary h-9 gap-1.5 px-3 text-sm"
-                title="수정"
-                aria-label="수정"
-              >
-                <EditIcon />
-                <span>수정</span>
-              </Link>
-            ) : null}
+        <div className="grid gap-5 xl:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)] xl:items-start">
+          <div className="min-w-0">
+            <ImageSlider
+              images={
+                space.image_urls && space.image_urls.length > 0
+                  ? space.image_urls
+                  : space.image_url
+                    ? [space.image_url]
+                    : []
+              }
+              alt={space.name}
+            />
           </div>
 
-          <ResourceInfoGrid items={infoItems} />
+          <div className="min-w-0 space-y-4">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div className="min-w-0 space-y-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h1 className="break-words text-2xl font-bold text-neutral-900">{space.name}</h1>
+                  <ResourceStatusBadge
+                    status={space.status as "available" | "rented" | "repair" | "lost"}
+                    label={statusLabel[space.status]}
+                  />
+                </div>
+                <p className="text-sm text-neutral-600">
+                  위치: {space.location || "미등록"} · 수용 인원:{" "}
+                  {space.capacity ? `${space.capacity}명` : "미등록"}
+                </p>
+              </div>
+              {editHref ? (
+                <Link
+                  href={editHref}
+                  className="btn-secondary h-9 gap-1.5 px-3 text-sm"
+                  title="수정"
+                  aria-label="수정"
+                >
+                  <EditIcon />
+                  <span>수정</span>
+                </Link>
+              ) : null}
+            </div>
+
+            <ResourceInfoGrid items={infoItems} />
+          </div>
         </div>
       </SectionCard>
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useActionState } from "react";
+import { useActionState, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { createReservation } from "@/actions/booking-actions";
 import { supabase } from "@/lib/supabase";
@@ -43,151 +43,323 @@ const formatTimeValue = (hour24: number, minute: number) =>
 const normalizeTotalMinutes = (totalMinutes: number) =>
   ((totalMinutes % MINUTES_PER_DAY) + MINUTES_PER_DAY) % MINUTES_PER_DAY;
 
-type TimeStepperFieldProps = {
+const formatDateLabel = (value: string) => {
+  if (!value) return "날짜 선택";
+  const [year, month, day] = value.split("-");
+  if (!year || !month || !day) return value;
+  return `${year}. ${month}. ${day}.`;
+};
+
+const toNormalizedTime = (value: string, fallback = "09:00") => {
+  const { hour24, minute } = parseTimeValue(value, fallback);
+  return formatTimeValue(hour24, minute);
+};
+
+const formatDateTimeSummary = (dateValue: string, timeValue: string, fallbackTime: string) => {
+  const dateLabel = formatDateLabel(dateValue);
+  const normalizedTime = toNormalizedTime(timeValue, fallbackTime);
+  return `${dateLabel} ${normalizedTime}`;
+};
+
+const buildTimeDraft = (value: string, fallbackTime: string) => {
+  const normalized = toNormalizedTime(value, fallbackTime);
+  const { hour24, minute } = parseTimeValue(normalized, fallbackTime);
+  const period = hour24 < 12 ? "AM" : "PM";
+  const hour12 = hour24 % 12 || 12;
+
+  return {
+    period: period as "AM" | "PM",
+    hour12: String(hour12).padStart(2, "0"),
+    minute: String(minute).padStart(2, "0"),
+  };
+};
+
+type TimeInputFieldProps = {
   value: string;
   onChange: (value: string) => void;
   disabled?: boolean;
-  name: string;
+  id: string;
 };
 
-function TimeStepperField({
+function TimeInputField({
   value,
   onChange,
   disabled = false,
-  name,
-}: TimeStepperFieldProps) {
-  const { hour24, minute } = parseTimeValue(value);
-  const isPm = hour24 >= 12;
-  const hour12 = hour24 % 12 === 0 ? 12 : hour24 % 12;
-
-  const setTime = (nextHour24: number, nextMinute: number) => {
-    const safeHour = ((nextHour24 % 24) + 24) % 24;
-    const safeMinute = ((nextMinute % 60) + 60) % 60;
-    onChange(formatTimeValue(safeHour, safeMinute));
-  };
-
-  const shiftMinutes = (delta: number) => {
+  id,
+}: TimeInputFieldProps) {
+  const shiftBy = (deltaMinutes: number) => {
+    const { hour24, minute } = parseTimeValue(value, "09:00");
     const currentTotal = hour24 * 60 + minute;
-    const normalized = normalizeTotalMinutes(currentTotal + delta);
-    setTime(Math.floor(normalized / 60), normalized % 60);
-  };
-
-  const setPeriod = (nextPm: boolean) => {
-    const baseHour = hour12 % 12;
-    const nextHour24 = nextPm ? baseHour + 12 : baseHour;
-    setTime(nextHour24, minute);
-  };
-
-  const setHour12 = (nextHour12: number) => {
-    const clamped = Math.min(Math.max(nextHour12, 1), 12);
-    const nextHour24 = (clamped % 12) + (isPm ? 12 : 0);
-    setTime(nextHour24, minute);
-  };
-
-  const setMinute = (nextMinute: number) => {
-    const clamped = Math.min(Math.max(nextMinute, 0), 59);
-    setTime(hour24, clamped);
+    const normalized = normalizeTotalMinutes(currentTotal + deltaMinutes);
+    const nextHour = Math.floor(normalized / 60);
+    const nextMinute = normalized % 60;
+    onChange(formatTimeValue(nextHour, nextMinute));
   };
 
   return (
-    <div className="space-y-2 rounded-xl border border-neutral-200 bg-white p-3">
-      <input type="hidden" name={name} value={formatTimeValue(hour24, minute)} />
-      <div className="inline-flex rounded-lg border border-neutral-200 bg-neutral-50 p-1">
-        <button
-          type="button"
-          onClick={() => setPeriod(false)}
-          disabled={disabled}
-          className={`h-8 rounded-md px-3 text-sm font-medium transition-colors ${
-            !isPm ? "bg-slate-900 text-white" : "text-neutral-700 hover:bg-white"
-          }`}
-        >
-          오전
-        </button>
-        <button
-          type="button"
-          onClick={() => setPeriod(true)}
-          disabled={disabled}
-          className={`h-8 rounded-md px-3 text-sm font-medium transition-colors ${
-            isPm ? "bg-slate-900 text-white" : "text-neutral-700 hover:bg-white"
-          }`}
-        >
-          오후
-        </button>
-      </div>
+    <input
+      id={id}
+      type="text"
+      inputMode="numeric"
+      value={value}
+      onChange={(event) => {
+        const raw = event.target.value.replace(/[^\d:]/g, "");
+        if (!raw) {
+          onChange("");
+          return;
+        }
 
-      <div className="grid grid-cols-2 gap-2">
-        <div className="space-y-1">
-          <p className="text-xs font-medium text-neutral-600">시간</p>
-          <div className="grid grid-cols-[36px_1fr_36px] items-center gap-1">
-            <button
-              type="button"
-              onClick={() => shiftMinutes(60)}
-              disabled={disabled}
-              className="btn-secondary h-9 px-0 text-sm"
-              aria-label="시간 증가"
-            >
-              ▲
-            </button>
-            <input
-              type="number"
-              min={1}
-              max={12}
-              value={hour12}
-              onChange={(event) => {
-                const next = Number.parseInt(event.target.value, 10);
-                if (Number.isNaN(next)) return;
-                setHour12(next);
-              }}
-              className="form-input h-9 px-2 text-center tabular-nums"
-              disabled={disabled}
-            />
-            <button
-              type="button"
-              onClick={() => shiftMinutes(-60)}
-              disabled={disabled}
-              className="btn-secondary h-9 px-0 text-sm"
-              aria-label="시간 감소"
-            >
-              ▼
-            </button>
+        if (raw.includes(":")) {
+          const [rawHour = "", rawMinute = ""] = raw.split(":");
+          const hour = rawHour.slice(0, 2);
+          const minute = rawMinute.slice(0, 2);
+          const hasTrailingColon = raw.endsWith(":") && minute.length === 0;
+          onChange(hasTrailingColon ? `${hour}:` : `${hour}${minute ? `:${minute}` : ""}`);
+          return;
+        }
+
+        const digits = raw.slice(0, 4);
+        if (digits.length <= 2) {
+          onChange(digits);
+          return;
+        }
+
+        onChange(`${digits.slice(0, 2)}:${digits.slice(2)}`);
+      }}
+      onBlur={() => onChange(toNormalizedTime(value, "09:00"))}
+      onKeyDown={(event) => {
+        if (event.key !== "ArrowUp" && event.key !== "ArrowDown") return;
+        event.preventDefault();
+        const position = event.currentTarget.selectionStart ?? value.length;
+        const delta =
+          position <= 2
+            ? event.key === "ArrowUp"
+              ? 60
+              : -60
+            : event.key === "ArrowUp"
+            ? 10
+            : -10;
+        shiftBy(delta);
+      }}
+      placeholder="13:20"
+      className="form-input h-10 px-3 text-center text-base tabular-nums"
+      disabled={disabled}
+    />
+  );
+}
+
+type WheelOption = {
+  value: string;
+  label: string;
+};
+
+type WheelColumnProps = {
+  label: string;
+  options: WheelOption[];
+  value: string;
+  onChange: (value: string) => void;
+  disabled?: boolean;
+};
+
+function WheelColumn({
+  label,
+  options,
+  value,
+  onChange,
+  disabled = false,
+}: WheelColumnProps) {
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const itemHeight = 40;
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const targetIndex = options.findIndex((option) => option.value === value);
+    if (targetIndex < 0) return;
+    el.scrollTo({ top: targetIndex * itemHeight, behavior: "smooth" });
+  }, [options, value]);
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el || disabled) return;
+
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
+    const handleScroll = () => {
+      if (timeoutId) clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => {
+        const index = Math.round(el.scrollTop / itemHeight);
+        const safeIndex = Math.max(0, Math.min(options.length - 1, index));
+        const selected = options[safeIndex];
+        el.scrollTo({ top: safeIndex * itemHeight, behavior: "smooth" });
+        if (selected && selected.value !== value) {
+          onChange(selected.value);
+        }
+      }, 80);
+    };
+
+    el.addEventListener("scroll", handleScroll, { passive: true });
+    return () => {
+      el.removeEventListener("scroll", handleScroll);
+      if (timeoutId) clearTimeout(timeoutId);
+    };
+  }, [disabled, onChange, options, value]);
+
+  return (
+    <div className="space-y-2">
+      <p className="text-center text-xs font-medium text-neutral-500">{label}</p>
+      <div className="relative">
+        <div
+          ref={containerRef}
+          className="h-52 overflow-y-auto overscroll-contain py-20 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        >
+          <div className="space-y-0">
+            {options.map((option, index) => {
+              const isSelected = option.value === value;
+              return (
+                <button
+                  key={`${label}-${option.value}`}
+                  type="button"
+                  onClick={() => {
+                    if (disabled) return;
+                    onChange(option.value);
+                    containerRef.current?.scrollTo({ top: index * itemHeight, behavior: "smooth" });
+                  }}
+                  className={`h-10 w-full text-center text-lg tabular-nums transition-colors ${
+                    isSelected ? "font-semibold text-slate-900" : "text-neutral-400"
+                  }`}
+                  disabled={disabled}
+                >
+                  {option.label}
+                </button>
+              );
+            })}
           </div>
         </div>
+        <div className="pointer-events-none absolute inset-x-2 top-1/2 h-10 -translate-y-1/2 rounded-xl border border-slate-200 bg-slate-50/70" />
+      </div>
+    </div>
+  );
+}
 
-        <div className="space-y-1">
-          <p className="text-xs font-medium text-neutral-600">분</p>
-          <div className="grid grid-cols-[36px_1fr_36px] items-center gap-1">
-            <button
-              type="button"
-              onClick={() => shiftMinutes(10)}
-              disabled={disabled}
-              className="btn-secondary h-9 px-0 text-sm"
-              aria-label="분 증가"
-            >
-              ▲
-            </button>
-            <input
-              type="number"
-              min={0}
-              max={59}
-              step={10}
-              value={minute}
-              onChange={(event) => {
-                const next = Number.parseInt(event.target.value, 10);
-                if (Number.isNaN(next)) return;
-                setMinute(next);
-              }}
-              className="form-input h-9 px-2 text-center tabular-nums"
+type MobileTimePickerSheetProps = {
+  label: string;
+  value: string;
+  fallbackTime: string;
+  onClose: () => void;
+  onApply: (value: string) => void;
+  disabled?: boolean;
+};
+
+function MobileTimePickerSheet({
+  label,
+  value,
+  fallbackTime,
+  onClose,
+  onApply,
+  disabled = false,
+}: MobileTimePickerSheetProps) {
+  const initialDraft = buildTimeDraft(value, fallbackTime);
+  const [period, setPeriod] = useState<"AM" | "PM">(initialDraft.period);
+  const [hour12, setHour12] = useState(initialDraft.hour12);
+  const [minute, setMinute] = useState(initialDraft.minute);
+
+  useEffect(() => {
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, []);
+
+  const hourOptions = useMemo<WheelOption[]>(
+    () =>
+      Array.from({ length: 12 }, (_, index) => {
+        const display = index + 1;
+        const value = String(display).padStart(2, "0");
+        return { value, label: value };
+      }),
+    []
+  );
+
+  const minuteOptions = useMemo<WheelOption[]>(
+    () =>
+      Array.from({ length: 60 }, (_, index) => {
+        const formatted = String(index).padStart(2, "0");
+        return { value: formatted, label: formatted };
+      }),
+    []
+  );
+
+  const periodOptions = useMemo<WheelOption[]>(
+    () => [
+      { value: "AM", label: "오전" },
+      { value: "PM", label: "오후" },
+    ],
+    []
+  );
+
+  const handleConfirm = useCallback(() => {
+    const numericHour12 = Number.parseInt(hour12, 10) || 9;
+    const numericMinute = Number.parseInt(minute, 10) || 0;
+    const safeHour12 = Math.min(Math.max(numericHour12, 1), 12);
+    const safeMinute = Math.min(Math.max(numericMinute, 0), 59);
+    const computedHour24 = period === "AM" ? safeHour12 % 12 : (safeHour12 % 12) + 12;
+    onApply(formatTimeValue(computedHour24, safeMinute));
+    onClose();
+  }, [hour12, minute, onApply, onClose, period]);
+
+  return (
+    <div className="fixed inset-0 z-[90] md:hidden">
+      <button
+        type="button"
+        aria-label="시간 선택 닫기"
+        className="absolute inset-0 bg-black/40"
+        onClick={onClose}
+      />
+      <div className="absolute inset-x-0 bottom-0 rounded-t-3xl border-t border-neutral-200 bg-white p-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] shadow-2xl">
+        <div className="mb-3 flex items-center justify-between">
+          <button
+            type="button"
+            className="text-sm font-medium text-neutral-500"
+            onClick={onClose}
+            disabled={disabled}
+          >
+            취소
+          </button>
+          <p className="text-sm font-semibold text-neutral-800">{label}</p>
+          <button
+            type="button"
+            className="text-sm font-semibold text-slate-700 disabled:text-neutral-400"
+            onClick={handleConfirm}
+            disabled={disabled}
+          >
+            완료
+          </button>
+        </div>
+
+        <div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-3">
+          <div className="grid grid-cols-3 gap-2">
+            <WheelColumn
+              label="오전/오후"
+              options={periodOptions}
+              value={period}
+              onChange={(next) => setPeriod(next as "AM" | "PM")}
               disabled={disabled}
             />
-            <button
-              type="button"
-              onClick={() => shiftMinutes(-10)}
+            <WheelColumn
+              label="시"
+              options={hourOptions}
+              value={hour12}
+              onChange={setHour12}
               disabled={disabled}
-              className="btn-secondary h-9 px-0 text-sm"
-              aria-label="분 감소"
-            >
-              ▼
-            </button>
+            />
+            <WheelColumn
+              label="분"
+              options={minuteOptions}
+              value={minute}
+              onChange={setMinute}
+              disabled={disabled}
+            />
           </div>
         </div>
       </div>
@@ -243,6 +415,9 @@ export default function ReservationForm({
   const [recurrenceEndDate, setRecurrenceEndDate] = useState("");
   const [selectedDaysOfWeek, setSelectedDaysOfWeek] = useState<number[]>([]);
   const [dayOfMonth, setDayOfMonth] = useState<number>(1);
+  const [mobileStartOpen, setMobileStartOpen] = useState(false);
+  const [mobileEndOpen, setMobileEndOpen] = useState(false);
+  const [mobileTimeSheetTarget, setMobileTimeSheetTarget] = useState<"start" | "end" | null>(null);
 
   useEffect(() => {
     const loadSession = async () => {
@@ -294,6 +469,8 @@ export default function ReservationForm({
 
   const dayNames = ["일", "월", "화", "수", "목", "금", "토"];
   const formDisabled = isDisabled || isPending;
+  const normalizedStartTime = toNormalizedTime(startTime, "09:00");
+  const normalizedEndTime = toNormalizedTime(endTime, "18:00");
   const submitLabel = resourceType === "space" ? "예약 신청" : "대여 신청";
   const reservationQueryKey =
     resourceType === "space"
@@ -381,11 +558,12 @@ export default function ReservationForm({
       ) : null}
       <fieldset disabled={formDisabled} className="space-y-4">
         <div className="space-y-3">
-          <div className="grid w-full grid-cols-1 gap-4">
+          <div className="hidden w-full gap-4 md:grid md:grid-cols-2">
             <div className="min-w-0 space-y-2">
-              <label className="form-label">시작일시</label>
-              <div className="grid grid-cols-1 gap-2">
+              <label className="form-label" htmlFor="start-date-desktop">시작일시</label>
+              <div className="grid grid-cols-[minmax(0,1fr)_116px] gap-2">
                 <input
+                  id="start-date-desktop"
                   type="date"
                   value={startDate}
                   onChange={(e) => setStartDate(e.target.value)}
@@ -394,18 +572,20 @@ export default function ReservationForm({
                   required
                   disabled={formDisabled}
                 />
-                <TimeStepperField
+                <TimeInputField
+                  id="start-time-desktop"
                   value={startTime}
                   onChange={setStartTime}
                   disabled={formDisabled}
-                  name="start_time"
                 />
               </div>
             </div>
+
             <div className="min-w-0 space-y-2">
-              <label className="form-label">종료일시</label>
-              <div className="grid grid-cols-1 gap-2">
+              <label className="form-label" htmlFor="end-date-desktop">종료일시</label>
+              <div className="grid grid-cols-[minmax(0,1fr)_116px] gap-2">
                 <input
+                  id="end-date-desktop"
                   type="date"
                   value={endDate}
                   onChange={(e) => setEndDate(e.target.value)}
@@ -414,14 +594,103 @@ export default function ReservationForm({
                   required
                   disabled={formDisabled}
                 />
-                <TimeStepperField
+                <TimeInputField
+                  id="end-time-desktop"
                   value={endTime}
                   onChange={setEndTime}
                   disabled={formDisabled}
-                  name="end_time"
                 />
               </div>
             </div>
+          </div>
+
+          <div className="space-y-3 md:hidden">
+            <div className="rounded-xl border border-neutral-200 bg-white">
+              <button
+                type="button"
+                onClick={() => {
+                  setMobileStartOpen((prev) => !prev);
+                  setMobileEndOpen(false);
+                }}
+                className="flex w-full items-center justify-between px-3 py-2.5 text-left"
+              >
+                <span className="text-sm font-semibold text-neutral-800">시작일시</span>
+                <span className="text-sm tabular-nums text-neutral-700">
+                  {formatDateTimeSummary(startDate, startTime, "09:00")}
+                </span>
+              </button>
+              {mobileStartOpen ? (
+                <div className="grid gap-2 border-t border-neutral-200 p-3">
+                  <input
+                    id="start-date-mobile"
+                    type="date"
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                    max={endDate || undefined}
+                    className="form-input min-w-0 text-base"
+                    required
+                    disabled={formDisabled}
+                  />
+                  <button
+                    id="start-time-mobile"
+                    type="button"
+                    onClick={() => setMobileTimeSheetTarget("start")}
+                    className="form-input flex h-10 items-center justify-between px-3 text-sm tabular-nums text-neutral-700"
+                    disabled={formDisabled}
+                  >
+                    <span className="text-neutral-500">시간</span>
+                    <span className="font-medium text-neutral-900">
+                      {toNormalizedTime(startTime, "09:00")}
+                    </span>
+                  </button>
+                </div>
+              ) : null}
+            </div>
+
+            <div className="rounded-xl border border-neutral-200 bg-white">
+              <button
+                type="button"
+                onClick={() => {
+                  setMobileEndOpen((prev) => !prev);
+                  setMobileStartOpen(false);
+                }}
+                className="flex w-full items-center justify-between px-3 py-2.5 text-left"
+              >
+                <span className="text-sm font-semibold text-neutral-800">종료일시</span>
+                <span className="text-sm tabular-nums text-neutral-700">
+                  {formatDateTimeSummary(endDate, endTime, "18:00")}
+                </span>
+              </button>
+              {mobileEndOpen ? (
+                <div className="grid gap-2 border-t border-neutral-200 p-3">
+                  <input
+                    id="end-date-mobile"
+                    type="date"
+                    value={endDate}
+                    onChange={(e) => setEndDate(e.target.value)}
+                    min={startDate || undefined}
+                    className="form-input min-w-0 text-base"
+                    required
+                    disabled={formDisabled}
+                  />
+                  <button
+                    id="end-time-mobile"
+                    type="button"
+                    onClick={() => setMobileTimeSheetTarget("end")}
+                    className="form-input flex h-10 items-center justify-between px-3 text-sm tabular-nums text-neutral-700"
+                    disabled={formDisabled}
+                  >
+                    <span className="text-neutral-500">시간</span>
+                    <span className="font-medium text-neutral-900">
+                      {toNormalizedTime(endTime, "18:00")}
+                    </span>
+                  </button>
+                </div>
+              ) : null}
+            </div>
+          </div>
+
+          <div className="min-w-0 space-y-2">
             <div className="min-w-0 space-y-2">
               <label className="form-label">반복 유형</label>
               <Select
@@ -451,12 +720,12 @@ export default function ReservationForm({
           <input
             type="hidden"
             name="start_date"
-            value={startDate && startTime ? `${startDate}T${startTime}:00` : ""}
+            value={startDate ? `${startDate}T${normalizedStartTime}:00` : ""}
           />
           <input
             type="hidden"
             name="end_date"
-            value={endDate && endTime ? `${endDate}T${endTime}:00` : ""}
+            value={endDate ? `${endDate}T${normalizedEndTime}:00` : ""}
           />
 
           {showRecurrence && recurrenceType !== "none" && (
@@ -655,6 +924,24 @@ export default function ReservationForm({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {mobileTimeSheetTarget ? (
+        <MobileTimePickerSheet
+          key={`${mobileTimeSheetTarget}-${mobileTimeSheetTarget === "start" ? startTime : endTime}`}
+          label={mobileTimeSheetTarget === "start" ? "시작 시간 선택" : "종료 시간 선택"}
+          value={mobileTimeSheetTarget === "start" ? startTime : endTime}
+          fallbackTime={mobileTimeSheetTarget === "start" ? "09:00" : "18:00"}
+          onClose={() => setMobileTimeSheetTarget(null)}
+          onApply={(next) => {
+            if (mobileTimeSheetTarget === "start") {
+              setStartTime(next);
+            } else {
+              setEndTime(next);
+            }
+          }}
+          disabled={formDisabled}
+        />
+      ) : null}
     </form>
   );
 }

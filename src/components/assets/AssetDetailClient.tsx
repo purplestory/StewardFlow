@@ -214,58 +214,62 @@ export default function AssetDetailClient() {
       />
 
       <SectionCard bodyClassName="p-5 md:p-6">
-        <div className="space-y-5">
-          <ImageSlider
-            images={
-              asset.image_urls && asset.image_urls.length > 0
-                ? asset.image_urls
-                : asset.image_url
-                  ? [asset.image_url]
-                  : []
-            }
-            alt={asset.name}
-          />
-
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div className="min-w-0 space-y-1">
-              <div className="flex flex-wrap items-center gap-2">
-                <h1 className="break-words text-2xl font-bold text-neutral-900">{asset.name}</h1>
-                <ResourceStatusBadge
-                  status={statusTone as "available" | "rented" | "repair" | "lost" | "retired"}
-                  label={statusLabel}
-                />
-              </div>
-              <p className="text-sm text-neutral-600">
-                보관 위치: {asset.location || "미등록"} · 소유:{" "}
-                {asset.owner_scope === "organization"
-                  ? "기관 공용"
-                  : asset.owner_department || "미등록"}
-              </p>
-            </div>
-            {editHref ? (
-              <Link
-                href={editHref}
-                className="btn-secondary h-9 gap-1.5 px-3 text-sm"
-                title="수정"
-                aria-label="수정"
-              >
-                <EditIcon />
-                <span>수정</span>
-              </Link>
-            ) : null}
+        <div className="grid gap-5 xl:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)] xl:items-start">
+          <div className="min-w-0">
+            <ImageSlider
+              images={
+                asset.image_urls && asset.image_urls.length > 0
+                  ? asset.image_urls
+                  : asset.image_url
+                    ? [asset.image_url]
+                    : []
+              }
+              alt={asset.name}
+            />
           </div>
 
-          <ResourceInfoGrid items={infoItems} />
-
-          {tags.length > 0 ? (
-            <div className="flex flex-wrap gap-1.5">
-              {tags.map((tag) => (
-                <span key={tag} className="chip-muted">
-                  {tag}
-                </span>
-              ))}
+          <div className="min-w-0 space-y-4">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div className="min-w-0 space-y-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h1 className="break-words text-2xl font-bold text-neutral-900">{asset.name}</h1>
+                  <ResourceStatusBadge
+                    status={statusTone as "available" | "rented" | "repair" | "lost" | "retired"}
+                    label={statusLabel}
+                  />
+                </div>
+                <p className="text-sm text-neutral-600">
+                  보관 위치: {asset.location || "미등록"} · 소유:{" "}
+                  {asset.owner_scope === "organization"
+                    ? "기관 공용"
+                    : asset.owner_department || "미등록"}
+                </p>
+              </div>
+              {editHref ? (
+                <Link
+                  href={editHref}
+                  className="btn-secondary h-9 gap-1.5 px-3 text-sm"
+                  title="수정"
+                  aria-label="수정"
+                >
+                  <EditIcon />
+                  <span>수정</span>
+                </Link>
+              ) : null}
             </div>
-          ) : null}
+
+            <ResourceInfoGrid items={infoItems} />
+
+            {tags.length > 0 ? (
+              <div className="flex flex-wrap gap-1.5">
+                {tags.map((tag) => (
+                  <span key={tag} className="chip-muted">
+                    {tag}
+                  </span>
+                ))}
+              </div>
+            ) : null}
+          </div>
         </div>
       </SectionCard>
 

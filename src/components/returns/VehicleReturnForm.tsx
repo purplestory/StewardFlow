@@ -270,6 +270,14 @@ export default function VehicleReturnForm({
             ? reservationInfo.vehicles[0]
             : reservationInfo.vehicles;
 
+          const { data: borrowerProfile } = reservationInfo.borrower_id
+            ? await supabase
+                .from("profiles")
+                .select("name")
+                .eq("id", reservationInfo.borrower_id)
+                .maybeSingle()
+            : { data: null };
+
           const { data: adminProfiles } = await supabase
             .from("profiles")
             .select("id")
@@ -280,6 +288,7 @@ export default function VehicleReturnForm({
             resource_type: "vehicle",
             resource_name: vehicleJoin?.name ?? null,
             resource_id: reservationInfo.vehicle_id,
+            borrower_name: borrowerProfile?.name ?? null,
             status: "returned",
             return_date: new Date().toISOString(),
           };

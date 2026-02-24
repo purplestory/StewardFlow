@@ -9,6 +9,46 @@ type KakaoMessageResult = {
   messageId?: string;
 };
 
+type ResourceType = "asset" | "space" | "vehicle";
+
+type KakaoMessageOptions = {
+  serviceUrl?: string;
+};
+
+function resolveDefaultServiceUrl(): string | undefined {
+  const configured =
+    process.env.KAKAO_SERVICE_URL ||
+    process.env.NEXT_PUBLIC_APP_URL ||
+    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "");
+
+  if (!configured) return undefined;
+
+  try {
+    return new URL(configured).toString();
+  } catch {
+    return undefined;
+  }
+}
+
+function buildResourceDetailPath(resourceType: ResourceType, resourceId?: string | null): string | null {
+  if (!resourceId) return null;
+  if (resourceType === "space") return `/spaces/${resourceId}`;
+  if (resourceType === "vehicle") return `/vehicles/${resourceId}`;
+  return `/assets/${resourceId}`;
+}
+
+function buildServiceUrl(path?: string | null): string | undefined {
+  const fallback = resolveDefaultServiceUrl();
+  if (!fallback) return undefined;
+  if (!path) return fallback;
+
+  try {
+    return new URL(path, fallback).toString();
+  } catch {
+    return fallback;
+  }
+}
+
 /**
  * 카카오톡 알림톡 발송
  * @param phoneNumber 수신자 전화번호 (하이픈 제거, 숫자만)
@@ -18,12 +58,13 @@ type KakaoMessageResult = {
 export async function sendKakaoAlimTalk(
   phoneNumber: string,
   templateCode: string,
-  templateArgs: Record<string, string>
+  templateArgs: Record<string, string>,
+  options: KakaoMessageOptions = {}
 ): Promise<KakaoMessageResult> {
   // 카카오 비즈니스 메시지 API 키 확인
   const apiKey = process.env.KAKAO_BUSINESS_API_KEY;
   const channelId = process.env.KAKAO_CHANNEL_ID;
-  const serviceUrl = process.env.KAKAO_SERVICE_URL;
+  const serviceUrl = buildServiceUrl(options.serviceUrl);
 
   if (!apiKey || !channelId) {
     console.warn("카카오톡 API 키가 설정되지 않았습니다. 알림을 발송하지 않습니다.");
@@ -84,10 +125,12 @@ export async function sendReservationRequestToAdmin(
   borrowerDepartment: string | null,
   startDate: string,
   endDate: string,
-  resourceType: "asset" | "space" | "vehicle"
+  resourceType: ResourceType,
+  resourceId?: string | null
 ): Promise<KakaoMessageResult> {
   const resourceTypeLabel = resourceType === "asset" ? "물품" : resourceType === "space" ? "공간" : "차량";
   const deptText = borrowerDepartment ? `(${borrowerDepartment})` : "";
+  const detailPath = buildResourceDetailPath(resourceType, resourceId);
   
   return sendKakaoAlimTalk(adminPhone, "RESERVATION_REQUEST_ADMIN", {
     resource_type: resourceTypeLabel,
@@ -96,6 +139,8 @@ export async function sendReservationRequestToAdmin(
     borrower_department: deptText,
     start_date: new Date(startDate).toLocaleDateString("ko-KR"),
     end_date: new Date(endDate).toLocaleDateString("ko-KR"),
+  }, {
+    serviceUrl: detailPath ?? undefined,
   });
 }
 
@@ -107,15 +152,19 @@ export async function sendReservationRequestToBorrower(
   resourceName: string,
   startDate: string,
   endDate: string,
-  resourceType: "asset" | "space" | "vehicle"
+  resourceType: ResourceType,
+  resourceId?: string | null
 ): Promise<KakaoMessageResult> {
   const resourceTypeLabel = resourceType === "asset" ? "물품" : resourceType === "space" ? "공간" : "차량";
+  const detailPath = buildResourceDetailPath(resourceType, resourceId);
   
   return sendKakaoAlimTalk(borrowerPhone, "RESERVATION_REQUEST_BORROWER", {
     resource_type: resourceTypeLabel,
     resource_name: resourceName,
     start_date: new Date(startDate).toLocaleDateString("ko-KR"),
     end_date: new Date(endDate).toLocaleDateString("ko-KR"),
+  }, {
+    serviceUrl: detailPath ?? undefined,
   });
 }
 
@@ -128,9 +177,11 @@ export async function sendReservationApprovalToBorrower(
   startDate: string,
   endDate: string,
   returnDeadline: string,
-  resourceType: "asset" | "space" | "vehicle"
+  resourceType: ResourceType,
+  resourceId?: string | null
 ): Promise<KakaoMessageResult> {
   const resourceTypeLabel = resourceType === "asset" ? "물품" : resourceType === "space" ? "공간" : "차량";
+  const detailPath = buildResourceDetailPath(resourceType, resourceId);
   
   return sendKakaoAlimTalk(borrowerPhone, "RESERVATION_APPROVED", {
     resource_type: resourceTypeLabel,
@@ -138,6 +189,8 @@ export async function sendReservationApprovalToBorrower(
     start_date: new Date(startDate).toLocaleDateString("ko-KR"),
     end_date: new Date(endDate).toLocaleDateString("ko-KR"),
     return_deadline: new Date(returnDeadline).toLocaleDateString("ko-KR"),
+  }, {
+    serviceUrl: detailPath ?? undefined,
   });
 }
 
@@ -149,15 +202,19 @@ export async function sendReturnSubmittedToAdmin(
   resourceName: string,
   borrowerName: string,
   returnDate: string,
-  resourceType: "asset" | "space" | "vehicle"
+  resourceType: ResourceType,
+  resourceId?: string | null
 ): Promise<KakaoMessageResult> {
   const resourceTypeLabel = resourceType === "asset" ? "물품" : resourceType === "space" ? "공간" : "차량";
+  const detailPath = buildResourceDetailPath(resourceType, resourceId);
   
   return sendKakaoAlimTalk(adminPhone, "RETURN_SUBMITTED_ADMIN", {
     resource_type: resourceTypeLabel,
     resource_name: resourceName,
     borrower_name: borrowerName,
     return_date: new Date(returnDate).toLocaleDateString("ko-KR"),
+  }, {
+    serviceUrl: detailPath ?? undefined,
   });
 }
 
@@ -168,14 +225,18 @@ export async function sendReturnSubmittedToBorrower(
   borrowerPhone: string,
   resourceName: string,
   returnDate: string,
-  resourceType: "asset" | "space" | "vehicle"
+  resourceType: ResourceType,
+  resourceId?: string | null
 ): Promise<KakaoMessageResult> {
   const resourceTypeLabel = resourceType === "asset" ? "물품" : resourceType === "space" ? "공간" : "차량";
+  const detailPath = buildResourceDetailPath(resourceType, resourceId);
   
   return sendKakaoAlimTalk(borrowerPhone, "RETURN_SUBMITTED_BORROWER", {
     resource_type: resourceTypeLabel,
     resource_name: resourceName,
     return_date: new Date(returnDate).toLocaleDateString("ko-KR"),
+  }, {
+    serviceUrl: detailPath ?? undefined,
   });
 }
 
@@ -187,16 +248,20 @@ export async function sendReturnApprovalToAdmin(
   resourceName: string,
   borrowerName: string,
   verificationStatus: "verified" | "rejected",
-  resourceType: "asset" | "space" | "vehicle"
+  resourceType: ResourceType,
+  resourceId?: string | null
 ): Promise<KakaoMessageResult> {
   const resourceTypeLabel = resourceType === "asset" ? "물품" : resourceType === "space" ? "공간" : "차량";
   const statusText = verificationStatus === "verified" ? "승인" : "반려";
+  const detailPath = buildResourceDetailPath(resourceType, resourceId);
   
   return sendKakaoAlimTalk(adminPhone, "RETURN_APPROVED_ADMIN", {
     resource_type: resourceTypeLabel,
     resource_name: resourceName,
     borrower_name: borrowerName,
     verification_status: statusText,
+  }, {
+    serviceUrl: detailPath ?? undefined,
   });
 }
 
@@ -207,14 +272,18 @@ export async function sendReturnApprovalToBorrower(
   borrowerPhone: string,
   resourceName: string,
   verificationStatus: "verified" | "rejected",
-  resourceType: "asset" | "space" | "vehicle"
+  resourceType: ResourceType,
+  resourceId?: string | null
 ): Promise<KakaoMessageResult> {
   const resourceTypeLabel = resourceType === "asset" ? "물품" : resourceType === "space" ? "공간" : "차량";
   const statusText = verificationStatus === "verified" ? "승인" : "반려";
+  const detailPath = buildResourceDetailPath(resourceType, resourceId);
   
   return sendKakaoAlimTalk(borrowerPhone, "RETURN_APPROVED_BORROWER", {
     resource_type: resourceTypeLabel,
     resource_name: resourceName,
     verification_status: statusText,
+  }, {
+    serviceUrl: detailPath ?? undefined,
   });
 }

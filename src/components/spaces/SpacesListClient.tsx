@@ -213,12 +213,13 @@ export default function SpacesListClient() {
                     ? space.image_urls[0]
                     : space.image_url;
                 return (
-                  <div key={space.id} className="surface-card p-3 sm:p-4">
+                  <Link
+                    key={space.id}
+                    href={detailUrl}
+                    className="surface-card group block p-3 transition-colors hover:border-slate-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300 sm:p-4"
+                  >
                     <div className="flex items-start gap-3 sm:gap-4">
-                      <Link
-                        href={detailUrl}
-                        className="group block w-24 shrink-0 sm:w-36 md:w-44"
-                      >
+                      <div className="w-24 shrink-0 sm:w-36 md:w-44">
                         <div className="relative aspect-square w-full overflow-hidden rounded-xl border border-neutral-200 bg-neutral-100 sm:aspect-[4/3]">
                           {firstImage ? (
                             <Image
@@ -235,16 +236,13 @@ export default function SpacesListClient() {
                             </div>
                           )}
                         </div>
-                      </Link>
+                      </div>
 
                       <div className="min-w-0 flex-1 space-y-2">
                         <div className="flex flex-wrap items-center justify-between gap-2">
-                          <Link
-                            href={detailUrl}
-                            className="line-clamp-1 text-base font-semibold text-neutral-900 hover:text-slate-800 sm:text-lg"
-                          >
+                          <h3 className="line-clamp-1 text-base font-semibold text-neutral-900 transition-colors group-hover:text-slate-800 sm:text-lg">
                             {space.name}
-                          </Link>
+                          </h3>
                           <ResourceStatusBadge
                             status={space.status}
                             label={statusLabel[space.status]}
@@ -264,16 +262,9 @@ export default function SpacesListClient() {
                               : space.owner_department || "소유 부서 미등록"}
                           </p>
                         </div>
-
-                        <Link
-                          href={detailUrl}
-                          className="btn-secondary mt-2 inline-flex h-9 items-center px-3 text-sm font-semibold"
-                        >
-                          상세 보기
-                        </Link>
                       </div>
                     </div>
-                  </div>
+                  </Link>
                 );
               })}
             </div>

@@ -1,11 +1,28 @@
 import { sendTelegramMessage } from "@/lib/telegram-message";
 import { sendWebPushToUser } from "@/lib/web-push";
+import { createSupabaseAdmin } from "@/lib/supabase-admin";
+import {
+  sendReturnApprovalToAdmin,
+  sendReturnApprovalToBorrower,
+  sendReturnSubmittedToAdmin,
+  sendReturnSubmittedToBorrower,
+} from "@/lib/kakao-message";
 
 type DispatchNotificationChannelsParams = {
   userId: string;
   type: string;
   payload?: Record<string, unknown> | null;
 };
+
+type ProfileChannelTarget = {
+  id: string;
+  name: string | null;
+  phone: string | null;
+  role: string | null;
+};
+
+const isKakaoEnabled = () =>
+  Boolean(process.env.KAKAO_BUSINESS_API_KEY) && Boolean(process.env.KAKAO_CHANNEL_ID);
 
 function escapeHtml(value: string): string {
   return value
@@ -135,12 +152,72 @@ export async function dispatchNotificationChannels({
   payload,
 }: DispatchNotificationChannelsParams) {
   const safePayload = payload ?? {};
+  const admin = createSupabaseAdmin();
+  const { data: profile } = await admin
+    .from("profiles")
+    .select("id,name,phone,role")
+    .eq("id", userId)
+    .maybeSingle<ProfileChannelTarget>();
+
+  const recipient = profile ?? null;
+  const recipientPhone = recipient?.phone ?? null;
+  const resourceType = (safePayload.resource_type as "asset" | "space" | "vehicle" | undefined) ?? "asset";
+  const resourceName = (safePayload.resource_name as string | undefined) ?? "자원";
+  const resourceId = (safePayload.resource_id as string | undefined) ?? null;
+  const borrowerName = (safePayload.borrower_name as string | undefined) ?? "신청자";
+  const returnDate = (safePayload.return_date as string | undefined) ?? new Date().toISOString();
+  const isAdminLike = recipient?.role === "admin" || recipient?.role === "manager";
+  const verificationRaw =
+    (safePayload.verification_status as "verified" | "rejected" | string | undefined) ??
+    (safePayload.status as "verified" | "rejected" | string | undefined);
+  const verificationStatus: "verified" | "rejected" =
+    verificationRaw === "rejected" ? "rejected" : "verified";
+
   const pushResult = await sendWebPushToUser({ userId });
 
   const telegramText = buildTelegramText(type, safePayload);
   const telegramResult = telegramText
     ? await sendTelegramMessage(telegramText)
     : { ok: false, message: "skip" };
+
+  let kakaoResult: { ok: boolean; message?: string } = { ok: false, message: "skip" };
+  if (isKakaoEnabled() && recipientPhone) {
+    if (type === "return_submitted") {
+      kakaoResult = isAdminLike
+        ? await sendReturnSubmittedToAdmin(
+            recipientPhone,
+            resourceName,
+            borrowerName,
+            returnDate,
+            resourceType,
+            resourceId
+          )
+        : await sendReturnSubmittedToBorrower(
+            recipientPhone,
+            resourceName,
+            returnDate,
+            resourceType,
+            resourceId
+          );
+    } else if (type === "return_verified") {
+      kakaoResult = isAdminLike
+        ? await sendReturnApprovalToAdmin(
+            recipientPhone,
+            resourceName,
+            borrowerName,
+            verificationStatus,
+            resourceType,
+            resourceId
+          )
+        : await sendReturnApprovalToBorrower(
+            recipientPhone,
+            resourceName,
+            verificationStatus,
+            resourceType,
+            resourceId
+          );
+    }
+  }
 
   return {
     push: {
@@ -150,5 +227,6 @@ export async function dispatchNotificationChannels({
       path: getPushPath(type, safePayload),
     },
     telegram: telegramResult,
+    kakao: kakaoResult,
   };
 }

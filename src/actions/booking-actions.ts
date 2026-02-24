@@ -594,7 +594,8 @@ export async function createReservation(
         resourceName,
         startDate,
         endDate,
-        typedResourceType
+        typedResourceType,
+        resourceId
       );
 
       // 관리자에게 알림 (승인 정책에 따라 결정)
@@ -628,7 +629,8 @@ export async function createReservation(
                 borrowerProfile.department,
                 startDate,
                 endDate,
-                typedResourceType
+                typedResourceType,
+                resourceId
               );
             }
           }

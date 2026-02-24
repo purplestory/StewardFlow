@@ -233,6 +233,7 @@ export default function ReturnForm({
             resource_name: resourceName ?? null,
             resource_id:
               resourceType === "asset" ? (info.asset_id ?? null) : (info.space_id ?? null),
+            borrower_name: borrowerProfile?.name ?? null,
             return_date: returnDate,
             status: "returned",
           };

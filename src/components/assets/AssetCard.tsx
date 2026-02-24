@@ -40,9 +40,11 @@ export default function AssetCard({ asset }: AssetCardProps) {
       : asset.image_url;
 
   return (
-    <div className="surface-card flex h-full flex-col p-4">
-      <Link href={detailUrl} className="block">
-        <div className="relative aspect-[4/3] w-full cursor-pointer overflow-hidden rounded-xl bg-neutral-100 transition-opacity hover:opacity-90">
+    <Link
+      href={detailUrl}
+      className="surface-card group flex h-full flex-col p-4 transition-colors hover:border-slate-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
+    >
+      <div className="relative aspect-[4/3] w-full overflow-hidden rounded-xl bg-neutral-100 transition-opacity group-hover:opacity-90">
           {firstImage ? (
             <Image
               src={firstImage}
@@ -57,12 +59,10 @@ export default function AssetCard({ asset }: AssetCardProps) {
               이미지 없음
             </div>
           )}
-        </div>
-      </Link>
-      <Link href={detailUrl} className="block">
-        <div className="mt-4">
+      </div>
+      <div className="mt-4">
           <div className="flex items-center gap-2 flex-wrap">
-            <h2 className="text-base font-semibold hover:text-neutral-700 cursor-pointer transition-colors flex-1 min-w-0">
+            <h2 className="text-base font-semibold transition-colors group-hover:text-neutral-700 flex-1 min-w-0">
               {asset.name}
             </h2>
           {/* 상태 뱃지 - 제품명 옆에 표시 */}
@@ -113,8 +113,7 @@ export default function AssetCard({ asset }: AssetCardProps) {
           {asset.model_name && (
             <p className="mt-1 text-xs text-neutral-500">{asset.model_name}</p>
           )}
-        </div>
-      </Link>
+      </div>
 
       {/* 상세 정보 표시 */}
       <div className="mt-3 space-y-1.5">
@@ -161,15 +160,6 @@ export default function AssetCard({ asset }: AssetCardProps) {
           ))}
         </div>
       )}
-
-      <div className="mt-auto pt-4">
-        <Link
-          href={`/assets/${asset.short_id ?? asset.id}`}
-          className="btn-secondary w-full font-semibold"
-        >
-          상세 보기
-        </Link>
-      </div>
-    </div>
+    </Link>
   );
 }

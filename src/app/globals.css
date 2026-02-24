@@ -439,6 +439,11 @@ input[type="time"] {
   @apply disabled:opacity-50 disabled:cursor-not-allowed;
 }
 
+.header-icon-button {
+  @apply inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-neutral-700 transition-colors;
+  @apply hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900;
+}
+
 .icon-button-danger {
   @apply border-rose-200 text-rose-600 hover:bg-rose-50 hover:text-rose-700;
 }

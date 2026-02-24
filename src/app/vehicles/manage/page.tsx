@@ -1,18 +1,23 @@
 "use client";
 
+import { useState } from "react";
 import ReservationManager from "@/components/manage/VehicleReservationManager";
 import OrganizationGate from "@/components/settings/OrganizationGate";
 import VehicleAdminPanel from "@/components/manage/VehicleAdminPanel";
 import CategoryTabs from "@/components/manage/CategoryTabs";
 import ManageLayout from "@/components/manage/ManageLayout";
+import ManageSubmenuLayout from "@/components/manage/ManageSubmenuLayout";
 import Notice from "@/components/common/Notice";
 import PageHero from "@/components/ui/PageHero";
 import { useUserProfile } from "@/hooks/useAssets";
+
+type VehicleManageTab = "vehicle-admin" | "reservation-approval";
 
 export default function VehicleManagePage() {
   const { data: userProfile, isLoading } = useUserProfile();
   const role = userProfile?.profile?.role ?? null;
   const hasPermission = role === "admin" || role === "manager";
+  const [activeTab, setActiveTab] = useState<VehicleManageTab>("vehicle-admin");
 
   if (isLoading && !userProfile) {
     return (
@@ -41,10 +46,18 @@ export default function VehicleManagePage() {
       />
       <CategoryTabs />
       <OrganizationGate>
-        <div className="space-y-6">
-          <VehicleAdminPanel />
-          <ReservationManager />
-        </div>
+        <ManageSubmenuLayout
+          items={[
+            { key: "vehicle-admin", label: "차량 관리" },
+            { key: "reservation-approval", label: "예약 승인" },
+          ]}
+          activeKey={activeTab}
+          onChange={setActiveTab}
+          menuTitle="자원 관리"
+        >
+          {activeTab === "vehicle-admin" ? <VehicleAdminPanel /> : null}
+          {activeTab === "reservation-approval" ? <ReservationManager /> : null}
+        </ManageSubmenuLayout>
       </OrganizationGate>
     </ManageLayout>
   );

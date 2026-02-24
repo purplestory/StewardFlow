@@ -4,15 +4,21 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import OrganizationGate from "@/components/settings/OrganizationGate";
 import UserRoleManager from "@/components/settings/UserRoleManager";
+import AuditLogList from "@/components/settings/AuditLogList";
 import ManageLayout from "@/components/manage/ManageLayout";
+import ManageSubmenuLayout from "@/components/manage/ManageSubmenuLayout";
 import { supabase } from "@/lib/supabase";
 import Notice from "@/components/common/Notice";
 import PageHero from "@/components/ui/PageHero";
+import SectionCard from "@/components/ui/SectionCard";
+
+type UserSettingsTab = "user-role" | "audit-log";
 
 export default function UsersSettingsPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [hasPermission, setHasPermission] = useState(false);
+  const [activeTab, setActiveTab] = useState<UserSettingsTab>("user-role");
 
   useEffect(() => {
     const checkPermission = async () => {
@@ -62,7 +68,22 @@ export default function UsersSettingsPage() {
         description="기관 내 사용자 초대 및 역할을 관리합니다."
       />
       <OrganizationGate>
-        <UserRoleManager />
+        <ManageSubmenuLayout
+          items={[
+            { key: "user-role", label: "사용자/초대 관리" },
+            { key: "audit-log", label: "감사 로그" },
+          ]}
+          activeKey={activeTab}
+          onChange={setActiveTab}
+          menuTitle="사용자 관리"
+        >
+          {activeTab === "user-role" ? <UserRoleManager /> : null}
+          {activeTab === "audit-log" ? (
+            <SectionCard bodyClassName="p-0">
+              <AuditLogList />
+            </SectionCard>
+          ) : null}
+        </ManageSubmenuLayout>
       </OrganizationGate>
     </ManageLayout>
   );

@@ -9,12 +9,14 @@ type OrganizationFeatures = {
   equipment?: boolean;
   spaces?: boolean;
   vehicles?: boolean;
+  books?: boolean;
 };
 
 type OrganizationMenuLabels = {
   equipment?: string;
   spaces?: string;
   vehicles?: string;
+  books?: string;
 };
 
 type CategoryTab = {
@@ -58,11 +60,13 @@ export default function CategoryTabs() {
             equipment: orgData.features?.equipment ?? true,
             spaces: orgData.features?.spaces ?? true,
             vehicles: orgData.features?.vehicles ?? false,
+            books: orgData.features?.books ?? false,
           });
           setMenuLabels({
             equipment: orgData.menu_labels?.equipment ?? "물품",
             spaces: orgData.menu_labels?.spaces ?? "공간",
             vehicles: orgData.menu_labels?.vehicles ?? "차량",
+            books: orgData.menu_labels?.books ?? "도서",
           });
         }
       }
@@ -95,6 +99,12 @@ export default function CategoryTabs() {
       label: menuLabels.vehicles || "차량",
       href: "/vehicles/manage",
       enabled: features.vehicles === true,
+    },
+    {
+      key: "books",
+      label: menuLabels.books || "도서",
+      href: "/books/manage",
+      enabled: features.books === true,
     },
   ].filter((tab) => tab.enabled);
 

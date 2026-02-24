@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import ManageLayout from "@/components/manage/ManageLayout";
 import ManageSubmenuLayout from "@/components/manage/ManageSubmenuLayout";
+import CategoryTabs from "@/components/manage/CategoryTabs";
 import Notice from "@/components/common/Notice";
 import PageHero from "@/components/ui/PageHero";
 import SectionCard from "@/components/ui/SectionCard";
@@ -660,10 +661,10 @@ export default function BooksManagePage() {
   }
 
   return (
-    <ManageLayout showTabs={false}>
+    <ManageLayout>
       <PageHero
-        title="도서 운영 관리"
-        description="도서 라운지는 자원관리와 분리된 사용자 경험으로 운영됩니다."
+        title="자원 관리"
+        description="도서 카탈로그 등록과 대여 승인/반납 검수, 운영 정책을 한 화면에서 관리합니다."
         actions={
           <div className="flex flex-wrap gap-2">
             <button type="button" className="btn-primary" onClick={() => setActiveTab("register")}>
@@ -672,12 +673,10 @@ export default function BooksManagePage() {
             <Link href="/books" className="btn-secondary">
               도서 라운지
             </Link>
-            <Link href="/settings/menu" className="btn-outline">
-              메뉴 설정
-            </Link>
           </div>
         }
       />
+      <CategoryTabs />
 
       {!booksEnabled ? (
         <Notice variant="warning" className="text-left">
@@ -693,7 +692,7 @@ export default function BooksManagePage() {
             items={tabs}
             activeKey={activeTab}
             onChange={setActiveTab}
-            menuTitle="도서 운영"
+            menuTitle="도서 관리"
           >
               {activeTab === "register" ? (
                 <SectionCard

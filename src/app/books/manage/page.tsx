@@ -70,6 +70,68 @@ type BookLookupPayload = {
 
 type BookManageTab = "register" | "requests" | "returns" | "settings";
 
+type BooksManageCache = {
+  loading: boolean;
+  hasPermission: boolean;
+  organizationId: string | null;
+  currentUserId: string | null;
+  booksEnabled: boolean;
+  programSettings: ProgramSettings | null;
+  ruleCount: number;
+  message: string | null;
+  accessToken: string | null;
+  pendingRequests: PendingRequestItem[];
+  pendingReturns: PendingReturnItem[];
+  fetchedAt: number;
+};
+
+const BOOKS_MANAGE_CACHE_TTL_MS = 2 * 60 * 1000;
+const BOOKS_MANAGE_CACHE_STORAGE_KEY = "booksManageCache";
+let booksManageCache: BooksManageCache | null = null;
+
+const isFreshBooksManageCache = (cache: BooksManageCache | null) =>
+  Boolean(cache && Date.now() - cache.fetchedAt < BOOKS_MANAGE_CACHE_TTL_MS);
+
+const readBooksManageCache = (): BooksManageCache | null => {
+  if (isFreshBooksManageCache(booksManageCache)) {
+    return booksManageCache;
+  }
+
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  try {
+    const raw = window.sessionStorage.getItem(BOOKS_MANAGE_CACHE_STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as BooksManageCache;
+    if (!isFreshBooksManageCache(parsed)) {
+      window.sessionStorage.removeItem(BOOKS_MANAGE_CACHE_STORAGE_KEY);
+      return null;
+    }
+    booksManageCache = parsed;
+    return parsed;
+  } catch {
+    return null;
+  }
+};
+
+const writeBooksManageCache = (cache: BooksManageCache | null) => {
+  booksManageCache = cache;
+  if (typeof window === "undefined") return;
+
+  if (!cache) {
+    window.sessionStorage.removeItem(BOOKS_MANAGE_CACHE_STORAGE_KEY);
+    return;
+  }
+
+  try {
+    window.sessionStorage.setItem(BOOKS_MANAGE_CACHE_STORAGE_KEY, JSON.stringify(cache));
+  } catch {
+    // Ignore storage quota errors and keep in-memory cache only.
+  }
+};
+
 const toBooksDataErrorMessage = (message: string, fallback: string) => {
   if (
     message.includes("Could not find the table") ||
@@ -83,14 +145,15 @@ const toBooksDataErrorMessage = (message: string, fallback: string) => {
 };
 
 export default function BooksManagePage() {
-  const [loading, setLoading] = useState(true);
-  const [hasPermission, setHasPermission] = useState(false);
-  const [organizationId, setOrganizationId] = useState<string | null>(null);
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
-  const [booksEnabled, setBooksEnabled] = useState(false);
-  const [programSettings, setProgramSettings] = useState<ProgramSettings | null>(null);
-  const [ruleCount, setRuleCount] = useState(0);
-  const [message, setMessage] = useState<string | null>(null);
+  const freshCache = readBooksManageCache();
+  const [loading, setLoading] = useState(freshCache?.loading ?? !freshCache);
+  const [hasPermission, setHasPermission] = useState(freshCache?.hasPermission ?? false);
+  const [organizationId, setOrganizationId] = useState<string | null>(freshCache?.organizationId ?? null);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(freshCache?.currentUserId ?? null);
+  const [booksEnabled, setBooksEnabled] = useState(freshCache?.booksEnabled ?? false);
+  const [programSettings, setProgramSettings] = useState<ProgramSettings | null>(freshCache?.programSettings ?? null);
+  const [ruleCount, setRuleCount] = useState(freshCache?.ruleCount ?? 0);
+  const [message, setMessage] = useState<string | null>(freshCache?.message ?? null);
   const [bookRegisterMessage, setBookRegisterMessage] = useState<string | null>(null);
   const [bookLookupLoading, setBookLookupLoading] = useState(false);
   const [bookRegistering, setBookRegistering] = useState(false);
@@ -105,13 +168,17 @@ export default function BooksManagePage() {
     coverImageUrl: "",
     description: "",
   });
-  const [accessToken, setAccessToken] = useState<string | null>(null);
-  const [pendingRequests, setPendingRequests] = useState<PendingRequestItem[]>([]);
+  const [accessToken, setAccessToken] = useState<string | null>(freshCache?.accessToken ?? null);
+  const [pendingRequests, setPendingRequests] = useState<PendingRequestItem[]>(
+    freshCache?.pendingRequests ?? []
+  );
   const [decisionNoteByLoanId, setDecisionNoteByLoanId] = useState<Record<string, string>>({});
   const [decisionDueDateByLoanId, setDecisionDueDateByLoanId] = useState<Record<string, string>>({});
   const [decidingLoanId, setDecidingLoanId] = useState<string | null>(null);
   const [decisionMessage, setDecisionMessage] = useState<string | null>(null);
-  const [pendingReturns, setPendingReturns] = useState<PendingReturnItem[]>([]);
+  const [pendingReturns, setPendingReturns] = useState<PendingReturnItem[]>(
+    freshCache?.pendingReturns ?? []
+  );
   const [verifyNoteByLoanId, setVerifyNoteByLoanId] = useState<Record<string, string>>({});
   const [verifyingLoanId, setVerifyingLoanId] = useState<string | null>(null);
   const [verifyMessage, setVerifyMessage] = useState<string | null>(null);
@@ -124,8 +191,9 @@ export default function BooksManagePage() {
     let isMounted = true;
 
     const load = async () => {
-      setLoading(true);
-      setMessage(null);
+      if (!readBooksManageCache()) {
+        setLoading(true);
+      }
 
       const { data: sessionData } = await supabase.auth.getSession();
       const user = sessionData.session?.user ?? null;
@@ -134,6 +202,7 @@ export default function BooksManagePage() {
         if (!isMounted) return;
         setHasPermission(false);
         setCurrentUserId(null);
+        writeBooksManageCache(null);
         setLoading(false);
         return;
       }
@@ -150,6 +219,20 @@ export default function BooksManagePage() {
 
       if (profileError || !profileData?.organization_id) {
         setMessage("기관 정보를 불러오지 못했습니다.");
+        writeBooksManageCache({
+          loading: false,
+          hasPermission: false,
+          organizationId: null,
+          currentUserId: user.id,
+          booksEnabled: false,
+          programSettings: null,
+          ruleCount: 0,
+          message: "기관 정보를 불러오지 못했습니다.",
+          accessToken: sessionAccessToken,
+          pendingRequests: [],
+          pendingReturns: [],
+          fetchedAt: Date.now(),
+        });
         setLoading(false);
         return;
       }
@@ -159,6 +242,20 @@ export default function BooksManagePage() {
       setOrganizationId(profileData.organization_id);
 
       if (!isManager) {
+        writeBooksManageCache({
+          loading: false,
+          hasPermission: false,
+          organizationId: profileData.organization_id,
+          currentUserId: user.id,
+          booksEnabled: false,
+          programSettings: null,
+          ruleCount: 0,
+          message: null,
+          accessToken: sessionAccessToken,
+          pendingRequests: [],
+          pendingReturns: [],
+          fetchedAt: Date.now(),
+        });
         setLoading(false);
         return;
       }
@@ -173,6 +270,20 @@ export default function BooksManagePage() {
 
       if (orgError) {
         setMessage("기관 기능 설정을 확인하지 못했습니다.");
+        writeBooksManageCache({
+          loading: false,
+          hasPermission: true,
+          organizationId: profileData.organization_id,
+          currentUserId: user.id,
+          booksEnabled: false,
+          programSettings: null,
+          ruleCount: 0,
+          message: "기관 기능 설정을 확인하지 못했습니다.",
+          accessToken: sessionAccessToken,
+          pendingRequests: [],
+          pendingReturns: [],
+          fetchedAt: Date.now(),
+        });
         setLoading(false);
         return;
       }
@@ -211,39 +322,41 @@ export default function BooksManagePage() {
 
       if (!isMounted) return;
 
-      if (settingsRes.error) {
-        setMessage(
-          toBooksDataErrorMessage(
+      const nextProgramSettings = settingsRes.error ? null : (settingsRes.data ?? null);
+      const nextRuleCount = rulesRes.error ? 0 : (rulesRes.count ?? 0);
+      const settingsErrorMessage = settingsRes.error
+        ? toBooksDataErrorMessage(
             settingsRes.error.message,
             `도서 운영 설정 조회 실패: ${settingsRes.error.message}`
           )
-        );
-      } else {
-        setProgramSettings(settingsRes.data ?? null);
-      }
+        : null;
+      const rulesErrorMessage = rulesRes.error ? `점수 규칙 조회 실패: ${rulesRes.error.message}` : null;
+      setProgramSettings(nextProgramSettings);
+      setRuleCount(nextRuleCount);
 
-      if (rulesRes.error) {
-        setMessage(`점수 규칙 조회 실패: ${rulesRes.error.message}`);
-      } else {
-        setRuleCount(rulesRes.count ?? 0);
-      }
-
-      if (pendingReturnRes.error) {
-        setMessage(
-          toBooksDataErrorMessage(
+      const pendingReturnErrorMessage = pendingReturnRes.error
+        ? toBooksDataErrorMessage(
             pendingReturnRes.error.message,
             `반납 검수 목록 조회 실패: ${pendingReturnRes.error.message}`
           )
-        );
-        setPendingReturns([]);
-      }
-      if (pendingRequestRes.error) {
-        setMessage(
-          toBooksDataErrorMessage(
+        : null;
+      const pendingRequestErrorMessage = pendingRequestRes.error
+        ? toBooksDataErrorMessage(
             pendingRequestRes.error.message,
             `대여 요청 목록 조회 실패: ${pendingRequestRes.error.message}`
           )
-        );
+        : null;
+      const nextMessage =
+        pendingRequestErrorMessage ??
+        pendingReturnErrorMessage ??
+        rulesErrorMessage ??
+        settingsErrorMessage;
+      setMessage(nextMessage);
+
+      if (pendingReturnRes.error) {
+        setPendingReturns([]);
+      }
+      if (pendingRequestRes.error) {
         setPendingRequests([]);
       }
 
@@ -268,6 +381,20 @@ export default function BooksManagePage() {
       if (bookIds.length === 0 || borrowerIds.length === 0) {
         setPendingReturns([]);
         setPendingRequests([]);
+        writeBooksManageCache({
+          loading: false,
+          hasPermission: true,
+          organizationId: profileData.organization_id,
+          currentUserId: user.id,
+          booksEnabled: enabled,
+          programSettings: nextProgramSettings,
+          ruleCount: nextRuleCount,
+          message: nextMessage,
+          accessToken: sessionAccessToken,
+          pendingRequests: [],
+          pendingReturns: [],
+          fetchedAt: Date.now(),
+        });
       } else {
         const [bookItemsRes, borrowersRes] = await Promise.all([
           supabase
@@ -293,23 +420,35 @@ export default function BooksManagePage() {
           });
         });
 
-        setPendingReturns(
-          pendingReturnRows.map((row) => ({
+        const nextPendingReturns = pendingReturnRows.map((row) => ({
             ...row,
             book_title: bookTitleById.get(row.book_item_id) ?? "제목 없음",
             borrower_name: borrowerInfoById.get(row.borrower_id)?.name ?? null,
             borrower_department: borrowerInfoById.get(row.borrower_id)?.department ?? null,
-          }))
-        );
+          }));
+        const nextPendingRequests = pendingRequestRows.map((row) => ({
+            ...row,
+            book_title: bookTitleById.get(row.book_item_id) ?? "제목 없음",
+            borrower_name: borrowerInfoById.get(row.borrower_id)?.name ?? null,
+            borrower_department: borrowerInfoById.get(row.borrower_id)?.department ?? null,
+          }));
 
-        setPendingRequests(
-          pendingRequestRows.map((row) => ({
-            ...row,
-            book_title: bookTitleById.get(row.book_item_id) ?? "제목 없음",
-            borrower_name: borrowerInfoById.get(row.borrower_id)?.name ?? null,
-            borrower_department: borrowerInfoById.get(row.borrower_id)?.department ?? null,
-          }))
-        );
+        setPendingReturns(nextPendingReturns);
+        setPendingRequests(nextPendingRequests);
+        writeBooksManageCache({
+          loading: false,
+          hasPermission: true,
+          organizationId: profileData.organization_id,
+          currentUserId: user.id,
+          booksEnabled: enabled,
+          programSettings: nextProgramSettings,
+          ruleCount: nextRuleCount,
+          message: nextMessage,
+          accessToken: sessionAccessToken,
+          pendingRequests: nextPendingRequests,
+          pendingReturns: nextPendingReturns,
+          fetchedAt: Date.now(),
+        });
       }
 
       setLoading(false);

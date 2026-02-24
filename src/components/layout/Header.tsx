@@ -33,8 +33,18 @@ export default function Header() {
     setDropdownOpen(dropdownOpen === menu ? null : menu);
   };
 
+  const isManageWorkspacePath =
+    pathname.startsWith("/assets/manage") ||
+    pathname.startsWith("/spaces/manage") ||
+    pathname.startsWith("/vehicles/manage") ||
+    pathname.startsWith("/books/manage") ||
+    pathname.startsWith("/settings/");
+
   const navLinkClass = (href: string) => {
-    const isActive = pathname === href || pathname.startsWith(`${href}/`);
+    const isServiceTopNavItem = href === "/assets" || href === "/spaces" || href === "/vehicles" || href === "/books";
+    const isActive =
+      !(isManageWorkspacePath && isServiceTopNavItem) &&
+      (pathname === href || pathname.startsWith(`${href}/`));
     if (isActive) {
       return "inline-flex h-10 items-center rounded-xl bg-slate-900 px-3.5 text-sm font-medium text-white shadow-sm";
     }
@@ -42,7 +52,10 @@ export default function Header() {
   };
 
   const mobileNavLinkClass = (href: string) => {
-    const isActive = pathname === href || pathname.startsWith(`${href}/`);
+    const isServiceTopNavItem = href === "/assets" || href === "/spaces" || href === "/vehicles" || href === "/books";
+    const isActive =
+      !(isManageWorkspacePath && isServiceTopNavItem) &&
+      (pathname === href || pathname.startsWith(`${href}/`));
     return isActive
       ? "block border-l-2 border-slate-900 pl-3 pr-2 py-2.5 text-sm font-semibold text-slate-900"
       : "block pl-3 pr-2 py-2.5 text-sm text-neutral-600 hover:text-slate-900";

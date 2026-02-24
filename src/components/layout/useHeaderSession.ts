@@ -324,13 +324,10 @@ export function useHeaderSession() {
 
     if (isManager) {
       items.push({ href: "/assets/manage", label: "관리페이지" });
-      if (features?.books === true) {
-        items.push({ href: "/books/manage", label: "도서 운영" });
-      }
     }
 
     return items;
-  }, [features?.books, hasOrganization, isAuthed, isManager]);
+  }, [hasOrganization, isAuthed, isManager]);
 
   const userMenuLabel = useMemo(() => {
     if (userName && userDepartment) {

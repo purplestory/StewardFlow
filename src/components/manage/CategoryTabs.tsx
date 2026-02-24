@@ -26,11 +26,13 @@ type CategoryTab = {
   enabled: boolean;
 };
 
+let cachedFeatures: OrganizationFeatures | null = null;
+let cachedMenuLabels: OrganizationMenuLabels | null = null;
+
 export default function CategoryTabs() {
   const pathname = usePathname();
-  const [features, setFeatures] = useState<OrganizationFeatures | null>(null);
-  const [menuLabels, setMenuLabels] = useState<OrganizationMenuLabels | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [features, setFeatures] = useState<OrganizationFeatures | null>(cachedFeatures);
+  const [menuLabels, setMenuLabels] = useState<OrganizationMenuLabels | null>(cachedMenuLabels);
 
   useEffect(() => {
     const loadOrganizationData = async () => {
@@ -38,7 +40,6 @@ export default function CategoryTabs() {
       const user = sessionData.session?.user;
 
       if (!user) {
-        setLoading(false);
         return;
       }
 
@@ -56,28 +57,30 @@ export default function CategoryTabs() {
           .maybeSingle();
 
         if (orgData) {
-          setFeatures({
+          const nextFeatures: OrganizationFeatures = {
             equipment: orgData.features?.equipment ?? true,
             spaces: orgData.features?.spaces ?? true,
             vehicles: orgData.features?.vehicles ?? false,
             books: orgData.features?.books ?? false,
-          });
-          setMenuLabels({
+          };
+          const nextMenuLabels: OrganizationMenuLabels = {
             equipment: orgData.menu_labels?.equipment ?? "물품",
             spaces: orgData.menu_labels?.spaces ?? "공간",
             vehicles: orgData.menu_labels?.vehicles ?? "차량",
             books: orgData.menu_labels?.books ?? "도서",
-          });
+          };
+          cachedFeatures = nextFeatures;
+          cachedMenuLabels = nextMenuLabels;
+          setFeatures(nextFeatures);
+          setMenuLabels(nextMenuLabels);
         }
       }
-
-      setLoading(false);
     };
 
     loadOrganizationData();
   }, []);
 
-  if (loading || !features || !menuLabels) {
+  if (!features || !menuLabels) {
     return null;
   }
 

@@ -72,6 +72,67 @@ type ActiveBookLoan = {
   return_verification_status: "not_required" | "pending" | "verified" | "rejected";
 };
 
+type BooksHomeCache = {
+  isAuthed: boolean;
+  isManager: boolean;
+  booksEnabled: boolean;
+  message: string | null;
+  summary: BookSummary | null;
+  bookItems: BookItem[];
+  booksLoadError: string | null;
+  currentUserId: string | null;
+  accessToken: string | null;
+  myActiveLoansByBookId: Record<string, ActiveBookLoan>;
+  fetchedAt: number;
+};
+
+const BOOKS_HOME_CACHE_TTL_MS = 2 * 60 * 1000;
+const BOOKS_HOME_CACHE_STORAGE_KEY = "booksHomeCache";
+let booksHomeCache: BooksHomeCache | null = null;
+
+const isFreshBooksHomeCache = (cache: BooksHomeCache | null) =>
+  Boolean(cache && Date.now() - cache.fetchedAt < BOOKS_HOME_CACHE_TTL_MS);
+
+const readBooksHomeCache = (): BooksHomeCache | null => {
+  if (isFreshBooksHomeCache(booksHomeCache)) {
+    return booksHomeCache;
+  }
+
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  try {
+    const raw = window.sessionStorage.getItem(BOOKS_HOME_CACHE_STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as BooksHomeCache;
+    if (!isFreshBooksHomeCache(parsed)) {
+      window.sessionStorage.removeItem(BOOKS_HOME_CACHE_STORAGE_KEY);
+      return null;
+    }
+    booksHomeCache = parsed;
+    return parsed;
+  } catch {
+    return null;
+  }
+};
+
+const writeBooksHomeCache = (cache: BooksHomeCache | null) => {
+  booksHomeCache = cache;
+  if (typeof window === "undefined") return;
+
+  if (!cache) {
+    window.sessionStorage.removeItem(BOOKS_HOME_CACHE_STORAGE_KEY);
+    return;
+  }
+
+  try {
+    window.sessionStorage.setItem(BOOKS_HOME_CACHE_STORAGE_KEY, JSON.stringify(cache));
+  } catch {
+    // Ignore storage quota or serialization issues and keep in-memory cache only.
+  }
+};
+
 const BOOK_STATUS_LABEL: Record<BookStatus, string> = {
   available: "대여 가능",
   requested: "요청 처리중",
@@ -101,20 +162,21 @@ const toBooksDataErrorMessage = (message: string, fallback: string) => {
 };
 
 export default function BooksHomeClient() {
-  const [loading, setLoading] = useState(true);
-  const [isAuthed, setIsAuthed] = useState(false);
-  const [isManager, setIsManager] = useState(false);
-  const [booksEnabled, setBooksEnabled] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
-  const [summary, setSummary] = useState<BookSummary | null>(null);
-  const [bookItems, setBookItems] = useState<BookItem[]>([]);
-  const [booksLoadError, setBooksLoadError] = useState<string | null>(null);
+  const freshCache = readBooksHomeCache();
+  const [loading, setLoading] = useState(!freshCache);
+  const [isAuthed, setIsAuthed] = useState(freshCache?.isAuthed ?? false);
+  const [isManager, setIsManager] = useState(freshCache?.isManager ?? false);
+  const [booksEnabled, setBooksEnabled] = useState(freshCache?.booksEnabled ?? false);
+  const [message, setMessage] = useState<string | null>(freshCache?.message ?? null);
+  const [summary, setSummary] = useState<BookSummary | null>(freshCache?.summary ?? null);
+  const [bookItems, setBookItems] = useState<BookItem[]>(freshCache?.bookItems ?? []);
+  const [booksLoadError, setBooksLoadError] = useState<string | null>(freshCache?.booksLoadError ?? null);
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | BookStatus>("all");
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
-  const [accessToken, setAccessToken] = useState<string | null>(null);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(freshCache?.currentUserId ?? null);
+  const [accessToken, setAccessToken] = useState<string | null>(freshCache?.accessToken ?? null);
   const [myActiveLoansByBookId, setMyActiveLoansByBookId] = useState<Record<string, ActiveBookLoan>>(
-    {}
+    freshCache?.myActiveLoansByBookId ?? {}
   );
   const [returnTarget, setReturnTarget] = useState<{
     loanId: string;
@@ -132,7 +194,9 @@ export default function BooksHomeClient() {
     let isMounted = true;
 
     const load = async () => {
-      setLoading(true);
+      if (!readBooksHomeCache()) {
+        setLoading(true);
+      }
       setMessage(null);
       setActionMessage(null);
 
@@ -144,6 +208,7 @@ export default function BooksHomeClient() {
 
       if (!user || !session?.access_token) {
         setIsAuthed(false);
+        writeBooksHomeCache(null);
         setLoading(false);
         return;
       }
@@ -187,6 +252,19 @@ export default function BooksHomeClient() {
       setBooksEnabled(enabled);
 
       if (!enabled) {
+        writeBooksHomeCache({
+          isAuthed: true,
+          isManager: role === "admin" || role === "manager",
+          booksEnabled: false,
+          message: null,
+          summary: null,
+          bookItems: [],
+          booksLoadError: null,
+          currentUserId: user.id,
+          accessToken: session.access_token,
+          myActiveLoansByBookId: {},
+          fetchedAt: Date.now(),
+        });
         setLoading(false);
         return;
       }
@@ -260,6 +338,44 @@ export default function BooksHomeClient() {
         setMyActiveLoansByBookId(nextMap);
       }
 
+      const nextMessage =
+        !summaryResponse.ok || !summaryResult?.ok || !summaryResult.summary
+          ? summaryResult?.message ?? "도서 요약 정보를 불러오지 못했습니다."
+          : null;
+      const nextSummary =
+        summaryResponse.ok && summaryResult?.ok && summaryResult.summary
+          ? summaryResult.summary
+          : null;
+      const nextBooksLoadError = booksResponse.error
+        ? toBooksDataErrorMessage(
+            booksResponse.error.message,
+            `도서 목록 조회 실패: ${booksResponse.error.message}`
+          )
+        : null;
+      const nextBookItems = booksResponse.error ? [] : ((booksResponse.data ?? []) as BookItem[]);
+      const nextActiveLoansByBookId: Record<string, ActiveBookLoan> = {};
+      if (!loansResponse.error) {
+        const rows = (loansResponse.data ?? []) as ActiveBookLoan[];
+        rows.forEach((loan) => {
+          if (!nextActiveLoansByBookId[loan.book_item_id]) {
+            nextActiveLoansByBookId[loan.book_item_id] = loan;
+          }
+        });
+      }
+
+      writeBooksHomeCache({
+        isAuthed: true,
+        isManager: role === "admin" || role === "manager",
+        booksEnabled: true,
+        message: nextMessage,
+        summary: nextSummary,
+        bookItems: nextBookItems,
+        booksLoadError: nextBooksLoadError,
+        currentUserId: user.id,
+        accessToken: session.access_token,
+        myActiveLoansByBookId: nextActiveLoansByBookId,
+        fetchedAt: Date.now(),
+      });
       setLoading(false);
     };
 

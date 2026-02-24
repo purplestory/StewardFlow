@@ -3,6 +3,19 @@ import { supabase } from "@/lib/supabase";
 import { isUUID } from "@/lib/short-id";
 import type { Asset, Reservation } from "@/types/database";
 
+export type AssetCategoryOption = {
+  value: string;
+  label: string;
+};
+
+const DEFAULT_ASSET_CATEGORIES: AssetCategoryOption[] = [
+  { value: "sound", label: "음향" },
+  { value: "video", label: "영상" },
+  { value: "kitchen", label: "조리" },
+  { value: "furniture", label: "가구" },
+  { value: "etc", label: "기타" },
+];
+
 export function useAssets() {
   return useQuery({
     queryKey: ["assets"],
@@ -26,6 +39,44 @@ export function useAssets() {
       return (data ?? []) as Asset[];
     },
     staleTime: 1000 * 60 * 2, // 2분간 fresh 상태 유지
+  });
+}
+
+export function useAssetCategories(orgId: string | null) {
+  return useQuery({
+    queryKey: ["assetCategories", orgId],
+    queryFn: async () => {
+      if (!orgId) return DEFAULT_ASSET_CATEGORIES;
+
+      const { data, error } = await supabase
+        .from("organizations")
+        .select("asset_categories")
+        .eq("id", orgId)
+        .maybeSingle();
+
+      if (error) {
+        return DEFAULT_ASSET_CATEGORIES;
+      }
+
+      const raw = data?.asset_categories;
+      if (!Array.isArray(raw)) {
+        return DEFAULT_ASSET_CATEGORIES;
+      }
+
+      const normalized = raw
+        .map((item) => {
+          const value =
+            typeof item?.value === "string" ? item.value.trim() : "";
+          const label =
+            typeof item?.label === "string" ? item.label.trim() : value;
+          if (!value) return null;
+          return { value, label: label || value };
+        })
+        .filter((item): item is AssetCategoryOption => item !== null);
+
+      return normalized.length > 0 ? normalized : DEFAULT_ASSET_CATEGORIES;
+    },
+    staleTime: 1000 * 60 * 10,
   });
 }
 

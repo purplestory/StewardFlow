@@ -29,6 +29,14 @@ type CategoryTab = {
 let cachedFeatures: OrganizationFeatures | null = null;
 let cachedMenuLabels: OrganizationMenuLabels | null = null;
 
+function normalizeManageTabLabel(rawLabel: string | undefined, fallback: string) {
+  const base = (rawLabel || fallback).trim();
+  if (base.endsWith("예약")) {
+    return base.slice(0, -2).trim() || fallback;
+  }
+  return base;
+}
+
 export default function CategoryTabs() {
   const pathname = usePathname();
   const [features, setFeatures] = useState<OrganizationFeatures | null>(cachedFeatures);
@@ -87,19 +95,19 @@ export default function CategoryTabs() {
   const tabs: CategoryTab[] = [
     {
       key: "assets",
-      label: menuLabels.equipment || "물품",
+      label: normalizeManageTabLabel(menuLabels.equipment, "물품"),
       href: "/assets/manage",
       enabled: features.equipment !== false,
     },
     {
       key: "spaces",
-      label: menuLabels.spaces || "공간",
+      label: normalizeManageTabLabel(menuLabels.spaces, "공간"),
       href: "/spaces/manage",
       enabled: features.spaces !== false,
     },
     {
       key: "vehicles",
-      label: menuLabels.vehicles || "차량",
+      label: normalizeManageTabLabel(menuLabels.vehicles, "차량"),
       href: "/vehicles/manage",
       enabled: features.vehicles === true,
     },

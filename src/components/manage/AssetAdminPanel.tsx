@@ -2,8 +2,10 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import Notice from "@/components/common/Notice";
+import AssetForm from "@/components/assets/AssetForm";
 import type { Asset } from "@/types/database";
 import { isUUID } from "@/lib/short-id";
 import StatusFilterPills from "@/components/ui/StatusFilterPills";
@@ -38,9 +40,13 @@ const statusFilterOptions: Array<{ value: Asset["status"] | "all"; label: string
 ];
 
 export default function AssetAdminPanel() {
+  const searchParams = useSearchParams();
   const [assets, setAssets] = useState<Asset[]>([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState<string | null>(null);
+  const [showRegisterForm, setShowRegisterForm] = useState(
+    searchParams.get("mode") === "register"
+  );
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<Asset["status"] | "all">(
     "all"
@@ -180,13 +186,25 @@ export default function AssetAdminPanel() {
             물품 상태를 일괄 변경하거나 검색할 수 있습니다.
           </p>
         </div>
-        <Link
-          href="/new?category=equipment"
+        <button
+          type="button"
+          onClick={() => setShowRegisterForm((prev) => !prev)}
           className="btn-primary whitespace-nowrap"
         >
-          물품 등록
-        </Link>
+          {showRegisterForm ? "목록 보기" : "물품 등록"}
+        </button>
       </div>
+
+      {showRegisterForm ? (
+        <AssetForm
+          onSuccess={async () => {
+            setShowRegisterForm(false);
+            setMessage(null);
+            await load();
+          }}
+        />
+      ) : (
+        <>
 
       <div className="module-toolbar space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-neutral-600">
@@ -529,6 +547,8 @@ export default function AssetAdminPanel() {
           </div>
         </DialogContent>
       </Dialog>
+        </>
+      )}
       </div>
     </section>
   );

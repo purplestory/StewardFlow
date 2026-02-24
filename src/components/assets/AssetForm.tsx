@@ -47,6 +47,7 @@ type AssetFormProps = {
     usable_until: string | null;
     tags: string[] | null;
   };
+  onSuccess?: () => void | Promise<void>;
 };
 
 type BookLookupResult = {
@@ -71,7 +72,7 @@ function normalizeIsbn(raw: string): string {
   return raw.replace(/[^0-9Xx]/g, "").toUpperCase();
 }
 
-export default function AssetForm({ asset }: AssetFormProps = {}) {
+export default function AssetForm({ asset, onSuccess }: AssetFormProps = {}) {
   const queryClient = useQueryClient();
   const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [previewUrls, setPreviewUrls] = useState<string[]>([]);
@@ -638,10 +639,14 @@ export default function AssetForm({ asset }: AssetFormProps = {}) {
         // React Query 캐시 무효화하여 목록 갱신
         queryClient.invalidateQueries({ queryKey: ["assets"] });
         
-        // 수정 후 상세 페이지로 이동
-        setTimeout(() => {
-          window.location.href = `/assets/${asset.short_id || asset.id}`;
-        }, 1000);
+        if (onSuccess) {
+          await onSuccess();
+        } else {
+          // 수정 후 상세 페이지로 이동
+          setTimeout(() => {
+            window.location.href = `/assets/${asset.short_id || asset.id}`;
+          }, 1000);
+        }
       } else {
         // 등록 모드: INSERT
         const shortId = generateShortId(8);
@@ -746,10 +751,14 @@ export default function AssetForm({ asset }: AssetFormProps = {}) {
         // React Query 캐시 무효화하여 목록 갱신
         queryClient.invalidateQueries({ queryKey: ["assets"] });
         
-        // 등록 후 자원 관리 페이지로 이동
-        setTimeout(() => {
-          window.location.replace("/assets/manage");
-        }, 1000);
+        if (onSuccess) {
+          await onSuccess();
+        } else {
+          // 등록 후 자원 관리 페이지로 이동
+          setTimeout(() => {
+            window.location.replace("/assets/manage");
+          }, 1000);
+        }
       }
     } catch (error) {
       console.error("Asset form submit error:", error);

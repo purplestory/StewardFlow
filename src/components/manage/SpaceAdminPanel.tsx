@@ -2,8 +2,10 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import Notice from "@/components/common/Notice";
+import SpaceForm from "@/components/spaces/SpaceForm";
 import type { Space } from "@/types/database";
 import StatusFilterPills from "@/components/ui/StatusFilterPills";
 import ResourceStatusBadge from "@/components/ui/ResourceStatusBadge";
@@ -21,9 +23,13 @@ const statusFilterOptions: Array<{ value: Space["status"] | "all"; label: string
 ];
 
 export default function SpaceAdminPanel() {
+  const searchParams = useSearchParams();
   const [spaces, setSpaces] = useState<Space[]>([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState<string | null>(null);
+  const [showRegisterForm, setShowRegisterForm] = useState(
+    searchParams.get("mode") === "register"
+  );
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<Space["status"] | "all">(
     "all"
@@ -160,13 +166,25 @@ export default function SpaceAdminPanel() {
             공간 상태를 일괄 변경하거나 검색할 수 있습니다.
           </p>
         </div>
-        <Link
-          href="/new?category=spaces"
+        <button
+          type="button"
+          onClick={() => setShowRegisterForm((prev) => !prev)}
           className="btn-primary whitespace-nowrap"
         >
-          공간 등록
-        </Link>
+          {showRegisterForm ? "목록 보기" : "공간 등록"}
+        </button>
       </div>
+
+      {showRegisterForm ? (
+        <SpaceForm
+          onSuccess={async () => {
+            setShowRegisterForm(false);
+            setMessage(null);
+            await load();
+          }}
+        />
+      ) : (
+        <>
 
       <div className="module-toolbar space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-neutral-600">
@@ -308,6 +326,8 @@ export default function SpaceAdminPanel() {
             </div>
           ))}
         </div>
+      )}
+      </>
       )}
       </div>
     </section>

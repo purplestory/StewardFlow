@@ -49,9 +49,10 @@ type VehicleFormProps = {
     fuel_type: string | null;
     current_odometer: number | null;
   };
+  onSuccess?: () => void | Promise<void>;
 };
 
-export default function VehicleForm({ vehicle }: VehicleFormProps = {}) {
+export default function VehicleForm({ vehicle, onSuccess }: VehicleFormProps = {}) {
   const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [previewUrls, setPreviewUrls] = useState<string[]>([]);
   const [existingImageUrls, setExistingImageUrls] = useState<string[]>([]); // 기존에 업로드된 이미지 URL들
@@ -423,10 +424,14 @@ export default function VehicleForm({ vehicle }: VehicleFormProps = {}) {
         }
 
         setMessage("차량이 수정되었습니다.");
-        // 수정 후 상세 페이지로 이동
-        setTimeout(() => {
-          window.location.href = `/vehicles/${vehicle.short_id || vehicle.id}`;
-        }, 1000);
+        if (onSuccess) {
+          await onSuccess();
+        } else {
+          // 수정 후 상세 페이지로 이동
+          setTimeout(() => {
+            window.location.href = `/vehicles/${vehicle.short_id || vehicle.id}`;
+          }, 1000);
+        }
       } else {
         // 등록 모드: INSERT
         const shortId = generateShortId(8);
@@ -493,10 +498,14 @@ export default function VehicleForm({ vehicle }: VehicleFormProps = {}) {
         existingImageUrlsRef.current = [];
         setMessage("차량이 등록되었습니다.");
         
-        // 등록 후 자원 관리 페이지로 이동
-        setTimeout(() => {
-          window.location.replace("/vehicles/manage");
-        }, 1000);
+        if (onSuccess) {
+          await onSuccess();
+        } else {
+          // 등록 후 자원 관리 페이지로 이동
+          setTimeout(() => {
+            window.location.replace("/vehicles/manage");
+          }, 1000);
+        }
       }
     } catch (error) {
       setMessage(

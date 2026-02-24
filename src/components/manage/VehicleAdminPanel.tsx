@@ -2,8 +2,10 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import Notice from "@/components/common/Notice";
+import VehicleForm from "@/components/vehicles/VehicleForm";
 import type { Vehicle } from "@/types/database";
 import StatusFilterPills from "@/components/ui/StatusFilterPills";
 import ResourceStatusBadge from "@/components/ui/ResourceStatusBadge";
@@ -28,9 +30,13 @@ const statusFilterOptions: Array<{ value: Vehicle["status"] | "all"; label: stri
 ];
 
 export default function VehicleAdminPanel() {
+  const searchParams = useSearchParams();
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState<string | null>(null);
+  const [showRegisterForm, setShowRegisterForm] = useState(
+    searchParams.get("mode") === "register"
+  );
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<Vehicle["status"] | "all">(
     "all"
@@ -190,13 +196,25 @@ export default function VehicleAdminPanel() {
             차량 상태를 일괄 변경하거나 검색할 수 있습니다.
           </p>
         </div>
-        <Link
-          href="/new?category=vehicles"
+        <button
+          type="button"
+          onClick={() => setShowRegisterForm((prev) => !prev)}
           className="btn-primary whitespace-nowrap"
         >
-          차량 등록
-        </Link>
+          {showRegisterForm ? "목록 보기" : "차량 등록"}
+        </button>
       </div>
+
+      {showRegisterForm ? (
+        <VehicleForm
+          onSuccess={async () => {
+            setShowRegisterForm(false);
+            setMessage(null);
+            await load();
+          }}
+        />
+      ) : (
+        <>
 
       <div className="module-toolbar space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-neutral-600">
@@ -332,6 +350,8 @@ export default function VehicleAdminPanel() {
             </div>
           ))}
         </div>
+      )}
+      </>
       )}
       </div>
     </section>

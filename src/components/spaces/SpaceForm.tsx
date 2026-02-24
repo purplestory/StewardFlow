@@ -29,9 +29,10 @@ type SpaceFormProps = {
     max_reservation_minutes: number | null;
     reservation_buffer_minutes: number;
   };
+  onSuccess?: () => void | Promise<void>;
 };
 
-export default function SpaceForm({ space }: SpaceFormProps = {}) {
+export default function SpaceForm({ space, onSuccess }: SpaceFormProps = {}) {
   const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [previewUrls, setPreviewUrls] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null); // 파일 입력 ref
@@ -397,10 +398,14 @@ export default function SpaceForm({ space }: SpaceFormProps = {}) {
         }
 
         setMessage("공간이 수정되었습니다.");
-        // 수정 후 상세 페이지로 이동
-        setTimeout(() => {
-          window.location.href = `/spaces/${space.short_id || space.id}`;
-        }, 1000);
+        if (onSuccess) {
+          await onSuccess();
+        } else {
+          // 수정 후 상세 페이지로 이동
+          setTimeout(() => {
+            window.location.href = `/spaces/${space.short_id || space.id}`;
+          }, 1000);
+        }
       } else {
         // 등록 모드: INSERT
         const { data: createdSpace, error: insertError } = await supabase
@@ -458,10 +463,14 @@ export default function SpaceForm({ space }: SpaceFormProps = {}) {
         setPreviewUrls([]);
         setMessage("공간이 등록되었습니다.");
         
-        // 등록 후 자원 관리 페이지로 이동
-        setTimeout(() => {
-          window.location.replace("/spaces/manage");
-        }, 1000);
+        if (onSuccess) {
+          await onSuccess();
+        } else {
+          // 등록 후 자원 관리 페이지로 이동
+          setTimeout(() => {
+            window.location.replace("/spaces/manage");
+          }, 1000);
+        }
       }
     } catch (error) {
       setMessage(

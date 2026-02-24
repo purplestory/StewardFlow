@@ -804,16 +804,6 @@ export default function BooksManagePage() {
       <PageHero
         title="자원 관리"
         description="도서 카탈로그 등록과 대여 승인/반납 검수, 운영 정책을 한 화면에서 관리합니다."
-        actions={
-          <div className="flex flex-wrap gap-2">
-            <button type="button" className="btn-primary" onClick={() => setActiveTab("register")}>
-              도서 등록
-            </button>
-            <Link href="/books" className="btn-secondary">
-              도서 라운지
-            </Link>
-          </div>
-        }
       />
       <CategoryTabs />
 

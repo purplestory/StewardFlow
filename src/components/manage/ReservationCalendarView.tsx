@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent } from "react";
 import StatusFilterPills from "@/components/ui/StatusFilterPills";
+import { formatDateTimeRange } from "./reservation-manager-shared";
 
 type Reservation = {
   id: string;
@@ -46,6 +47,9 @@ export default function ReservationCalendarView({
   onReservationClick,
 }: ReservationCalendarViewProps) {
   const [hoveredReservation, setHoveredReservation] = useState<string | null>(null);
+  const [selectedReservation, setSelectedReservation] = useState<Reservation | null>(null);
+  const [popoverPosition, setPopoverPosition] = useState<{ x: number; y: number } | null>(null);
+  const popoverRef = useRef<HTMLDivElement | null>(null);
   const calendarModeOptions = [
     { value: "month", label: "월간" },
     { value: "week", label: "주간" },
@@ -165,10 +169,12 @@ export default function ReservationCalendarView({
     return filteredReservations.filter((reservation) => {
       const start = new Date(reservation.start_date);
       const end = new Date(reservation.end_date);
-      const checkDate = new Date(date);
-      checkDate.setHours(0, 0, 0, 0);
+      const dayStart = new Date(date);
+      dayStart.setHours(0, 0, 0, 0);
+      const dayEnd = new Date(date);
+      dayEnd.setHours(23, 59, 59, 999);
 
-      return checkDate >= start && checkDate <= end;
+      return start <= dayEnd && end >= dayStart;
     });
   };
 
@@ -180,18 +186,10 @@ export default function ReservationCalendarView({
     });
   };
 
-  // 시간 포맷
-  const formatTime = (dateStr: string) => {
-    const date = new Date(dateStr);
-    return date.toLocaleTimeString("ko-KR", {
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: false,
-    });
-  };
-
   // 이전/다음 날짜로 이동
   const navigateDate = (direction: "prev" | "next") => {
+    setSelectedReservation(null);
+    setPopoverPosition(null);
     const newDate = new Date(currentDate);
     if (viewMode === "month") {
       newDate.setMonth(newDate.getMonth() + (direction === "next" ? 1 : -1));
@@ -205,8 +203,71 @@ export default function ReservationCalendarView({
 
   // 오늘로 이동
   const goToToday = () => {
+    setSelectedReservation(null);
+    setPopoverPosition(null);
     onDateChange(new Date());
   };
+
+  const handleReservationClick = (
+    event: ReactMouseEvent<HTMLElement>,
+    reservation: Reservation
+  ) => {
+    event.stopPropagation();
+    const rect = event.currentTarget.getBoundingClientRect();
+    const popoverWidth = 280;
+    const popoverHeight = 170;
+    const edgePadding = 12;
+    const rawX = rect.left + rect.width / 2;
+    const minX = edgePadding + popoverWidth / 2;
+    const maxX = window.innerWidth - edgePadding - popoverWidth / 2;
+    const x = Math.min(Math.max(rawX, minX), maxX);
+    const belowY = rect.bottom + 8;
+    const y =
+      belowY + popoverHeight > window.innerHeight - edgePadding
+        ? Math.max(edgePadding, rect.top - popoverHeight - 8)
+        : belowY;
+
+    setSelectedReservation(reservation);
+    setPopoverPosition({
+      x,
+      y,
+    });
+  };
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        popoverRef.current &&
+        !popoverRef.current.contains(event.target as Node)
+      ) {
+        setSelectedReservation(null);
+        setPopoverPosition(null);
+      }
+    };
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setSelectedReservation(null);
+        setPopoverPosition(null);
+      }
+    };
+
+    const closePopover = () => {
+      setSelectedReservation(null);
+      setPopoverPosition(null);
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("keydown", handleEscape);
+    window.addEventListener("resize", closePopover);
+    window.addEventListener("scroll", closePopover, true);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleEscape);
+      window.removeEventListener("resize", closePopover);
+      window.removeEventListener("scroll", closePopover, true);
+    };
+  }, []);
 
   // 월간 뷰 렌더링
   const renderMonthView = () => {
@@ -255,7 +316,7 @@ export default function ReservationCalendarView({
                           ? "ring-2 ring-slate-500"
                           : ""
                       }`}
-                      onClick={() => onReservationClick?.(reservation)}
+                      onClick={(event) => handleReservationClick(event, reservation)}
                       onMouseEnter={() => setHoveredReservation(reservation.id)}
                       onMouseLeave={() => setHoveredReservation(null)}
                       title={`${reservation.resource_name} - ${statusLabels[reservation.status]}`}
@@ -302,16 +363,12 @@ export default function ReservationCalendarView({
                       className={`text-xs px-2 py-1 rounded border cursor-pointer ${
                         statusColors[reservation.status]
                       }`}
-                      onClick={() => onReservationClick?.(reservation)}
+                      onClick={(event) => handleReservationClick(event, reservation)}
                       onMouseEnter={() => setHoveredReservation(reservation.id)}
                       onMouseLeave={() => setHoveredReservation(null)}
                     >
                       <div className="font-medium truncate">
                         {reservation.resource_name}
-                      </div>
-                      <div className="text-xs mt-0.5">
-                        {formatTime(reservation.start_date)} -{" "}
-                        {formatTime(reservation.end_date)}
                       </div>
                     </div>
                   ))}
@@ -346,19 +403,12 @@ export default function ReservationCalendarView({
                   className={`p-3 rounded border cursor-pointer ${
                     statusColors[reservation.status]
                   }`}
-                  onClick={() => onReservationClick?.(reservation)}
+                  onClick={(event) => handleReservationClick(event, reservation)}
                   onMouseEnter={() => setHoveredReservation(reservation.id)}
                   onMouseLeave={() => setHoveredReservation(null)}
                 >
                   <div className="font-medium mb-1">
                     {reservation.resource_name}
-                  </div>
-                  <div className="text-xs">
-                    {formatTime(reservation.start_date)} -{" "}
-                    {formatTime(reservation.end_date)}
-                  </div>
-                  <div className="text-xs mt-1">
-                    {statusLabels[reservation.status]}
                   </div>
                 </div>
               ))
@@ -370,7 +420,7 @@ export default function ReservationCalendarView({
   };
 
   return (
-    <div className="space-y-4">
+    <div className="relative space-y-4">
       {/* 컨트롤 바 */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
@@ -420,6 +470,62 @@ export default function ReservationCalendarView({
         {viewMode === "week" && renderWeekView()}
         {viewMode === "day" && renderDayView()}
       </div>
+
+      {selectedReservation && popoverPosition && (
+        <div
+          ref={popoverRef}
+          className="fixed z-50 w-[280px] rounded-xl border border-neutral-200 bg-white p-3 shadow-xl"
+          style={{
+            left: popoverPosition.x,
+            top: popoverPosition.y,
+            transform: "translateX(-50%)",
+          }}
+          onClick={(event) => event.stopPropagation()}
+        >
+          <div className="flex items-start justify-between gap-2">
+            <p className="text-sm font-semibold text-neutral-900">
+              {selectedReservation.resource_name}
+            </p>
+            <span
+              className={`rounded-full border px-2 py-0.5 text-[11px] font-medium ${statusColors[selectedReservation.status]}`}
+            >
+              {statusLabels[selectedReservation.status]}
+            </span>
+          </div>
+          <p className="mt-2 text-xs text-neutral-600">
+            {formatDateTimeRange(
+              selectedReservation.start_date,
+              selectedReservation.end_date
+            )}
+          </p>
+          <p className="mt-1 text-xs text-neutral-500">
+            신청자: {selectedReservation.borrower_id}
+          </p>
+          <div className="mt-3 flex justify-end gap-2">
+            <button
+              type="button"
+              className="btn-ghost h-8 px-3 text-xs"
+              onClick={() => {
+                setSelectedReservation(null);
+                setPopoverPosition(null);
+              }}
+            >
+              닫기
+            </button>
+            <button
+              type="button"
+              className="btn-outline h-8 px-3 text-xs"
+              onClick={() => {
+                onReservationClick?.(selectedReservation);
+                setSelectedReservation(null);
+                setPopoverPosition(null);
+              }}
+            >
+              상세 보기
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

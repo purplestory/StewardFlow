@@ -33,6 +33,7 @@ type ReservationRow = {
   } | null;
   vehicles: {
     name: string;
+    license_plate: string | null;
     owner_department: string;
     owner_scope: string;
     image_url: string | null;
@@ -45,8 +46,20 @@ type ReservationQueryRow = Omit<ReservationRow, "borrower" | "vehicles"> & {
     | Array<{ name: string | null; department: string | null }>
     | null;
   vehicles:
-    | { name: string; owner_department: string; owner_scope: "organization" | "department"; image_url: string | null }
-    | Array<{ name: string; owner_department: string; owner_scope: "organization" | "department"; image_url: string | null }>
+    | {
+        name: string;
+        license_plate: string | null;
+        owner_department: string;
+        owner_scope: "organization" | "department";
+        image_url: string | null;
+      }
+    | Array<{
+        name: string;
+        license_plate: string | null;
+        owner_department: string;
+        owner_scope: "organization" | "department";
+        image_url: string | null;
+      }>
     | null;
 };
 
@@ -144,7 +157,7 @@ export default function VehicleReservationManager() {
     const { data, error } = await supabase
       .from("vehicle_reservations")
       .select(
-        "id,status,start_date,end_date,borrower_id,vehicle_id,profiles!borrower_id(name,department),vehicles(name,owner_department,owner_scope,image_url)"
+        "id,status,start_date,end_date,borrower_id,vehicle_id,profiles!borrower_id(name,department),vehicles(name,license_plate,owner_department,owner_scope,image_url)"
       )
       .order("created_at", { ascending: false });
 
@@ -259,7 +272,10 @@ export default function VehicleReservationManager() {
       start_date: reservation.start_date,
       end_date: reservation.end_date,
       status: reservation.status,
-      resource_name: reservation.vehicles?.name ?? "차량",
+      resource_name:
+        reservation.vehicles?.license_plate?.trim() ||
+        reservation.vehicles?.name ||
+        "차량",
       borrower_id: formatBorrowerName(reservation.borrower, reservation.borrower_id),
     }));
   }, [filteredReservations]);

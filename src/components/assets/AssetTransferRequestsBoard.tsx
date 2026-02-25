@@ -707,62 +707,62 @@ export default function AssetTransferRequestsBoard() {
       {message && <Notice variant="error">{message}</Notice>}
       {toast && <Notice variant="success">{toast}</Notice>}
 
-      <div className="module-toolbar">
-        <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-4">
-          <select
-            className="form-select w-full"
-            value={sortOrder}
-            onChange={(event) =>
-              setSortOrder(event.target.value as "latest" | "status")
-            }
-          >
-            <option value="latest">최신순</option>
-            <option value="status">상태순</option>
-          </select>
-          <select
-            className="form-select w-full"
-            value={effectiveDepartmentFilter}
-            onChange={(event) => setDepartmentFilter(event.target.value)}
-          >
-            <option value="all">전체 부서</option>
-            {availableDepartments.map((dept) => (
-              <option key={dept} value={dept}>
-                {dept}
-              </option>
-            ))}
-          </select>
-          <input
-            className="form-input w-full"
-            placeholder="자산/부서 검색"
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-          />
-          <input
-            className="form-input w-full"
-            placeholder="요청자 이름/이메일 검색"
-            value={requesterQuery}
-            onChange={(event) => setRequesterQuery(event.target.value)}
-          />
-        </div>
-      </div>
-      <p className="text-xs text-neutral-400">
-        요청자 검색은 이름/이메일 기준으로 동작하며, 정보는 기관 내 사용자만 표시됩니다.
-      </p>
-
-      {filteredRequests.length === 0 ? (
-        <Notice>
-          <p>요청이 없습니다.</p>
-        </Notice>
-      ) : (
-        <div className="space-y-2">
-          {filteredRequests.map((request) => (
-            <div
-              key={request.id}
-              className="list-row text-sm"
+      <section className="surface-card p-5 md:p-6">
+        <div className="module-toolbar">
+          <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-4">
+            <select
+              className="form-select w-full"
+              value={sortOrder}
+              onChange={(event) =>
+                setSortOrder(event.target.value as "latest" | "status")
+              }
             >
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div>
-                  <p className="font-medium">
+              <option value="latest">최신순</option>
+              <option value="status">상태순</option>
+            </select>
+            <select
+              className="form-select w-full"
+              value={effectiveDepartmentFilter}
+              onChange={(event) => setDepartmentFilter(event.target.value)}
+            >
+              <option value="all">전체 부서</option>
+              {availableDepartments.map((dept) => (
+                <option key={dept} value={dept}>
+                  {dept}
+                </option>
+              ))}
+            </select>
+            <input
+              className="form-input w-full"
+              placeholder="자산/부서 검색"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+            />
+            <input
+              className="form-input w-full"
+              placeholder="요청자 이름/이메일 검색"
+              value={requesterQuery}
+              onChange={(event) => setRequesterQuery(event.target.value)}
+            />
+          </div>
+        </div>
+        <p className="mt-3 text-xs text-neutral-400">
+          요청자 검색은 이름/이메일 기준으로 동작하며, 정보는 기관 내 사용자만 표시됩니다.
+        </p>
+
+        {filteredRequests.length === 0 ? (
+          <Notice className="mt-3">
+            <p>요청이 없습니다.</p>
+          </Notice>
+        ) : (
+          <div className="module-list mt-3">
+            {filteredRequests.map((request) => (
+              <div
+                key={request.id}
+                className="list-row flex-col gap-3 text-sm md:flex-row md:items-start md:justify-between"
+              >
+                <div className="min-w-0 flex-1">
+                  <p className="font-medium text-neutral-900">
                     {request.assets?.name ?? "자산"} ·{" "}
                     {request.from_department ?? "미등록"} →{" "}
                     {request.to_department ?? "미등록"}
@@ -775,9 +775,23 @@ export default function AssetTransferRequestsBoard() {
                   >
                     {statusLabel[request.status]}
                   </span>
+                  {request.note && (
+                    <p className="mt-2 text-xs text-neutral-500">
+                      사유:{" "}
+                      <span className="rounded bg-neutral-100 px-2 py-0.5 text-neutral-700">
+                        {request.note}
+                      </span>
+                    </p>
+                  )}
+                  <p className="mt-1 text-xs text-neutral-400">
+                    요청일: {formatDateTime(request.created_at)}
+                    {request.resolved_at && (
+                      <span> · 처리일: {formatDateTime(request.resolved_at)}</span>
+                    )}
+                  </p>
                 </div>
                 {request.status === "pending" && (
-                  <div className="flex items-center gap-2">
+                  <div className="flex w-full flex-wrap items-center justify-end gap-2 md:w-auto md:flex-nowrap">
                     {request.requester_id === userId && (
                       <button
                         type="button"
@@ -793,42 +807,28 @@ export default function AssetTransferRequestsBoard() {
                         <button
                           type="button"
                           onClick={() => handleResolve(request, "approved")}
-                        disabled={updatingId === request.id}
-                        className="btn-primary h-[38px]"
-                      >
-                        승인
-                      </button>
+                          disabled={updatingId === request.id}
+                          className="btn-primary h-[38px]"
+                        >
+                          승인
+                        </button>
                         <button
                           type="button"
                           onClick={() => handleResolve(request, "rejected")}
-                        disabled={updatingId === request.id}
-                        className="btn-outline h-[38px] border-rose-200 text-rose-600 hover:bg-rose-50"
-                      >
-                        거절
-                      </button>
+                          disabled={updatingId === request.id}
+                          className="btn-outline h-[38px] border-rose-200 text-rose-600 hover:bg-rose-50"
+                        >
+                          거절
+                        </button>
                       </>
                     )}
                   </div>
                 )}
               </div>
-              {request.note && (
-                <p className="mt-2 text-xs text-neutral-500">
-                  사유:{" "}
-                  <span className="rounded bg-neutral-100 px-2 py-0.5 text-neutral-700">
-                    {request.note}
-                  </span>
-                </p>
-              )}
-              <p className="mt-1 text-xs text-neutral-400">
-                요청일: {formatDateTime(request.created_at)}
-                {request.resolved_at && (
-                  <span> · 처리일: {formatDateTime(request.resolved_at)}</span>
-                )}
-              </p>
-            </div>
-          ))}
-        </div>
-      )}
+            ))}
+          </div>
+        )}
+      </section>
     </div>
   );
 }

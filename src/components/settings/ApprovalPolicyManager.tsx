@@ -311,41 +311,29 @@ export default function ApprovalPolicyManager() {
         description="물품, 공간, 차량의 대여 승인에 필요한 권한을 설정합니다."
         bodyClassName="space-y-4"
       >
-        <form
-          onSubmit={handleCreate}
-          className="grid gap-3 md:grid-cols-4"
-        >
-          <select
-            name="scope"
-            className="form-select"
-          >
-            <option value="asset">물품</option>
-            <option value="space">공간</option>
-            <option value="vehicle">차량</option>
-          </select>
-          <select
-            name="department"
-            className="form-select"
-          >
-            <option value="">기관 공용</option>
-            {departments.map((dept) => (
-              <option key={dept} value={dept}>
-                {dept}
-              </option>
-            ))}
-          </select>
-          <select
-            name="required_role"
-            className="form-select"
-          >
-            <option value="manager">부서 관리자</option>
-            <option value="admin">관리자</option>
-            <option value="user">일반 사용자</option>
-          </select>
-          <button className="btn-primary">
-            정책 추가
-          </button>
-        </form>
+        <div className="module-toolbar">
+          <form onSubmit={handleCreate} className="grid gap-2 md:grid-cols-4">
+            <select name="scope" className="form-select">
+              <option value="asset">물품</option>
+              <option value="space">공간</option>
+              <option value="vehicle">차량</option>
+            </select>
+            <select name="department" className="form-select">
+              <option value="">기관 공용</option>
+              {departments.map((dept) => (
+                <option key={dept} value={dept}>
+                  {dept}
+                </option>
+              ))}
+            </select>
+            <select name="required_role" className="form-select">
+              <option value="manager">부서 관리자</option>
+              <option value="admin">관리자</option>
+              <option value="user">일반 사용자</option>
+            </select>
+            <button className="btn-primary w-full md:w-auto">정책 추가</button>
+          </form>
+        </div>
 
         {policies.length === 0 ? (
           <div className="rounded-lg border border-dashed border-neutral-200 p-5 text-center text-sm text-neutral-500">
@@ -359,47 +347,53 @@ export default function ApprovalPolicyManager() {
             {policies.map((policy) => (
               <div
                 key={policy.id}
-                className="list-row flex-col items-stretch gap-2 sm:flex-row sm:items-center"
+                className="list-row flex-col gap-3 md:flex-row md:items-center md:justify-between"
               >
-                <div className="min-w-0 flex-shrink-0 text-neutral-700">
-                  {scopeLabels[policy.scope]} ·{" "}
-                  {policy.department ?? "기관 공용"}
+                <div className="min-w-0 flex-1">
+                  <p className="font-medium text-neutral-900">
+                    {scopeLabels[policy.scope]} · {policy.department ?? "기관 공용"}
+                  </p>
+                  <p className="mt-1 text-xs text-neutral-500">
+                    승인 권한: {roleLabels[policy.required_role]}
+                  </p>
                 </div>
-                <select
-                  value={policy.required_role}
-                  onChange={(event) =>
-                    handleRoleUpdate(
-                      policy.id,
-                      event.target.value as ApprovalPolicy["required_role"]
-                    )
-                  }
-                  className="form-select flex-1 min-w-0"
-                >
-                  <option value="manager">부서 관리자</option>
-                  <option value="admin">관리자</option>
-                  <option value="user">일반 사용자</option>
-                </select>
-                <button
-                  type="button"
-                  onClick={() => handleDelete(policy.id)}
-                  className="icon-button icon-button-danger"
-                  title="삭제"
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    strokeWidth={1.5}
-                    stroke="currentColor"
-                    className="w-5 h-5"
+                <div className="flex w-full items-center gap-2 md:w-auto">
+                  <select
+                    value={policy.required_role}
+                    onChange={(event) =>
+                      handleRoleUpdate(
+                        policy.id,
+                        event.target.value as ApprovalPolicy["required_role"]
+                      )
+                    }
+                    className="form-select h-10 min-w-0 flex-1 md:min-w-[170px] md:flex-none"
                   >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0"
-                    />
-                  </svg>
-                </button>
+                    <option value="manager">부서 관리자</option>
+                    <option value="admin">관리자</option>
+                    <option value="user">일반 사용자</option>
+                  </select>
+                  <button
+                    type="button"
+                    onClick={() => handleDelete(policy.id)}
+                    className="icon-button icon-button-danger"
+                    title="삭제"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      strokeWidth={1.5}
+                      stroke="currentColor"
+                      className="w-5 h-5"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0"
+                      />
+                    </svg>
+                  </button>
+                </div>
               </div>
             ))}
           </div>

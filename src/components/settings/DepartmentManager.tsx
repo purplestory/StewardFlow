@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import Notice from "@/components/common/Notice";
+import SectionCard from "@/components/ui/SectionCard";
 
 type Department = {
   id: string;
@@ -361,13 +362,6 @@ export default function DepartmentManager({ organizationId }: DepartmentManagerP
 
   return (
     <div className="space-y-6">
-      <div>
-        <h3 className="text-xl font-semibold tracking-tight text-slate-900">부서 관리</h3>
-        <p className="mt-1 text-sm text-neutral-600">
-          기관의 부서를 생성하고 관리할 수 있습니다.
-        </p>
-      </div>
-
       {message && (
         <Notice
           variant={
@@ -381,47 +375,51 @@ export default function DepartmentManager({ organizationId }: DepartmentManagerP
         </Notice>
       )}
 
-      {/* Create Form */}
-      <form
-        onSubmit={handleCreate}
-        className="surface-card space-y-3 p-5 md:p-6"
+      <SectionCard
+        title="부서 생성"
+        description="기관 내 부서를 추가하고 설명을 관리합니다."
       >
-        <h4 className="font-medium">새 부서 생성</h4>
-        <div className="space-y-3">
-          <input
-            type="text"
-            value={newDepartmentName}
-            onChange={(e) => setNewDepartmentName(e.target.value)}
-            className="form-input"
-            placeholder="부서 이름 (예: 유년부, 중고등부, 청년부)"
-            required
-          />
-          <input
-            type="text"
-            value={newDepartmentDescription}
-            onChange={(e) => setNewDepartmentDescription(e.target.value)}
-            className="form-input"
-            placeholder="부서 설명 (선택사항)"
-          />
-        </div>
-        <button
-          type="submit"
-          disabled={saving}
-          className="btn-primary w-auto"
+        <form
+          onSubmit={handleCreate}
+          className="space-y-3"
         >
-          부서 생성
-        </button>
-      </form>
+          <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]">
+            <input
+              type="text"
+              value={newDepartmentName}
+              onChange={(e) => setNewDepartmentName(e.target.value)}
+              className="form-input"
+              placeholder="부서 이름 (예: 유년부, 중고등부, 청년부)"
+              required
+            />
+            <input
+              type="text"
+              value={newDepartmentDescription}
+              onChange={(e) => setNewDepartmentDescription(e.target.value)}
+              className="form-input"
+              placeholder="부서 설명 (선택사항)"
+            />
+            <button
+              type="submit"
+              disabled={saving}
+              className="btn-primary w-full md:w-auto"
+            >
+              부서 생성
+            </button>
+          </div>
+        </form>
+      </SectionCard>
 
-      {/* Department List */}
-      <div className="surface-card p-4 md:p-5">
-        <h4 className="text-sm font-semibold mb-3">부서 목록</h4>
+      <SectionCard
+        title="부서 목록"
+        description="드래그로 순서를 변경하고 부서 정보를 수정할 수 있습니다."
+      >
         {departments.length === 0 ? (
           <Notice variant="neutral" className="text-left">
             등록된 부서가 없습니다.
           </Notice>
         ) : (
-          <div className="space-y-2">
+          <div className="module-list">
             {departments.map((dept, index) => (
               <div
                 key={dept.id}
@@ -438,10 +436,10 @@ export default function DepartmentManager({ organizationId }: DepartmentManagerP
                   draggedIndex === index
                     ? "opacity-50 cursor-grabbing"
                     : dragOverIndex === index
-                    ? "border-blue-400 bg-blue-50"
+                    ? "bg-blue-50"
                     : editingId === dept.id
                     ? ""
-                    : "cursor-grab bg-white"
+                    : "cursor-grab hover:bg-neutral-50"
                 }`}
               >
                 {editingId === dept.id ? (
@@ -532,7 +530,7 @@ export default function DepartmentManager({ organizationId }: DepartmentManagerP
             ))}
           </div>
         )}
-      </div>
+      </SectionCard>
 
       {/* 삭제 확인 모달 */}
       {showDeleteConfirm && (

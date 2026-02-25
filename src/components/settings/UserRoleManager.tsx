@@ -2082,6 +2082,12 @@ export default function UserRoleManager() {
 
       <section className="surface-card p-5 md:p-6">
         <h3 className="text-sm font-semibold text-slate-900">등록된 사용자</h3>
+        <div className="module-toolbar mt-3">
+          <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-neutral-600">
+            <span className="module-kpi">총 {profiles.length}명</span>
+            <span>부서/권한은 행 우측에서 즉시 변경됩니다.</span>
+          </div>
+        </div>
         {profiles.length === 0 ? (
           <div className="mt-3 rounded-lg border border-dashed border-neutral-300 p-6 text-center text-sm text-neutral-500">
             <p>등록된 사용자가 없습니다.</p>
@@ -2094,18 +2100,22 @@ export default function UserRoleManager() {
             {profiles.map((profile) => (
               <div
                 key={profile.id}
-                className="list-row flex-col text-xs sm:flex-row"
+                className="list-row flex-col items-start justify-between gap-3 text-xs lg:flex-row lg:items-center"
               >
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-medium text-neutral-900">
                     {profile.name ?? "이름 없음"}
                   </p>
                   <p className="text-xs text-neutral-500">{profile.email}</p>
+                  <p className="mt-1 text-xs text-neutral-400">
+                    현재 부서: {profile.department ?? "미지정"} · 권한:{" "}
+                    {roleLabel[profile.role]}
+                  </p>
                 </div>
-                <div className="grid w-full grid-cols-1 gap-2 sm:flex sm:w-auto sm:flex-shrink-0 sm:items-center">
+                <div className="grid w-full grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] lg:w-auto lg:min-w-[420px]">
                   {currentUserRole === "admin" ? (
                     <select
-                      className="form-select h-[38px] w-full sm:min-w-[120px] sm:w-auto"
+                      className="form-select h-[38px] w-full"
                       value={profile.department || ""}
                       onChange={(event) =>
                         updateDepartment(
@@ -2123,12 +2133,12 @@ export default function UserRoleManager() {
                       ))}
                     </select>
                   ) : (
-                    <span className="text-xs text-neutral-400 sm:min-w-[120px]">
+                    <span className="flex h-[38px] items-center rounded-lg border border-neutral-200 bg-neutral-50 px-3 text-xs text-neutral-500">
                       {profile.department ?? "부서 미등록"}
                     </span>
                   )}
                   <select
-                    className="form-select h-10 w-full sm:min-w-[120px] sm:w-auto"
+                    className="form-select h-10 w-full"
                     value={profile.role}
                     onChange={(event) =>
                       updateRole(
@@ -2159,7 +2169,7 @@ export default function UserRoleManager() {
                       type="button"
                       onClick={() => deleteUser(profile.id, profile.name || "이름 없음")}
                       disabled={deletingUserId === profile.id || loading}
-                      className="icon-button icon-button-danger justify-self-end sm:justify-self-auto"
+                      className="icon-button icon-button-danger justify-self-end"
                       title="사용자 삭제"
                     >
                       {deletingUserId === profile.id ? (

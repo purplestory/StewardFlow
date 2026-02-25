@@ -367,95 +367,95 @@ export default function ReservationManager() {
       ) : (
         <>
           {filteredReservations.length === 0 ? (
-        <Notice>
-          <p>조건에 맞는 예약이 없습니다.</p>
-          <button
-            type="button"
-            onClick={() => {
-              setQuery("");
-              setStatusFilter("all");
-            }}
-            className="btn-ghost mt-3"
-          >
-            필터 초기화
-          </button>
-        </Notice>
-      ) : (
-        filteredReservations.map((reservation) => (
-        <div
-          key={reservation.id}
-          className="cursor-pointer rounded-xl border border-neutral-200 bg-white px-4 py-3 transition-colors hover:bg-neutral-50"
-          onClick={() => setSelectedReservation(reservation)}
-        >
-          <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-            <div>
-              <p className="text-sm font-medium">
-                {reservation.assets?.name ?? "자산"} 대여
-              </p>
-              <p className="text-xs text-neutral-500">
-                {formatDateTimeRange(reservation.start_date, reservation.end_date)}
-              </p>
-              <p className="text-xs text-neutral-500">
-                신청자:{" "}
-                {formatBorrowerName(reservation.borrower, reservation.borrower_id)}
-              </p>
-              {reservation.note && (
-                <p className="text-xs text-neutral-400">사유: {reservation.note}</p>
-              )}
-            </div>
-            <div className="flex items-center gap-2">
+            <Notice>
+              <p>조건에 맞는 예약이 없습니다.</p>
               <button
                 type="button"
-                className="btn-ghost h-8 px-3 text-xs"
-                onClick={(event) => {
-                  event.stopPropagation();
-                  setSelectedReservation(reservation);
+                onClick={() => {
+                  setQuery("");
+                  setStatusFilter("all");
                 }}
+                className="btn-ghost mt-3"
               >
-                상세
+                필터 초기화
               </button>
-              <span className="text-xs text-neutral-500">상태</span>
-              <Select
-                value={reservation.status}
-                onValueChange={(nextStatus) =>
-                  handleStatusChange(
-                    reservation.id,
-                    nextStatus as ReservationRow["status"]
-                  )
-                }
-                disabled={
-                  reservation.status === "returned" ||
-                  !context ||
-                  !reservation.assets ||
-                  updatingId === reservation.id ||
-                  roleRank[context.role] <
-                    roleRank[
-                      resolveRequiredRole(policies, reservation.assets)
-                    ]
-                }
-              >
-                <SelectTrigger
-                  className="form-select h-8 w-28 px-2 text-xs"
-                  onClick={(event) => event.stopPropagation()}
+            </Notice>
+          ) : (
+            <div className="module-list">
+              {filteredReservations.map((reservation) => (
+                <div
+                  key={reservation.id}
+                  className="list-row cursor-pointer flex-col gap-3 text-sm transition-colors hover:bg-neutral-50 md:flex-row md:items-start md:justify-between"
+                  onClick={() => setSelectedReservation(reservation)}
                 >
-                  {statusOptions.map((status) => (
-                    <SelectItem key={status} value={status} disabled={status === "returned"}>
-                      {statusLabel[status]}
-                    </SelectItem>
-                  ))}
-                </SelectTrigger>
-              </Select>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium text-neutral-900">
+                      {reservation.assets?.name ?? "자산"} 대여
+                    </p>
+                    <p className="text-xs text-neutral-500">
+                      {formatDateTimeRange(reservation.start_date, reservation.end_date)}
+                    </p>
+                    <p className="text-xs text-neutral-500">
+                      신청자:{" "}
+                      {formatBorrowerName(reservation.borrower, reservation.borrower_id)}
+                    </p>
+                    {reservation.note && (
+                      <p className="text-xs text-neutral-500">사유: {reservation.note}</p>
+                    )}
+                    {context && reservation.assets && (
+                      <p className="mt-1 text-xs text-neutral-400">
+                        승인 필요 권한:{" "}
+                        {roleLabel[resolveRequiredRole(policies, reservation.assets)]}
+                      </p>
+                    )}
+                  </div>
+                  <div className="flex w-full flex-wrap items-center justify-end gap-2 md:w-auto md:flex-nowrap">
+                    <button
+                      type="button"
+                      className="btn-ghost h-8 px-3 text-xs"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        setSelectedReservation(reservation);
+                      }}
+                    >
+                      상세
+                    </button>
+                    <span className="text-xs text-neutral-500">상태</span>
+                    <Select
+                      value={reservation.status}
+                      onValueChange={(nextStatus) =>
+                        handleStatusChange(
+                          reservation.id,
+                          nextStatus as ReservationRow["status"]
+                        )
+                      }
+                      disabled={
+                        reservation.status === "returned" ||
+                        !context ||
+                        !reservation.assets ||
+                        updatingId === reservation.id ||
+                        roleRank[context.role] <
+                          roleRank[
+                            resolveRequiredRole(policies, reservation.assets)
+                          ]
+                      }
+                    >
+                      <SelectTrigger
+                        className="form-select h-8 w-28 px-2 text-xs"
+                        onClick={(event) => event.stopPropagation()}
+                      >
+                        {statusOptions.map((status) => (
+                          <SelectItem key={status} value={status} disabled={status === "returned"}>
+                            {statusLabel[status]}
+                          </SelectItem>
+                        ))}
+                      </SelectTrigger>
+                    </Select>
+                  </div>
+                </div>
+              ))}
             </div>
-          </div>
-          {context && reservation.assets && (
-            <p className="mt-2 text-xs text-neutral-400">
-              승인 필요 권한:{" "}
-              {roleLabel[resolveRequiredRole(policies, reservation.assets)]}
-            </p>
           )}
-        </div>
-        ))
-      )}
         </>
       )}
 

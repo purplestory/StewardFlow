@@ -21,6 +21,7 @@ Supabase를 통해 카카오톡 OAuth 로그인을 설정하는 방법입니다.
 4. 사이트 도메인 입력:
    - 개발용: `http://localhost:3000`
    - 프로덕션용: `https://yourdomain.com`
+   - 프리뷰(권장: 브랜치 고정 URL): `https://your-project-git-main-your-team.vercel.app`
 5. 저장
 
 ### 1.3 카카오 로그인 활성화
@@ -30,6 +31,7 @@ Supabase를 통해 카카오톡 OAuth 로그인을 설정하는 방법입니다.
 3. **"Redirect URI 등록"** 섹션에서 URI 추가:
    - 개발: `http://localhost:3000/auth/callback`
    - 프로덕션: `https://yourdomain.com/auth/callback`
+   - 프리뷰(브랜치 고정 URL): `https://your-project-git-main-your-team.vercel.app/auth/callback`
    - **Supabase 콜백 (필수)**: `https://[your-project-ref].supabase.co/auth/v1/callback`
 4. **OpenID Connect 설정 (선택, 권장)**:
    - OpenID Connect를 활성화하면 더 많은 사용자 정보(이메일, 프로필 등)를 안정적으로 받을 수 있습니다
@@ -150,6 +152,8 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
 - Supabase의 Redirect URL은 자동 생성되며 변경할 수 없습니다
 - 카카오 개발자 센터에 정확히 등록해야 합니다
 - 개발/프로덕션 환경별로 다른 Redirect URL을 등록할 수 있습니다
+- Vercel 커밋 단위 프리뷰 URL(`*-<hash>-team.vercel.app`)은 매번 바뀌므로 OAuth 허용 목록 관리가 어렵습니다
+- 프리뷰 로그인 테스트는 브랜치 고정 URL(`*-git-main-*.vercel.app`) 또는 별도 고정 스테이징 도메인을 사용하세요
 
 ### 5.2 이메일 정보
 

@@ -4,6 +4,12 @@
 
 ## 2026-02-28
 - 상태: 확정
+- 결정: Vercel 프리뷰의 OAuth 기준 호스트를 커밋 URL이 아닌 브랜치 고정 URL로 정규화한다
+- 이유: 카카오 Redirect URI는 고정 허용 목록 기반이라 커밋마다 바뀌는 프리뷰 URL에서 로그인 실패가 반복되기 때문
+- 영향: `middleware.ts`, 카카오/Supabase Redirect URL 운영 절차, 배포 가이드 문서
+
+## 2026-02-28
+- 상태: 확정
 - 결정: 예약승인 달력의 파생 경로(`calendarCurrentDate`, 달력 클릭 상세 매핑)도 `filteredReservations` 기준으로 통일한다
 - 이유: 렌더 데이터만 통일하면 필터 조건에서 달력 기준 월/상세 연동이 어긋나는 체감 불일치가 남기 때문
 - 영향: `ReservationManager`, `SpaceReservationManager`, `VehicleReservationManager`

@@ -176,6 +176,15 @@ SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
    ```
 5. 저장
 
+### 프리뷰에서 카카오 로그인 테스트할 때
+
+- 커밋 단위 프리뷰 URL(`https://...-<hash>-...vercel.app`)은 배포마다 바뀌어 카카오 Redirect URI에 계속 추가해야 하므로 비권장입니다.
+- 브랜치 고정 URL(`https://your-project-git-main-your-team.vercel.app`)을 기준으로 카카오/Supabase Redirect URL을 등록하세요.
+- 본 프로젝트는 미들웨어에서 `VERCEL_BRANCH_URL`(또는 `NEXT_PUBLIC_CANONICAL_PREVIEW_HOST`)이 있으면 랜덤 프리뷰 URL을 브랜치 고정 URL로 리다이렉트하도록 구성했습니다.
+- 따라서 프리뷰 OAuth를 쓰려면 아래 URL을 둘 다 등록해야 합니다:
+  - 카카오 Redirect URI: `https://your-project-git-main-your-team.vercel.app/auth/callback`
+  - Supabase Redirect URL: `https://your-project-git-main-your-team.vercel.app/auth/callback`
+
 ### Supabase 프로덕션 URL 허용
 
 Supabase에서 프로덕션 URL을 허용해야 합니다:

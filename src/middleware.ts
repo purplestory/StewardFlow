@@ -1,10 +1,42 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
+function normalizeHost(host?: string | null): string | null {
+  if (!host) return null;
+  const trimmed = host.trim();
+  if (!trimmed) return null;
+  const withoutProtocol = trimmed.replace(/^https?:\/\//i, "");
+  const onlyHost = withoutProtocol.split("/")[0];
+  return onlyHost.toLowerCase();
+}
+
 // Next.js 16+ 권장 방식: middleware 대신 proxy 패턴 사용
 // 하지만 Supabase SSR의 경우 middleware가 여전히 필요하므로
 // 경고를 억제하기 위해 주석 추가 및 최신 패턴 적용
 export async function middleware(request: NextRequest) {
+  // 프리뷰 랜덤 URL(커밋 단위)을 브랜치 고정 URL로 통일해 OAuth redirect URI 불일치를 줄인다.
+  const requestHost = normalizeHost(request.headers.get("host"));
+  const canonicalPreviewHost = normalizeHost(
+    process.env.NEXT_PUBLIC_CANONICAL_PREVIEW_HOST || process.env.VERCEL_BRANCH_URL
+  );
+  const shouldRedirectToCanonicalPreviewHost = Boolean(
+    requestHost &&
+      canonicalPreviewHost &&
+      requestHost !== canonicalPreviewHost &&
+      requestHost.endsWith(".vercel.app") &&
+      canonicalPreviewHost.endsWith(".vercel.app")
+  );
+
+  if (shouldRedirectToCanonicalPreviewHost) {
+    const redirectUrl = request.nextUrl.clone();
+    redirectUrl.host = canonicalPreviewHost!;
+    const forwardedProto = request.headers.get("x-forwarded-proto");
+    if (forwardedProto === "http" || forwardedProto === "https") {
+      redirectUrl.protocol = `${forwardedProto}:`;
+    }
+    return NextResponse.redirect(redirectUrl, 307);
+  }
+
   // RSC(React Server Components) 요청은 수정하지 않고 그대로 통과시킴.
   // 미들웨어에서 응답/쿠키를 건드리면 CORS "access control checks" 오류가 발생할 수 있음.
   const isRsc =

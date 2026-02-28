@@ -63,6 +63,13 @@
 - [DONE] 공정 전환  
   - 문서 기반 실행 방식 도입.  
   - 앞으로 모든 변경은 본 문서 갱신을 선행/동반한다.
+- [DONE] OAuth 프리뷰 로그인 안정화
+  - 원인 확인: 카카오 OAuth는 허용 Redirect URI 기반인데, Vercel 커밋 단위 프리뷰 URL이 배포마다 바뀌어 프리뷰 로그인 실패 발생.
+  - 조치: `middleware.ts`에 프리뷰 호스트 정규화 추가.
+    - 우선순위: `NEXT_PUBLIC_CANONICAL_PREVIEW_HOST` -> `VERCEL_BRANCH_URL`
+    - 현재 호스트가 `.vercel.app` 랜덤 프리뷰이고 정규화 대상 호스트가 있으면 307 리다이렉트
+  - 문서 갱신: `docs/kakao_oauth_setup.md`, `docs/vercel_deployment_guide.md`에 브랜치 고정 URL 등록 절차 추가.
+  - 검증: `npm run lint -- src/middleware.ts` (오류 0)
 
 ## 3) 이슈 / RCA 로그
 
@@ -108,6 +115,18 @@
   1. 예약 목록/달력의 데이터 소스는 동일 변수(`filteredReservations`)를 표준으로 사용.
   2. 날짜 파싱 함수 변경 시 비정형 샘플(`range string`, `date only`, `ko locale`) 회귀 케이스를 최소 1회 포함.
   3. 달력 관련 파생값(`calendarCurrentDate`, 상세 매핑)도 동일 데이터 소스를 사용하도록 코드리뷰 체크리스트에 추가.
+
+### RCA-2026-02-28-04
+- 증상: 프리뷰 사이트에서 카카오 로그인이 실패함.
+- 원인:
+  1. 카카오 Redirect URI 허용 목록은 고정 URL 기준.
+  2. Vercel 커밋 단위 프리뷰 URL은 배포마다 호스트가 바뀌어 허용 목록과 불일치.
+- 조치:
+  1. 미들웨어에서 프리뷰 랜덤 호스트를 브랜치 고정 호스트(`VERCEL_BRANCH_URL` 또는 `NEXT_PUBLIC_CANONICAL_PREVIEW_HOST`)로 307 리다이렉트.
+  2. 카카오/Supabase 설정 문서에 브랜치 고정 URL 등록 절차 명시.
+- 재발 방지:
+  1. OAuth 테스트는 커밋 URL 대신 브랜치 고정 URL/스테이징 도메인만 사용.
+  2. 새 배포 환경 추가 시 카카오 + Supabase Redirect URI를 같은 기준 URL로 동시 등록.
 
 ## 4) 다음 실행 순서
 1. UI-003 착수: 내 신청 통합 표기 + 승인 취소 사유 플로우

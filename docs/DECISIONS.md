@@ -10,6 +10,12 @@
 
 ## 2026-02-28
 - 상태: 확정
+- 결정: 브라우저 OAuth 흐름은 `implicit`을 기본으로 사용하고, 콜백 오류 메시지는 원인별(세션 만료/취소/인증 실패)로 매핑한다
+- 이유: `PKCE flow_state_not_found` 케이스에서 콜백이 일반 오류로만 귀결되어 모바일 카카오 로그인 재시도 동선이 불명확했기 때문
+- 영향: `src/lib/supabase.ts` (`flowType: implicit`), `src/app/auth/callback/page.tsx` (쿼리/해시 오류 파싱, 예외 메시지 매핑)
+
+## 2026-02-28
+- 상태: 확정
 - 결정: 설정 페이지 리스트(부서/승인정책/등록사용자)의 공통 래퍼는 `ModuleList` / `ModuleListHeader`로 표준화한다
 - 이유: 섹션별 리스트 헤더/테두리/간격이 미세하게 달라 UI 일관성과 유지보수성이 떨어졌기 때문
 - 영향: `DepartmentManager`, `ApprovalPolicyManager`, `UserRoleManager`, `src/components/ui/ModuleList.tsx`

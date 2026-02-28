@@ -27,12 +27,31 @@ function AuthCallbackPageContent() {
   useEffect(() => {
     const SESSION_RECOVERY_RETRIES = 24;
     const SESSION_RECOVERY_DELAY_MS = 150;
+    const resolveAuthErrorMessage = (message?: string | null) => {
+      const normalized = (message || "").toLowerCase();
+      if (!normalized) return "인증에 실패했습니다.";
+      if (
+        normalized.includes("flow_state_not_found") ||
+        normalized.includes("flow state") ||
+        normalized.includes("code verifier") ||
+        normalized.includes("pkce")
+      ) {
+        return "로그인 세션이 만료되었습니다. 다시 로그인해 주세요.";
+      }
+      if (normalized.includes("cancel") || normalized.includes("access_denied")) {
+        return "로그인이 취소되었습니다.";
+      }
+      return "인증에 실패했습니다.";
+    };
     const isRecoverableOAuthError = (message?: string | null) => {
       const normalized = (message || "").toLowerCase();
       return (
+        normalized.includes("flow_state_not_found") ||
+        normalized.includes("flow state") ||
+        normalized.includes("invalid flow state") ||
         normalized.includes("invalid_grant") ||
         normalized.includes("code verifier") ||
-        normalized.includes("code") && normalized.includes("used") ||
+        (normalized.includes("code") && normalized.includes("used")) ||
         normalized.includes("pkce") ||
         normalized.includes("exchange")
       );
@@ -162,6 +181,27 @@ function AuthCallbackPageContent() {
           }
         };
 
+        const getOAuthErrorFromParams = () => {
+          const queryError =
+            searchParams.get("error_description") ||
+            searchParams.get("error");
+          if (queryError) return queryError;
+
+          const hash = window.location.hash.substring(1);
+          if (!hash) return null;
+          const hashParams = new URLSearchParams(hash);
+          return (
+            hashParams.get("error_description") ||
+            hashParams.get("error")
+          );
+        };
+
+        const oauthParamError = getOAuthErrorFromParams();
+        if (oauthParamError) {
+          await handleAuthError(resolveAuthErrorMessage(oauthParamError));
+          return;
+        }
+
         // Strict mode / 경합 상황에서 이미 세션이 만들어진 경우 바로 성공 처리
         if (await hasActiveSessionUser()) {
           await completeSuccess();
@@ -198,10 +238,19 @@ function AuthCallbackPageContent() {
         const code = searchParams.get("code");
         if (code) {
           // Exchange code for session
-          const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+          let exchangeErrorMessage: string | null = null;
+          try {
+            const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+            exchangeErrorMessage = exchangeError?.message ?? null;
+          } catch (exchangeException) {
+            exchangeErrorMessage =
+              exchangeException instanceof Error
+                ? exchangeException.message
+                : "code exchange exception";
+          }
 
-          if (exchangeError) {
-            if (isRecoverableOAuthError(exchangeError.message)) {
+          if (exchangeErrorMessage) {
+            if (isRecoverableOAuthError(exchangeErrorMessage)) {
               if (
                 await waitForActiveSessionUser(
                   SESSION_RECOVERY_RETRIES,
@@ -212,7 +261,7 @@ function AuthCallbackPageContent() {
                 return;
               }
             }
-            await handleAuthError("인증에 실패했습니다.");
+            await handleAuthError(resolveAuthErrorMessage(exchangeErrorMessage));
             return;
           }
           await completeSuccess();
@@ -230,6 +279,9 @@ function AuthCallbackPageContent() {
         await handleAuthError("인증 정보를 찾을 수 없습니다.");
       } catch (callbackError) {
         console.error("Auth callback error:", callbackError);
+        const fallbackMessage = resolveAuthErrorMessage(
+          callbackError instanceof Error ? callbackError.message : null
+        );
         if (await supabase.auth.getUser().then(({ data }) => Boolean(data.user)).catch(() => false)) {
           const currentOrigin = window.location.origin;
           const next = getJoinRedirectCookie() || "/";
@@ -257,12 +309,12 @@ function AuthCallbackPageContent() {
           }
         })();
         if ((isPopupError && window.opener) || isIframe) {
-          setError("오류가 발생했습니다.");
+          setError(fallbackMessage);
           const target = (window.opener && !window.opener.closed) ? window.opener : window.parent;
           if (target && target !== window) {
             target.postMessage({ 
               type: "OAUTH_ERROR", 
-              error: "오류가 발생했습니다." 
+              error: fallbackMessage 
             }, window.location.origin);
           }
           if (isPopupError) {
@@ -270,7 +322,7 @@ function AuthCallbackPageContent() {
           }
         } else {
           // replace를 사용하여 히스토리에 남기지 않음
-          window.location.replace("/login?error=오류가 발생했습니다");
+          window.location.replace(`/login?error=${encodeURIComponent(fallbackMessage)}`);
         }
       }
     };
@@ -278,6 +330,9 @@ function AuthCallbackPageContent() {
     void handleCallback().catch((error) => {
       if (isAbortError(error)) return;
       console.error("Auth callback unhandled error:", error);
+      const fallbackMessage = resolveAuthErrorMessage(
+        error instanceof Error ? error.message : null
+      );
       const isPopupUnhandled = (() => {
         try {
           return window.opener !== null && !window.opener.closed;
@@ -293,9 +348,9 @@ function AuthCallbackPageContent() {
         }
       })();
       if (isPopupUnhandled || isIframeUnhandled) {
-        setError("오류가 발생했습니다.");
+        setError(fallbackMessage);
       } else {
-        window.location.replace("/login?error=오류가 발생했습니다");
+        window.location.replace(`/login?error=${encodeURIComponent(fallbackMessage)}`);
       }
     });
   }, [searchParams]);

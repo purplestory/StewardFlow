@@ -160,6 +160,17 @@
     - `src/components/settings/DepartmentManager.tsx`
     - `src/components/settings/ApprovalPolicyManager.tsx`
   - 검증: `npm run lint -- src/components/settings/DepartmentManager.tsx src/components/settings/ApprovalPolicyManager.tsx` (통과)
+- [DONE] 프로덕션 OAuth 로그인 오류 대응 (콜백 안정화)
+  - 증상: production 로그인 완료 후 `/login?error=오류가 발생했습니다`로 귀결되어 로그인 실패.
+  - 원인 추정: PKCE 코드 교환 과정에서 `flow_state_not_found` 계열 오류가 발생할 때 콜백 예외 분기가 일반 오류로만 처리됨.
+  - 조치:
+    1. 브라우저 Supabase auth 흐름을 `flowType: "implicit"`으로 전환해 PKCE flow state 의존도를 제거.
+    2. 콜백 페이지에서 query/hash `error` 파라미터를 우선 해석하고, 세션만료/취소/일반실패를 구분해 메시지 표준화.
+    3. `exchangeCodeForSession` 예외 throw 케이스를 별도 포착해 recoverable 재시도 후 메시지 기반 리다이렉트 처리.
+  - 반영 파일:
+    - `src/lib/supabase.ts`
+    - `src/app/auth/callback/page.tsx`
+  - 검증: `npm run lint -- src/lib/supabase.ts src/app/auth/callback/page.tsx` (통과)
 
 ## 3) 이슈 / RCA 로그
 
@@ -286,6 +297,19 @@
 - 재발 방지:
   1. 관리형 리스트 신규 구현 시 `module-list` primitive 사용 여부를 PR 체크리스트에 포함.
   2. "등록" 탭은 기본 목록 노출 후 액션으로 입력 폼을 여는 패턴을 기본값으로 채택.
+
+### RCA-2026-02-28-11
+- 증상: 카카오 OAuth 콜백에서 간헐적으로 일반 오류(`/login?error=오류가 발생했습니다`)로 귀결되어 실제 원인 파악과 사용자 재시도 동선이 막힘.
+- 원인:
+  1. 콜백 로직이 `exchangeCodeForSession`의 throw 케이스를 일반 예외로 처리해 원인별 분기(세션 만료/취소/재시도)를 수행하지 못함.
+  2. PKCE flow state 유실 시(`flow_state_not_found`)에도 사용자 메시지가 일반 오류로만 표시됨.
+- 조치:
+  1. 브라우저 OAuth를 `implicit` 흐름으로 전환해 모바일 외부 앱 전환 시 flow state 유실 리스크를 줄임.
+  2. 콜백에서 `query/hash error`를 우선 파싱하고 메시지 매핑(`세션 만료/로그인 취소/인증 실패`)을 적용.
+  3. code 교환 예외는 recoverable 재시도 후 실패 시 원인별 메시지로 `/login` 리다이렉트.
+- 재발 방지:
+  1. OAuth 콜백 예외는 generic 문구를 금지하고, 최소 3분류(만료/취소/실패)로 매핑한다.
+  2. OAuth 흐름 변경 시 production + preview + mobile 카카오(앱 전환) 시나리오를 릴리즈 체크리스트에 포함한다.
 
 ## 4) 다음 실행 순서
 1. UI-003 착수: 내 신청 통합 표기 + 승인 취소 사유 플로우

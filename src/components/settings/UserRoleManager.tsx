@@ -2440,7 +2440,7 @@ export default function UserRoleManager() {
             {sortedProfiles.map((profile) => (
               <div
                 key={profile.id}
-                className="list-row flex-col items-start justify-between gap-3 text-xs lg:grid lg:grid-cols-[minmax(0,1fr)_500px] lg:items-center"
+                className="list-row flex-col items-start justify-between gap-3 text-xs md:grid md:grid-cols-[minmax(0,1fr)_520px] md:items-center"
               >
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-medium text-neutral-900">
@@ -2448,10 +2448,10 @@ export default function UserRoleManager() {
                   </p>
                   <p className="text-xs text-neutral-500">{profile.email}</p>
                 </div>
-                <div className="grid w-full grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] lg:w-[500px]">
+                <div className="flex w-full flex-wrap items-center gap-2 md:w-[520px] md:flex-nowrap md:justify-end">
                   {currentUserRole === "admin" ? (
                     <select
-                      className="form-select h-[38px] w-full"
+                      className="form-select h-[38px] w-full md:w-[220px] md:shrink-0"
                       value={profile.department || ""}
                       onChange={(event) =>
                         updateDepartment(
@@ -2469,12 +2469,12 @@ export default function UserRoleManager() {
                       ))}
                     </select>
                   ) : (
-                    <span className="flex h-[38px] items-center rounded-lg border border-neutral-200 bg-neutral-50 px-3 text-xs text-neutral-500">
+                    <span className="flex h-[38px] w-full items-center rounded-lg border border-neutral-200 bg-neutral-50 px-3 text-xs text-neutral-500 md:w-[220px] md:shrink-0">
                       {profile.department ?? "부서 미등록"}
                     </span>
                   )}
                   <select
-                    className="form-select h-10 w-full"
+                    className="form-select h-10 w-full md:w-[220px] md:shrink-0"
                     value={profile.role}
                     onChange={(event) =>
                       updateRole(
@@ -2505,7 +2505,7 @@ export default function UserRoleManager() {
                       type="button"
                       onClick={() => deleteUser(profile.id, profile.name || "이름 없음")}
                       disabled={deletingUserId === profile.id || loading}
-                      className="icon-button icon-button-danger justify-self-end"
+                      className="icon-button icon-button-danger md:ml-1 md:shrink-0"
                       title="사용자 삭제"
                     >
                       {deletingUserId === profile.id ? (
@@ -2520,7 +2520,7 @@ export default function UserRoleManager() {
                       )}
                     </button>
                   ) : (
-                    <div className="hidden h-10 w-10 lg:block" aria-hidden="true" />
+                    <div className="hidden h-10 w-10 md:block md:shrink-0" aria-hidden="true" />
                   )}
                 </div>
               </div>

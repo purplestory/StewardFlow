@@ -145,6 +145,11 @@
     - `src/components/settings/ApprovalPolicyManager.tsx`
     - `src/components/settings/UserRoleManager.tsx`
   - 검증: `npm run lint` (통과)
+- [DONE] 등록된 사용자 리스트 1행 정렬 보정
+  - 요청: 사용자 섹션의 중복 인지 요소를 줄이고, 다른 리스트처럼 행 단위 스캔이 되도록 1행 레이아웃으로 정렬.
+  - 조치: `UserRoleManager` 등록 사용자 행에서 우측 컨트롤 영역을 `nowrap + 고정폭`으로 조정해 데스크톱에서 한 줄 정렬을 강제.
+  - 반영 파일: `src/components/settings/UserRoleManager.tsx`
+  - 검증: `npm run lint -- src/components/settings/UserRoleManager.tsx` (통과)
 
 ## 3) 이슈 / RCA 로그
 

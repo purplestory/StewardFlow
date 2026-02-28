@@ -80,6 +80,16 @@
   - 원인: `getOAuthOrigin()`이 환경변수 원본을 무조건 우선해 현재 안정 호스트를 덮어씀.
   - 조치: 안정 호스트는 `window.location.origin` 우선, 커밋 프리뷰 호스트 패턴에서만 환경변수 정규화 적용.
   - 검증: `npm run lint -- src/lib/utils.ts` (오류 0)
+- [DONE] 사용자 관리 3건 후속 보정
+  - `만료일 저장` 버튼 폭 보정: `shrink-0 + whitespace-nowrap + min-width` 적용으로 텍스트 세로 줄바꿈 방지.
+  - 기관 생성/이관 경로 보강:
+    - `UserRoleManager`에 "새 기관 추가" 인라인 생성 UI 추가.
+    - `OrganizationManager`(기관 관리 메뉴)에 "신규 기관 추가 생성" 섹션 추가.
+    - 기관/부서 조회 및 사용자 기관 지정/이관은 서버 액션(service role) 경유로 처리해 RLS 조회 제한 영향 제거.
+  - 등록 사용자 정렬 보정: `본인 우선 + 이름 오름차순`으로 렌더 순서 고정.
+  - 검증:
+    - `npm run lint -- src/actions/admin-organization-actions.ts src/components/settings/UserRoleManager.tsx src/components/settings/OrganizationManager.tsx` (오류 0)
+    - `npm run lint:mobile` (통과)
 
 ## 3) 이슈 / RCA 로그
 
@@ -147,6 +157,23 @@
   2. 커밋 프리뷰 호스트(`*-<hash>-*.vercel.app`)에서만 환경변수 기반 canonical origin을 사용.
 - 재발 방지:
   1. OAuth origin 결정 로직 변경 시 `production / git-main / commit preview` 3개 케이스 회귀 테스트 포함.
+
+### RCA-2026-02-28-06
+- 증상:
+  1. `만료일 저장` 버튼이 좁은 폭에서 글자 단위 줄바꿈으로 깨짐.
+  2. 기관 관리 메뉴에서 신규 기관 추가 경로가 없어 사용자 기관 이관 준비가 막힘.
+  3. 등록 사용자 리스트 정렬이 생성일 기반으로 체감상 불규칙하게 보임.
+- 원인:
+  1. `.btn-outline` 버튼에 nowrap 보장이 없어 flex 수축 시 텍스트 줄바꿈 발생.
+  2. 클라이언트 RLS 조회 기준(본인 소속 기관)으로 기관/부서 목록이 제한되어 교차 기관 이관 플로우가 취약.
+  3. 운영자 기대와 다른 정렬 기준(`created_at ASC`)이 계속 유지됨.
+- 조치:
+  1. 대상 버튼에 `shrink-0/whitespace-nowrap/min-width` 적용.
+  2. 관리자 서버 액션으로 기관/부서 목록 조회, 기관 생성, 사용자 기관 지정/이관 수행.
+  3. 등록 사용자 렌더 순서를 `본인 우선 + 이름 오름차순`으로 변경.
+- 재발 방지:
+  1. 관리자 교차-기관 기능은 클라이언트 직접 쿼리 대신 서버 액션 경로를 기본값으로 유지.
+  2. 리스트 정렬 기준은 UI 텍스트와 동일하게 명시하고 변경 시 문서/QA 항목 동시 갱신.
 
 ## 4) 다음 실행 순서
 1. UI-003 착수: 내 신청 통합 표기 + 승인 취소 사유 플로우

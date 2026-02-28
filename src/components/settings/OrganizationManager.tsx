@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import Notice from "@/components/common/Notice";
 import { supabase } from "@/lib/supabase";
+import { createOrganizationForAdmin } from "@/actions/admin-organization-actions";
 import DepartmentManager from "./DepartmentManager";
 
 type Organization = {
@@ -23,6 +24,8 @@ export default function OrganizationManager() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [additionalOrganizationName, setAdditionalOrganizationName] = useState("");
+  const [isCreatingAdditionalOrganization, setIsCreatingAdditionalOrganization] = useState(false);
 
   const load = async (preserveExistingState = false) => {
     setMessage(null);
@@ -198,6 +201,38 @@ export default function OrganizationManager() {
         console.warn("Error loading organization data:", loadError);
       }
     }, 2000);
+  };
+
+  const handleCreateAdditionalOrganization = async (
+    event: React.FormEvent<HTMLFormElement>
+  ) => {
+    event.preventDefault();
+    if (userRole !== "admin") {
+      setMessage("기관 추가 생성은 최고 관리자만 가능합니다.");
+      return;
+    }
+
+    const name = additionalOrganizationName.trim();
+    if (!name) {
+      setMessage("기관 이름을 입력해주세요.");
+      return;
+    }
+
+    setIsCreatingAdditionalOrganization(true);
+    setMessage(null);
+
+    const result = await createOrganizationForAdmin(name);
+    if (!result.success || !result.organization) {
+      setMessage(result.error ?? "기관 추가 생성에 실패했습니다.");
+      setIsCreatingAdditionalOrganization(false);
+      return;
+    }
+
+    setAdditionalOrganizationName("");
+    setIsCreatingAdditionalOrganization(false);
+    setMessage(
+      `기관 "${result.organization.name}"이 생성되었습니다. 사용자/초대 관리의 "사용자 기관 지정/이관"에서 바로 지정할 수 있습니다.`
+    );
   };
 
   const handleUpdateName = async () => {
@@ -398,6 +433,33 @@ export default function OrganizationManager() {
           >
             기관 생성
           </button>
+        </form>
+      )}
+
+      {organizationId && userRole === "admin" && (
+        <form
+          onSubmit={handleCreateAdditionalOrganization}
+          className="surface-card space-y-3 p-5 md:p-6"
+        >
+          <h3 className="text-base font-semibold text-slate-900">신규 기관 추가 생성</h3>
+          <p className="text-sm text-neutral-600">
+            현재 내 소속은 유지한 채, 다른 기관을 추가로 생성합니다.
+          </p>
+          <div className="grid gap-2 md:grid-cols-[minmax(0,1fr)_auto]">
+            <input
+              value={additionalOrganizationName}
+              onChange={(event) => setAdditionalOrganizationName(event.target.value)}
+              className="form-input"
+              placeholder="기관 이름 입력 (예: OO교회)"
+            />
+            <button
+              type="submit"
+              disabled={isCreatingAdditionalOrganization || !additionalOrganizationName.trim()}
+              className="btn-outline w-full whitespace-nowrap px-4 md:w-auto"
+            >
+              {isCreatingAdditionalOrganization ? "생성 중..." : "기관 추가 생성"}
+            </button>
+          </div>
         </form>
       )}
 

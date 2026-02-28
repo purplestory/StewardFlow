@@ -4,6 +4,18 @@
 
 ## 2026-02-28
 - 상태: 확정
+- 결정: 기관 간 사용자 지정/이관 관련 읽기/쓰기(`organizations`, `departments`, `profiles update`)는 관리자 서버액션(service role) 경로를 우선 사용한다
+- 이유: 클라이언트 RLS 정책(본인 소속 기관만 조회)으로 인해 신규 기관 생성 후 대상 기관/부서 선택이 막히는 문제가 반복되기 때문
+- 영향: `src/actions/admin-organization-actions.ts`, `UserRoleManager`, `OrganizationManager`
+
+## 2026-02-28
+- 상태: 확정
+- 결정: 등록된 사용자 리스트 기본 정렬은 `본인 우선 + 이름 오름차순`으로 고정한다
+- 이유: 생성일 기준 정렬이 운영자가 기대하는 사용자 탐색 순서와 맞지 않아 체감 혼란이 커졌기 때문
+- 영향: `UserRoleManager` 등록 사용자 렌더링 순서
+
+## 2026-02-28
+- 상태: 확정
 - 결정: OAuth 원본 계산은 "안정 호스트(현재 origin) 우선, 커밋 프리뷰 호스트만 환경변수 기준으로 정규화"로 운영한다
 - 이유: `git-main` 같은 브랜치 고정 alias에서도 production으로 강제 리다이렉트되는 부작용을 방지하기 위함
 - 영향: `src/lib/utils.ts` (`getOAuthOrigin`)

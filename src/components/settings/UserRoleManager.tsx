@@ -4,6 +4,12 @@ import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { generateShortId } from "@/lib/short-id";
 import { deleteUserAccount } from "@/actions/auth-actions";
+import {
+  createOrganizationForAdmin,
+  listDepartmentsForAdminOrganization,
+  listOrganizationsForAdmin,
+  reassignUserOrganizationForAdmin,
+} from "@/actions/admin-organization-actions";
 import Notice from "@/components/common/Notice";
 import type {
   DeletionRequestRow,
@@ -63,6 +69,8 @@ export default function UserRoleManager() {
   const [transferRole, setTransferRole] = useState<ProfileRow["role"]>("user");
   const [transferDepartments, setTransferDepartments] = useState<string[]>([]);
   const [isTransferringUser, setIsTransferringUser] = useState(false);
+  const [newOrganizationName, setNewOrganizationName] = useState("");
+  const [isCreatingOrganization, setIsCreatingOrganization] = useState(false);
   const [showInviteLinkModal, setShowInviteLinkModal] = useState(false);
   const [generatedInviteLink, setGeneratedInviteLink] = useState<string | null>(null);
   const [inviteLinkCopied, setInviteLinkCopied] = useState(false);
@@ -249,14 +257,13 @@ export default function UserRoleManager() {
         setAllUsers([]);
       }
 
-      // 모든 기관 목록 조회 (최고관리자만)
-      const { data: orgsData, error: orgsError } = await supabase
-        .from("organizations")
-        .select("id,name")
-        .order("name", { ascending: true });
-
-      if (!orgsError && orgsData) {
-        setAllOrganizations(orgsData);
+      // 모든 기관 목록 조회 (최고관리자 only, 서버 액션으로 RLS 영향 제거)
+      const organizationsResult = await listOrganizationsForAdmin();
+      if (organizationsResult.success) {
+        setAllOrganizations(organizationsResult.organizations);
+      } else {
+        console.error("전체 기관 조회 오류:", organizationsResult.error);
+        setAllOrganizations([]);
       }
     } else {
       setPendingUsers([]);
@@ -1199,21 +1206,21 @@ export default function UserRoleManager() {
   const handleOrganizationChange = async (orgId: string) => {
     setApprovalOrganizationId(orgId);
     setApprovalDepartment(""); // Reset department when organization changes
-    if (orgId) {
-      const { data: depts, error } = await supabase
-        .from("departments")
-        .select("name")
-        .eq("organization_id", orgId)
-        .order("name", { ascending: true });
-      if (error) {
-        console.error("Error loading departments for approval:", error);
-        setApprovalDepartments([]);
-      } else {
-        setApprovalDepartments(depts.map((d) => d.name));
-      }
-    } else {
+    if (!orgId) {
       setApprovalDepartments([]);
+      return;
     }
+
+    const departmentsResult = await listDepartmentsForAdminOrganization(orgId);
+    if (!departmentsResult.success) {
+      console.error(
+        "Error loading departments for approval:",
+        departmentsResult.error
+      );
+      setApprovalDepartments([]);
+      return;
+    }
+    setApprovalDepartments(departmentsResult.departments);
   };
 
   const organizationNameById = useMemo(
@@ -1221,25 +1228,33 @@ export default function UserRoleManager() {
     [allOrganizations]
   );
 
+  const sortedAllUsers = useMemo(() => {
+    const collator = new Intl.Collator("ko-KR", { sensitivity: "base", numeric: true });
+    const nameOrEmail = (user: ProfileRow) =>
+      (user.name?.trim() || user.email || "").trim();
+
+    return [...allUsers].sort((a, b) =>
+      collator.compare(nameOrEmail(a), nameOrEmail(b))
+    );
+  }, [allUsers]);
+
   const loadTransferDepartments = async (orgId: string) => {
     if (!orgId) {
       setTransferDepartments([]);
       return;
     }
 
-    const { data: departments, error } = await supabase
-      .from("departments")
-      .select("name")
-      .eq("organization_id", orgId)
-      .order("name", { ascending: true });
-
-    if (error) {
-      console.error("Error loading transfer departments:", error);
+    const departmentsResult = await listDepartmentsForAdminOrganization(orgId);
+    if (!departmentsResult.success) {
+      console.error(
+        "Error loading transfer departments:",
+        departmentsResult.error
+      );
       setTransferDepartments([]);
       return;
     }
 
-    setTransferDepartments((departments ?? []).map((department) => department.name));
+    setTransferDepartments(departmentsResult.departments);
   };
 
   const handleTransferUserChange = async (userId: string) => {
@@ -1265,6 +1280,41 @@ export default function UserRoleManager() {
     setTransferOrganizationId(orgId);
     setTransferDepartment("");
     await loadTransferDepartments(orgId);
+  };
+
+  const createOrganizationForTransfer = async () => {
+    if (currentUserRole !== "admin") {
+      setMessage("기관 생성은 최고 관리자만 가능합니다.");
+      return;
+    }
+
+    const name = newOrganizationName.trim();
+    if (!name) {
+      setMessage("기관 이름을 입력해주세요.");
+      return;
+    }
+
+    setIsCreatingOrganization(true);
+    setMessage(null);
+
+    const result = await createOrganizationForAdmin(name);
+    if (!result.success || !result.organization) {
+      setMessage(result.error ?? "기관 생성에 실패했습니다.");
+      setIsCreatingOrganization(false);
+      return;
+    }
+
+    const nextOrganizations = [...allOrganizations, result.organization].sort((a, b) =>
+      a.name.localeCompare(b.name, "ko-KR")
+    );
+    setAllOrganizations(nextOrganizations);
+    setNewOrganizationName("");
+    setTransferOrganizationId(result.organization.id);
+    await loadTransferDepartments(result.organization.id);
+    setMessage(
+      `새 기관 "${result.organization.name}"이 생성되었습니다. 대상 기관으로 자동 선택되었습니다.`
+    );
+    setIsCreatingOrganization(false);
   };
 
   const assignUserOrganization = async () => {
@@ -1313,40 +1363,18 @@ export default function UserRoleManager() {
     }
 
     setIsTransferringUser(true);
-    const previousOrganizationId = targetUser.organization_id;
-    const previousDepartment = targetUser.department;
-    const previousRole = targetUser.role;
+    const result = await reassignUserOrganizationForAdmin({
+      targetUserId: transferUserId,
+      targetOrganizationId: transferOrganizationId,
+      department: nextDepartment,
+      role: transferRole,
+    });
 
-    const { error } = await supabase
-      .from("profiles")
-      .update({
-        organization_id: transferOrganizationId,
-        department: nextDepartment,
-        role: transferRole,
-      })
-      .eq("id", transferUserId);
-
-    if (error) {
-      setMessage(`기관 지정/이관 실패: ${error.message}`);
+    if (!result.success) {
+      setMessage(result.error ?? "기관 지정/이관에 실패했습니다.");
       setIsTransferringUser(false);
       return;
     }
-
-    await supabase.from("audit_logs").insert({
-      organization_id: transferOrganizationId,
-      actor_id: currentUserId,
-      action: "user_org_reassigned",
-      target_type: "profile",
-      target_id: transferUserId,
-      metadata: {
-        from_organization_id: previousOrganizationId,
-        to_organization_id: transferOrganizationId,
-        from_department: previousDepartment,
-        to_department: nextDepartment,
-        from_role: previousRole,
-        to_role: transferRole,
-      },
-    });
 
     setMessage("사용자 기관/권한이 업데이트되었습니다.");
     setIsTransferringUser(false);
@@ -1796,6 +1824,21 @@ export default function UserRoleManager() {
       ? "warning"
       : "neutral";
 
+  const collator = new Intl.Collator("ko-KR", {
+    sensitivity: "base",
+    numeric: true,
+  });
+  const sortedProfiles = [...profiles].sort((a, b) => {
+    if (currentUserId && a.id === currentUserId) return -1;
+    if (currentUserId && b.id === currentUserId) return 1;
+
+    const labelA = (a.name?.trim() || a.email || "").trim();
+    const labelB = (b.name?.trim() || b.email || "").trim();
+    const byName = collator.compare(labelA, labelB);
+    if (byName !== 0) return byName;
+    return collator.compare(a.email, b.email);
+  });
+
   return (
     <div className="manage-stack">
       {message && (
@@ -1854,7 +1897,7 @@ export default function UserRoleManager() {
                 type="button"
                 onClick={saveInviteExpirationPolicy}
                 disabled={currentUserRole !== "admin" || savingInvitePolicy}
-                className="btn-outline h-9 px-3 text-xs"
+                className="btn-outline h-9 shrink-0 whitespace-nowrap px-3 text-xs sm:min-w-[92px]"
               >
                 {savingInvitePolicy ? "저장 중..." : "만료일 저장"}
               </button>
@@ -2135,6 +2178,30 @@ export default function UserRoleManager() {
           <p className="mt-1 text-xs text-neutral-500">
             이미 가입한 사용자를 다른 기관으로 지정하거나, 동시에 부서/권한을 재설정할 수 있습니다.
           </p>
+          <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50/60 p-3">
+            <p className="text-xs font-medium text-neutral-700">새 기관 추가</p>
+            <p className="mt-1 text-[11px] text-neutral-500">
+              현재 소속은 유지한 채 기관을 추가 생성합니다. 생성 즉시 아래 &quot;대상 기관&quot; 선택 목록에 반영됩니다.
+            </p>
+            <div className="mt-2 grid gap-2 md:grid-cols-[minmax(0,1fr)_auto]">
+              <input
+                type="text"
+                className="form-input h-10"
+                value={newOrganizationName}
+                onChange={(event) => setNewOrganizationName(event.target.value)}
+                placeholder="새 기관 이름 입력 (예: 은혜교회)"
+                disabled={isCreatingOrganization}
+              />
+              <button
+                type="button"
+                onClick={createOrganizationForTransfer}
+                disabled={isCreatingOrganization || !newOrganizationName.trim()}
+                className="btn-outline h-10 w-full whitespace-nowrap px-4 md:w-auto"
+              >
+                {isCreatingOrganization ? "생성 중..." : "기관 추가"}
+              </button>
+            </div>
+          </div>
           <div className="mt-3 grid gap-3 md:grid-cols-2">
             <div className="space-y-1.5">
               <label className="form-label">대상 사용자</label>
@@ -2147,7 +2214,7 @@ export default function UserRoleManager() {
                 disabled={isTransferringUser}
               >
                 <option value="">사용자를 선택하세요</option>
-                {allUsers
+                {sortedAllUsers
                   .filter((user) => user.id !== currentUserId)
                   .map((user) => {
                     const organizationLabel = user.organization_id
@@ -2352,7 +2419,7 @@ export default function UserRoleManager() {
         <div className="module-toolbar mt-3">
           <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-neutral-600">
             <span className="module-kpi">총 {profiles.length}명</span>
-            <span>부서/권한은 행 우측에서 즉시 변경됩니다.</span>
+            <span>본인 우선, 나머지는 이름순으로 정렬됩니다. 부서/권한은 우측에서 즉시 변경됩니다.</span>
           </div>
         </div>
         {profiles.length === 0 ? (
@@ -2368,7 +2435,7 @@ export default function UserRoleManager() {
               <span>사용자</span>
               <span className="text-right">부서 / 권한 / 관리</span>
             </div>
-            {profiles.map((profile) => (
+            {sortedProfiles.map((profile) => (
               <div
                 key={profile.id}
                 className="list-row flex-col items-start justify-between gap-3 text-xs lg:grid lg:grid-cols-[minmax(0,1fr)_500px] lg:items-center"

@@ -59,7 +59,9 @@ const toNormalizedTime = (value: string, fallback = "09:00") => {
 };
 
 const formatDateTimeSummary = (dateValue: string, timeValue: string, fallbackTime: string) => {
+  if (!dateValue) return "선택해 주세요";
   const dateLabel = formatDateLabel(dateValue);
+  if (!timeValue.trim()) return `${dateLabel} 시간 선택`;
   const normalizedTime = toNormalizedTime(timeValue, fallbackTime);
   return `${dateLabel} ${normalizedTime}`;
 };
@@ -82,6 +84,7 @@ type TimeInputFieldProps = {
   onChange: (value: string) => void;
   disabled?: boolean;
   id: string;
+  fallbackTime?: string;
 };
 
 function TimeInputField({
@@ -89,6 +92,7 @@ function TimeInputField({
   onChange,
   disabled = false,
   id,
+  fallbackTime = "09:00",
 }: TimeInputFieldProps) {
   const shiftBy = (deltaMinutes: number) => {
     const { hour24, minute } = parseTimeValue(value, "09:00");
@@ -129,7 +133,10 @@ function TimeInputField({
 
         onChange(`${digits.slice(0, 2)}:${digits.slice(2)}`);
       }}
-      onBlur={() => onChange(toNormalizedTime(value, "09:00"))}
+      onBlur={() => {
+        if (!value.trim()) return;
+        onChange(toNormalizedTime(value, fallbackTime));
+      }}
       onKeyDown={(event) => {
         if (event.key !== "ArrowUp" && event.key !== "ArrowDown") return;
         event.preventDefault();
@@ -425,8 +432,8 @@ export default function ReservationForm({
   
   const [startDate, setStartDate] = useState(getDefaultDate());
   const [startTime, setStartTime] = useState("09:00");
-  const [endDate, setEndDate] = useState(getDefaultDate());
-  const [endTime, setEndTime] = useState("18:00");
+  const [endDate, setEndDate] = useState("");
+  const [endTime, setEndTime] = useState("");
   const [showRecurrence, setShowRecurrence] = useState(false);
   const [recurrenceType, setRecurrenceType] = useState<"none" | "weekly" | "monthly">("none");
   const [recurrenceInterval, setRecurrenceInterval] = useState(1);
@@ -479,6 +486,19 @@ export default function ReservationForm({
     return () => clearTimeout(timer);
   }, [presetStartDate, presetEndDate]);
 
+  const handleStartDateChange = (nextStartDate: string) => {
+    setStartDate(nextStartDate);
+    if (!nextStartDate) {
+      setEndDate("");
+      setEndTime("");
+      return;
+    }
+    if (endDate && endDate < nextStartDate) {
+      setEndDate("");
+      setEndTime("");
+    }
+  };
+
   const handleDayOfWeekToggle = (day: number) => {
     setSelectedDaysOfWeek((prev) =>
       prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day]
@@ -488,7 +508,7 @@ export default function ReservationForm({
   const dayNames = ["일", "월", "화", "수", "목", "금", "토"];
   const formDisabled = isDisabled || isPending;
   const normalizedStartTime = toNormalizedTime(startTime, "09:00");
-  const normalizedEndTime = toNormalizedTime(endTime, "18:00");
+  const normalizedEndTime = endTime.trim() ? toNormalizedTime(endTime, "18:00") : "";
   const submitLabel = resourceType === "space" ? "예약 신청" : "대여 신청";
   const reservationQueryKey =
     resourceType === "space"
@@ -584,8 +604,7 @@ export default function ReservationForm({
                   id="start-date-desktop"
                   type="date"
                   value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
-                  max={endDate || undefined}
+                  onChange={(e) => handleStartDateChange(e.target.value)}
                   className="form-input min-w-0 text-base md:text-sm"
                   required
                   disabled={formDisabled}
@@ -595,6 +614,7 @@ export default function ReservationForm({
                   value={startTime}
                   onChange={setStartTime}
                   disabled={formDisabled}
+                  fallbackTime="09:00"
                 />
               </div>
             </div>
@@ -616,7 +636,8 @@ export default function ReservationForm({
                   id="end-time-desktop"
                   value={endTime}
                   onChange={setEndTime}
-                  disabled={formDisabled}
+                  disabled={formDisabled || !startDate}
+                  fallbackTime="18:00"
                 />
               </div>
             </div>
@@ -643,8 +664,7 @@ export default function ReservationForm({
                     id="start-date-mobile"
                     type="date"
                     value={startDate}
-                    onChange={(e) => setStartDate(e.target.value)}
-                    max={endDate || undefined}
+                    onChange={(e) => handleStartDateChange(e.target.value)}
                     className="form-input min-w-0 text-base"
                     required
                     disabled={formDisabled}
@@ -696,11 +716,11 @@ export default function ReservationForm({
                     type="button"
                     onClick={() => setMobileTimeSheetTarget("end")}
                     className="form-input flex h-10 items-center justify-between px-3 text-sm tabular-nums text-neutral-700"
-                    disabled={formDisabled}
+                    disabled={formDisabled || !startDate}
                   >
                     <span className="text-neutral-500">시간</span>
                     <span className="font-medium text-neutral-900">
-                      {toNormalizedTime(endTime, "18:00")}
+                      {endTime.trim() ? toNormalizedTime(endTime, "18:00") : "선택"}
                     </span>
                   </button>
                 </div>
@@ -743,7 +763,7 @@ export default function ReservationForm({
           <input
             type="hidden"
             name="end_date"
-            value={endDate ? `${endDate}T${normalizedEndTime}:00` : ""}
+            value={endDate && normalizedEndTime ? `${endDate}T${normalizedEndTime}:00` : ""}
           />
 
           {showRecurrence && recurrenceType !== "none" && (

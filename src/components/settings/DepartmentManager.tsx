@@ -419,7 +419,7 @@ export default function DepartmentManager({ organizationId }: DepartmentManagerP
             등록된 부서가 없습니다.
           </Notice>
         ) : (
-          <div className="module-list">
+          <div className="module-list module-list-departments">
             <div className="list-row-muted hidden items-center text-xs text-neutral-500 lg:grid lg:grid-cols-[minmax(0,1fr)_168px]">
               <span>부서 정보</span>
               <span className="text-right">관리</span>

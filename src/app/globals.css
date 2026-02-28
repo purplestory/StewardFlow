@@ -525,6 +525,13 @@ input[type="time"] {
   border-top: 1px solid rgb(203 213 225 / 0.95);
 }
 
+/* Department list needs stronger row boundaries for scanning */
+.module-list-departments > * + *::before {
+  left: 0.75rem;
+  right: 0.75rem;
+  border-top-color: rgb(148 163 184 / 0.8);
+}
+
 .toggle-switch {
   @apply relative inline-flex h-7 w-12 items-center rounded-full bg-neutral-300 transition-colors duration-200;
 }

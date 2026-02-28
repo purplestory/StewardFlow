@@ -95,6 +95,11 @@
   - 조치: `module-list` 공통 스타일을 행 사이 divider 기반으로 보강(인셋 가로선 + 외곽선 톤 통일).
   - 반영 파일: `src/app/globals.css`
   - 검증: `npm run lint:mobile` (통과)
+- [DONE] 부서 목록 리스트 divider 가시성 강화
+  - 요청: 부서 목록도 기능/메뉴 리스트처럼 행 구분선을 명확히 표시.
+  - 조치: `DepartmentManager`에 전용 클래스(`module-list-departments`) 적용, divider 톤/인셋을 강화.
+  - 반영 파일: `src/components/settings/DepartmentManager.tsx`, `src/app/globals.css`
+  - 검증: `npm run lint -- src/components/settings/DepartmentManager.tsx`, `npm run lint:mobile` (통과)
 
 ## 3) 이슈 / RCA 로그
 
@@ -189,6 +194,15 @@
   2. 외곽 border 톤을 리스트 패턴과 맞춰 통일.
 - 재발 방지:
   1. 신규 리스트 UI는 `module-list` 공통 primitive 사용을 기본값으로 강제.
+
+### RCA-2026-02-28-08
+- 증상: 부서 목록에서 항목 경계선이 약해 드래그/편집 대상 구분이 어렵게 보임.
+- 원인:
+  1. 부서 목록은 텍스트 + 핸들 + 액션 아이콘 밀도가 높아 일반 divider 대비 시인성이 부족했음.
+- 조치:
+  1. 부서 목록 전용 divider 변형(`module-list-departments`)을 도입해 구분선을 강화.
+- 재발 방지:
+  1. 조작 UI(드래그/액션) 포함 리스트는 공통 divider 대비를 별도 점검해 필요 시 변형 클래스를 사용.
 
 ## 4) 다음 실행 순서
 1. UI-003 착수: 내 신청 통합 표기 + 승인 취소 사유 플로우

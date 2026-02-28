@@ -139,6 +139,11 @@ export default function Header() {
                 </div>
               ) : (
                 <>
+                  {!hasOrganization ? (
+                    <Link href="/settings/org" className="btn-outline h-10">
+                      기관 생성
+                    </Link>
+                  ) : null}
                   <span className="inline-flex h-10 max-w-[180px] items-center truncate rounded-xl border border-slate-200 bg-white px-3 text-sm text-neutral-700">
                     {userMenuLabel}
                   </span>
@@ -228,6 +233,15 @@ export default function Header() {
             {!loading && isAuthed && (
               <>
                 <div className="my-1 border-t border-slate-100" />
+                {!hasOrganization ? (
+                  <Link
+                    href="/settings/org"
+                    className={mobileNavLinkClass("/settings/org")}
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    기관 생성
+                  </Link>
+                ) : null}
                 <button
                   type="button"
                   onClick={() => {

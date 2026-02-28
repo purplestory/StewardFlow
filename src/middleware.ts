@@ -19,11 +19,14 @@ export async function middleware(request: NextRequest) {
   const canonicalPreviewHost = normalizeHost(
     process.env.NEXT_PUBLIC_CANONICAL_PREVIEW_HOST || process.env.VERCEL_BRANCH_URL
   );
+  const isCommitPreviewHost = Boolean(
+    requestHost && /-[a-z0-9]{9}-[a-z0-9-]+\.vercel\.app$/.test(requestHost)
+  );
   const shouldRedirectToCanonicalPreviewHost = Boolean(
+    isCommitPreviewHost &&
     requestHost &&
       canonicalPreviewHost &&
       requestHost !== canonicalPreviewHost &&
-      requestHost.endsWith(".vercel.app") &&
       canonicalPreviewHost.endsWith(".vercel.app")
   );
 

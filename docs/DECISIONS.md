@@ -10,9 +10,9 @@
 
 ## 2026-02-28
 - 상태: 확정
-- 결정: 브라우저 OAuth 흐름은 `implicit`을 기본으로 사용하고, 콜백 오류 메시지는 원인별(세션 만료/취소/인증 실패)로 매핑한다
-- 이유: `PKCE flow_state_not_found` 케이스에서 콜백이 일반 오류로만 귀결되어 모바일 카카오 로그인 재시도 동선이 불명확했기 때문
-- 영향: `src/lib/supabase.ts` (`flowType: implicit`), `src/app/auth/callback/page.tsx` (쿼리/해시 오류 파싱, 예외 메시지 매핑)
+- 결정: 카카오 OAuth 콜백은 `detectSessionInUrl` 자동 code 교환 완료를 먼저 대기하고, 수동 `exchangeCodeForSession`은 fallback으로만 호출한다. 콜백 오류 메시지는 원인별(세션 만료/취소/인증 실패)로 매핑한다
+- 이유: `flow_state_not_found`가 자동 교환 + 수동 교환의 경합(이중 교환)에서 발생해 일반 오류로만 귀결되던 문제를 줄이기 위함
+- 영향: `src/app/auth/callback/page.tsx` (자동 세션 대기 후 fallback 교환, 쿼리/해시 오류 파싱, 예외 메시지 매핑)
 
 ## 2026-02-28
 - 상태: 확정

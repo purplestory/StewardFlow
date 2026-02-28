@@ -237,6 +237,18 @@ function AuthCallbackPageContent() {
         // Check for code in query params (PKCE flow)
         const code = searchParams.get("code");
         if (code) {
+          // createBrowserClient(@supabase/ssr)는 detectSessionInUrl에서 code 교환을 자동 처리한다.
+          // 자동 교환 완료 전에 수동 교환을 바로 호출하면 flow_state_not_found가 발생할 수 있어 먼저 대기한다.
+          if (
+            await waitForActiveSessionUser(
+              SESSION_RECOVERY_RETRIES,
+              SESSION_RECOVERY_DELAY_MS
+            )
+          ) {
+            await completeSuccess();
+            return;
+          }
+
           // Exchange code for session
           let exchangeErrorMessage: string | null = null;
           try {

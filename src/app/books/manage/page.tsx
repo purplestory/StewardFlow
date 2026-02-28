@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import ManageLayout from "@/components/manage/ManageLayout";
 import ManageSubmenuLayout from "@/components/manage/ManageSubmenuLayout";
@@ -8,6 +8,7 @@ import CategoryTabs from "@/components/manage/CategoryTabs";
 import Notice from "@/components/common/Notice";
 import PageHero from "@/components/ui/PageHero";
 import SectionCard from "@/components/ui/SectionCard";
+import StatusFilterPills from "@/components/ui/StatusFilterPills";
 import { supabase } from "@/lib/supabase";
 
 type ProgramSettings = {
@@ -52,6 +53,20 @@ type PendingRequestItem = PendingRequestRow & {
   borrower_department: string | null;
 };
 
+type ManagedBookStatus = "available" | "requested" | "borrowed" | "overdue" | "archived";
+
+type ManagedBookItem = {
+  id: string;
+  title: string;
+  author: string | null;
+  publisher: string | null;
+  published_year: number | null;
+  status: ManagedBookStatus;
+  shelf_label: string | null;
+  isbn: string | null;
+  created_at: string;
+};
+
 type BookLookupPayload = {
   isbn: string;
   title: string | null;
@@ -80,6 +95,7 @@ type BooksManageCache = {
   ruleCount: number;
   message: string | null;
   accessToken: string | null;
+  bookItems: ManagedBookItem[];
   pendingRequests: PendingRequestItem[];
   pendingReturns: PendingReturnItem[];
   fetchedAt: number;
@@ -144,6 +160,31 @@ const toBooksDataErrorMessage = (message: string, fallback: string) => {
   return fallback;
 };
 
+const BOOK_STATUS_LABEL: Record<ManagedBookStatus, string> = {
+  available: "대여 가능",
+  requested: "요청 처리중",
+  borrowed: "대여 중",
+  overdue: "연체",
+  archived: "보관됨",
+};
+
+const BOOK_STATUS_BADGE_CLASS: Record<ManagedBookStatus, string> = {
+  available: "bg-emerald-50 text-emerald-700 ring-emerald-200",
+  requested: "bg-amber-50 text-amber-700 ring-amber-200",
+  borrowed: "bg-blue-50 text-blue-700 ring-blue-200",
+  overdue: "bg-rose-50 text-rose-700 ring-rose-200",
+  archived: "bg-neutral-100 text-neutral-600 ring-neutral-200",
+};
+
+const bookStatusFilterOptions: Array<{ value: ManagedBookStatus | "all"; label: string }> = [
+  { value: "all", label: "전체" },
+  { value: "available", label: "대여 가능" },
+  { value: "requested", label: "요청 처리중" },
+  { value: "borrowed", label: "대여 중" },
+  { value: "overdue", label: "연체" },
+  { value: "archived", label: "보관됨" },
+];
+
 export default function BooksManagePage() {
   const freshCache = readBooksManageCache();
   const [loading, setLoading] = useState(freshCache?.loading ?? !freshCache);
@@ -157,6 +198,10 @@ export default function BooksManagePage() {
   const [bookRegisterMessage, setBookRegisterMessage] = useState<string | null>(null);
   const [bookLookupLoading, setBookLookupLoading] = useState(false);
   const [bookRegistering, setBookRegistering] = useState(false);
+  const [bookItems, setBookItems] = useState<ManagedBookItem[]>(freshCache?.bookItems ?? []);
+  const [showBookRegisterForm, setShowBookRegisterForm] = useState(false);
+  const [bookSearchKeyword, setBookSearchKeyword] = useState("");
+  const [bookStatusFilter, setBookStatusFilter] = useState<ManagedBookStatus | "all">("all");
   const [bookForm, setBookForm] = useState({
     isbn: "",
     title: "",
@@ -202,6 +247,7 @@ export default function BooksManagePage() {
         if (!isMounted) return;
         setHasPermission(false);
         setCurrentUserId(null);
+        setBookItems([]);
         writeBooksManageCache(null);
         setLoading(false);
         return;
@@ -219,6 +265,7 @@ export default function BooksManagePage() {
 
       if (profileError || !profileData?.organization_id) {
         setMessage("기관 정보를 불러오지 못했습니다.");
+        setBookItems([]);
         writeBooksManageCache({
           loading: false,
           hasPermission: false,
@@ -229,6 +276,7 @@ export default function BooksManagePage() {
           ruleCount: 0,
           message: "기관 정보를 불러오지 못했습니다.",
           accessToken: sessionAccessToken,
+          bookItems: [],
           pendingRequests: [],
           pendingReturns: [],
           fetchedAt: Date.now(),
@@ -242,6 +290,7 @@ export default function BooksManagePage() {
       setOrganizationId(profileData.organization_id);
 
       if (!isManager) {
+        setBookItems([]);
         writeBooksManageCache({
           loading: false,
           hasPermission: false,
@@ -252,6 +301,7 @@ export default function BooksManagePage() {
           ruleCount: 0,
           message: null,
           accessToken: sessionAccessToken,
+          bookItems: [],
           pendingRequests: [],
           pendingReturns: [],
           fetchedAt: Date.now(),
@@ -270,6 +320,7 @@ export default function BooksManagePage() {
 
       if (orgError) {
         setMessage("기관 기능 설정을 확인하지 못했습니다.");
+        setBookItems([]);
         writeBooksManageCache({
           loading: false,
           hasPermission: true,
@@ -280,6 +331,7 @@ export default function BooksManagePage() {
           ruleCount: 0,
           message: "기관 기능 설정을 확인하지 못했습니다.",
           accessToken: sessionAccessToken,
+          bookItems: [],
           pendingRequests: [],
           pendingReturns: [],
           fetchedAt: Date.now(),
@@ -291,7 +343,7 @@ export default function BooksManagePage() {
       const enabled = orgData?.features?.books === true;
       setBooksEnabled(enabled);
 
-      const [settingsRes, rulesRes, pendingReturnRes, pendingRequestRes] = await Promise.all([
+      const [settingsRes, rulesRes, catalogRes, pendingReturnRes, pendingRequestRes] = await Promise.all([
         supabase
           .from("book_program_settings")
           .select(
@@ -303,6 +355,11 @@ export default function BooksManagePage() {
           .from("book_scoring_rules")
           .select("id", { count: "exact", head: true })
           .eq("organization_id", profileData.organization_id),
+        supabase
+          .from("book_items")
+          .select("id,title,author,publisher,published_year,status,shelf_label,isbn,created_at")
+          .eq("organization_id", profileData.organization_id)
+          .order("created_at", { ascending: false }),
         supabase
           .from("book_loans")
           .select(
@@ -331,8 +388,15 @@ export default function BooksManagePage() {
           )
         : null;
       const rulesErrorMessage = rulesRes.error ? `점수 규칙 조회 실패: ${rulesRes.error.message}` : null;
+      const booksErrorMessage = catalogRes.error
+        ? toBooksDataErrorMessage(
+            catalogRes.error.message,
+            `도서 목록 조회 실패: ${catalogRes.error.message}`
+          )
+        : null;
       setProgramSettings(nextProgramSettings);
       setRuleCount(nextRuleCount);
+      setBookItems(catalogRes.error ? [] : ((catalogRes.data ?? []) as ManagedBookItem[]));
 
       const pendingReturnErrorMessage = pendingReturnRes.error
         ? toBooksDataErrorMessage(
@@ -347,6 +411,7 @@ export default function BooksManagePage() {
           )
         : null;
       const nextMessage =
+        booksErrorMessage ??
         pendingRequestErrorMessage ??
         pendingReturnErrorMessage ??
         rulesErrorMessage ??
@@ -391,12 +456,13 @@ export default function BooksManagePage() {
           ruleCount: nextRuleCount,
           message: nextMessage,
           accessToken: sessionAccessToken,
+          bookItems: catalogRes.error ? [] : ((catalogRes.data ?? []) as ManagedBookItem[]),
           pendingRequests: [],
           pendingReturns: [],
           fetchedAt: Date.now(),
         });
       } else {
-        const [bookItemsRes, borrowersRes] = await Promise.all([
+        const [requestBookItemsRes, borrowersRes] = await Promise.all([
           supabase
             .from("book_items")
             .select("id,title")
@@ -408,7 +474,7 @@ export default function BooksManagePage() {
         ]);
 
         const bookTitleById = new Map<string, string>();
-        (bookItemsRes.data ?? []).forEach((row) => {
+        (requestBookItemsRes.data ?? []).forEach((row) => {
           bookTitleById.set(row.id, row.title ?? "제목 없음");
         });
 
@@ -445,6 +511,7 @@ export default function BooksManagePage() {
           ruleCount: nextRuleCount,
           message: nextMessage,
           accessToken: sessionAccessToken,
+          bookItems: catalogRes.error ? [] : ((catalogRes.data ?? []) as ManagedBookItem[]),
           pendingRequests: nextPendingRequests,
           pendingReturns: nextPendingReturns,
           fetchedAt: Date.now(),
@@ -460,6 +527,12 @@ export default function BooksManagePage() {
       isMounted = false;
     };
   }, [reloadTick]);
+
+  useEffect(() => {
+    if (activeTab !== "register") {
+      setShowBookRegisterForm(false);
+    }
+  }, [activeTab]);
 
   const normalizeIsbn = (input: string) =>
     input.replace(/[^0-9Xx]/g, "").toUpperCase();
@@ -601,6 +674,7 @@ export default function BooksManagePage() {
     }
 
     setBookRegisterMessage("도서가 등록되었습니다.");
+    setShowBookRegisterForm(false);
     setBookForm({
       isbn: "",
       title: "",
@@ -757,6 +831,28 @@ export default function BooksManagePage() {
 
   const requestKeyword = requestSearchKeyword.trim().toLowerCase();
   const returnKeyword = returnSearchKeyword.trim().toLowerCase();
+  const bookKeyword = bookSearchKeyword.trim().toLowerCase();
+
+  const filteredBookItems = useMemo(() => {
+    return bookItems.filter((book) => {
+      if (bookStatusFilter !== "all" && book.status !== bookStatusFilter) {
+        return false;
+      }
+      if (!bookKeyword) {
+        return true;
+      }
+      const searchable = [
+        book.title,
+        book.author ?? "",
+        book.publisher ?? "",
+        book.shelf_label ?? "",
+        book.isbn ?? "",
+      ]
+        .join(" ")
+        .toLowerCase();
+      return searchable.includes(bookKeyword);
+    });
+  }, [bookItems, bookKeyword, bookStatusFilter]);
 
   const filteredPendingRequests = pendingRequests.filter((item) => {
     if (!requestKeyword) {
@@ -781,7 +877,7 @@ export default function BooksManagePage() {
   });
 
   const tabs: Array<{ key: BookManageTab; label: string; count?: number }> = [
-    { key: "register", label: "도서 등록" },
+    { key: "register", label: "도서 목록", count: bookItems.length },
     { key: "requests", label: "대여 요청", count: pendingRequests.length },
     { key: "returns", label: "반납 검수", count: pendingReturns.length },
     { key: "settings", label: "운영 설정" },
@@ -825,87 +921,169 @@ export default function BooksManagePage() {
           >
               {activeTab === "register" ? (
                 <SectionCard
-                  title="도서 등록"
-                  description="ISBN 조회 후 도서 카탈로그에 등록할 수 있습니다."
+                  title={showBookRegisterForm ? "도서 등록" : "등록된 도서"}
+                  description={
+                    showBookRegisterForm
+                      ? "ISBN 조회 후 도서 카탈로그에 등록할 수 있습니다."
+                      : "등록된 도서를 조회하고, 필요할 때 등록 화면으로 전환할 수 있습니다."
+                  }
+                  actions={
+                    <button
+                      type="button"
+                      className={showBookRegisterForm ? "btn-outline" : "btn-primary"}
+                      onClick={() => setShowBookRegisterForm((prev) => !prev)}
+                    >
+                      {showBookRegisterForm ? "목록 보기" : "도서 등록"}
+                    </button>
+                  }
                 >
-                  <form id="book-register" className="space-y-3" onSubmit={handleRegisterBook}>
-                    <div className="grid gap-2 md:grid-cols-[1fr_auto]">
+                  {showBookRegisterForm ? (
+                    <form id="book-register" className="space-y-3" onSubmit={handleRegisterBook}>
+                      <div className="grid gap-2 md:grid-cols-[1fr_auto]">
+                        <input
+                          className="form-input"
+                          placeholder="ISBN (10/13자리)"
+                          value={bookForm.isbn}
+                          onChange={(event) => updateBookForm("isbn", event.target.value)}
+                        />
+                        <button
+                          type="button"
+                          className="btn-outline h-10 px-4"
+                          onClick={() => void handleLookupByIsbn()}
+                          disabled={bookLookupLoading}
+                        >
+                          {bookLookupLoading ? "조회 중..." : "ISBN 조회"}
+                        </button>
+                      </div>
+                      <div className="grid gap-2 md:grid-cols-2">
+                        <input
+                          className="form-input"
+                          placeholder="도서 제목 *"
+                          value={bookForm.title}
+                          onChange={(event) => updateBookForm("title", event.target.value)}
+                          required
+                        />
+                        <input
+                          className="form-input"
+                          placeholder="저자"
+                          value={bookForm.author}
+                          onChange={(event) => updateBookForm("author", event.target.value)}
+                        />
+                      </div>
+                      <div className="grid gap-2 md:grid-cols-2">
+                        <input
+                          className="form-input"
+                          placeholder="출판사"
+                          value={bookForm.publisher}
+                          onChange={(event) => updateBookForm("publisher", event.target.value)}
+                        />
+                        <input
+                          className="form-input"
+                          placeholder="출판연도 (예: 2024)"
+                          value={bookForm.publishedYear}
+                          onChange={(event) => updateBookForm("publishedYear", event.target.value)}
+                        />
+                      </div>
+                      <div className="grid gap-2 md:grid-cols-2">
+                        <input
+                          className="form-input"
+                          placeholder="서가 라벨 (예: B2-03)"
+                          value={bookForm.shelfLabel}
+                          onChange={(event) => updateBookForm("shelfLabel", event.target.value)}
+                        />
+                        <input
+                          className="form-input"
+                          placeholder="태그 (쉼표로 구분)"
+                          value={bookForm.tags}
+                          onChange={(event) => updateBookForm("tags", event.target.value)}
+                        />
+                      </div>
                       <input
                         className="form-input"
-                        placeholder="ISBN (10/13자리)"
-                        value={bookForm.isbn}
-                        onChange={(event) => updateBookForm("isbn", event.target.value)}
+                        placeholder="표지 이미지 URL"
+                        value={bookForm.coverImageUrl}
+                        onChange={(event) => updateBookForm("coverImageUrl", event.target.value)}
                       />
-                      <button
-                        type="button"
-                        className="btn-outline h-10 px-4"
-                        onClick={() => void handleLookupByIsbn()}
-                        disabled={bookLookupLoading}
-                      >
-                        {bookLookupLoading ? "조회 중..." : "ISBN 조회"}
-                      </button>
+                      <textarea
+                        className="form-textarea min-h-[96px]"
+                        placeholder="도서 설명 (선택)"
+                        value={bookForm.description}
+                        onChange={(event) => updateBookForm("description", event.target.value)}
+                      />
+                      <div className="flex justify-end">
+                        <button type="submit" className="btn-primary px-5" disabled={bookRegistering}>
+                          {bookRegistering ? "등록 중..." : "도서 등록"}
+                        </button>
+                      </div>
+                    </form>
+                  ) : (
+                    <div className="space-y-4">
+                      <div className="module-toolbar space-y-3">
+                        <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-neutral-600">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="module-kpi">총 {bookItems.length}권</span>
+                            <button
+                              type="button"
+                              onClick={() => setReloadTick((prev) => prev + 1)}
+                              className="btn-outline"
+                            >
+                              새로고침
+                            </button>
+                          </div>
+                          <input
+                            className="form-input text-sm md:w-80"
+                            placeholder="제목/저자/출판사/ISBN 검색"
+                            value={bookSearchKeyword}
+                            onChange={(event) => setBookSearchKeyword(event.target.value)}
+                          />
+                        </div>
+                        <StatusFilterPills
+                          options={bookStatusFilterOptions}
+                          value={bookStatusFilter}
+                          onChange={(next) => setBookStatusFilter(next as ManagedBookStatus | "all")}
+                        />
+                      </div>
+
+                      {filteredBookItems.length === 0 ? (
+                        <Notice>
+                          {bookItems.length === 0
+                            ? "등록된 도서가 없습니다. 우측 상단 `도서 등록` 버튼으로 추가하세요."
+                            : "조건에 맞는 도서가 없습니다."}
+                        </Notice>
+                      ) : (
+                        <div className="module-list module-list-resources">
+                          <div className="list-row-muted hidden items-center text-xs text-neutral-500 lg:grid lg:grid-cols-[minmax(0,1fr)_7rem]">
+                            <span>도서 정보</span>
+                            <span className="text-right">상태</span>
+                          </div>
+                          {filteredBookItems.map((book) => (
+                            <div
+                              key={book.id}
+                              className="list-row text-sm lg:grid lg:grid-cols-[minmax(0,1fr)_7rem] lg:items-center"
+                            >
+                              <div className="min-w-0">
+                                <p className="truncate font-semibold text-slate-900">{book.title}</p>
+                                <p className="mt-1 truncate text-xs text-neutral-600">
+                                  {book.author || "저자 미상"}
+                                  {book.publisher ? ` · ${book.publisher}` : ""}
+                                  {book.published_year ? ` · ${book.published_year}` : ""}
+                                  {book.shelf_label ? ` · 서가 ${book.shelf_label}` : ""}
+                                  {book.isbn ? ` · ISBN ${book.isbn}` : ""}
+                                </p>
+                              </div>
+                              <span
+                                className={`inline-flex h-7 items-center rounded-full px-2.5 text-xs font-medium ring-1 lg:justify-self-end ${
+                                  BOOK_STATUS_BADGE_CLASS[book.status]
+                                }`}
+                              >
+                                {BOOK_STATUS_LABEL[book.status]}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
-                    <div className="grid gap-2 md:grid-cols-2">
-                      <input
-                        className="form-input"
-                        placeholder="도서 제목 *"
-                        value={bookForm.title}
-                        onChange={(event) => updateBookForm("title", event.target.value)}
-                        required
-                      />
-                      <input
-                        className="form-input"
-                        placeholder="저자"
-                        value={bookForm.author}
-                        onChange={(event) => updateBookForm("author", event.target.value)}
-                      />
-                    </div>
-                    <div className="grid gap-2 md:grid-cols-2">
-                      <input
-                        className="form-input"
-                        placeholder="출판사"
-                        value={bookForm.publisher}
-                        onChange={(event) => updateBookForm("publisher", event.target.value)}
-                      />
-                      <input
-                        className="form-input"
-                        placeholder="출판연도 (예: 2024)"
-                        value={bookForm.publishedYear}
-                        onChange={(event) => updateBookForm("publishedYear", event.target.value)}
-                      />
-                    </div>
-                    <div className="grid gap-2 md:grid-cols-2">
-                      <input
-                        className="form-input"
-                        placeholder="서가 라벨 (예: B2-03)"
-                        value={bookForm.shelfLabel}
-                        onChange={(event) => updateBookForm("shelfLabel", event.target.value)}
-                      />
-                      <input
-                        className="form-input"
-                        placeholder="태그 (쉼표로 구분)"
-                        value={bookForm.tags}
-                        onChange={(event) => updateBookForm("tags", event.target.value)}
-                      />
-                    </div>
-                    <input
-                      className="form-input"
-                      placeholder="표지 이미지 URL"
-                      value={bookForm.coverImageUrl}
-                      onChange={(event) => updateBookForm("coverImageUrl", event.target.value)}
-                    />
-                    <textarea
-                      className="form-textarea min-h-[96px]"
-                      placeholder="도서 설명 (선택)"
-                      value={bookForm.description}
-                      onChange={(event) => updateBookForm("description", event.target.value)}
-                    />
-                    <div className="flex justify-end">
-                      <button type="submit" className="btn-primary px-5" disabled={bookRegistering}>
-                        {bookRegistering ? "등록 중..." : "도서 등록"}
-                      </button>
-                    </div>
-                  </form>
+                  )}
                 </SectionCard>
               ) : null}
 

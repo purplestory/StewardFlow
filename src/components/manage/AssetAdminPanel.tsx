@@ -291,7 +291,7 @@ export default function AssetAdminPanel() {
           </button>
         </Notice>
       ) : (
-        <div className="module-list">
+        <div className="module-list module-list-resources">
           <div className="list-row-muted hidden items-center text-xs text-neutral-500 lg:grid lg:grid-cols-[minmax(0,1fr)_8rem]">
             <span>물품 정보</span>
             <span className="text-right">관리</span>

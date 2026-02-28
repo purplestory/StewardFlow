@@ -270,7 +270,11 @@ export default function SpaceAdminPanel() {
           </button>
         </Notice>
       ) : (
-        <div className="space-y-2">
+        <div className="module-list module-list-resources">
+          <div className="list-row-muted hidden items-center text-xs text-neutral-500 lg:grid lg:grid-cols-[minmax(0,1fr)_8rem]">
+            <span>공간 정보</span>
+            <span className="text-right">관리</span>
+          </div>
           <div className="list-row-muted flex items-center gap-2 text-sm text-neutral-600">
             <input
               type="checkbox"
@@ -285,9 +289,9 @@ export default function SpaceAdminPanel() {
           {filteredSpaces.map((space) => (
             <div
               key={space.id}
-              className="list-row justify-between text-sm"
+              className="list-row text-sm lg:grid lg:grid-cols-[minmax(0,1fr)_8rem] lg:items-center"
             >
-              <label className="flex items-center gap-2 flex-1 min-w-0">
+              <label className="flex min-w-0 flex-1 items-center gap-2">
                 <input
                   type="checkbox"
                   checked={selectedIds.has(space.id)}
@@ -307,7 +311,7 @@ export default function SpaceAdminPanel() {
                   className="shrink-0"
                 />
               </label>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 lg:justify-self-end">
                 <Link
                   href={`/spaces/${space.short_id || space.id}/edit`}
                   className="icon-button"

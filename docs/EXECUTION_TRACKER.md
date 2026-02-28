@@ -105,6 +105,18 @@
   - 조치: `ApprovalPolicyManager`에 전용 클래스(`module-list-approvals`) 적용, divider 톤/인셋 강화.
   - 반영 파일: `src/components/settings/ApprovalPolicyManager.tsx`, `src/app/globals.css`
   - 검증: `npm run lint -- src/components/settings/ApprovalPolicyManager.tsx`, `npm run lint:mobile` (통과)
+- [DONE] 자원관리(물품/공간/차량) 리스트 구분선 일관화 + 도서 관리 기본 화면 전환
+  - 요청:
+    1. 물품/공간/차량 리스트를 동일한 가로 divider 패턴으로 통일.
+    2. 도서는 기본 진입 시 등록 폼이 아닌 "등록된 도서 목록"을 먼저 노출하고, `도서 등록` 클릭 시 ISBN 등록 폼으로 전환.
+  - 조치:
+    1. `module-list-resources` 스타일을 추가해 자원관리 리스트 divider를 동일 톤/인셋으로 통일.
+    2. `SpaceAdminPanel`/`VehicleAdminPanel`을 `module-list` 구조로 변경(헤더 행 + 전체선택 + 행 divider).
+    3. `BooksManagePage`에 등록 도서 목록 조회/필터 상태를 추가하고, `register` 탭을 "도서 목록" UX로 재구성(토글형 `도서 등록` 버튼).
+  - 반영 파일: `src/app/globals.css`, `src/components/manage/AssetAdminPanel.tsx`, `src/components/manage/SpaceAdminPanel.tsx`, `src/components/manage/VehicleAdminPanel.tsx`, `src/app/books/manage/page.tsx`
+  - 검증:
+    - `npm run lint` (통과)
+    - `npm run build` (실패: sandbox 네트워크 제한으로 Google Fonts(`Geist`, `Geist Mono`) fetch 불가)
 
 ## 3) 이슈 / RCA 로그
 
@@ -217,6 +229,20 @@
   1. 승인정책 목록 전용 divider 변형(`module-list-approvals`)을 추가 적용.
 - 재발 방지:
   1. 정책/승인/권한 계열 리스트는 공통 `module-list` 적용 후 divider 대비를 별도 QA 체크.
+
+### RCA-2026-02-28-10
+- 증상:
+  1. 자원관리(공간/차량) 리스트가 카드형 간격 위주로 보여 행 단위 스캔이 약함.
+  2. 도서 관리 진입 시 즉시 등록 폼이 열려, 기존 등록 도서 확인 동선이 끊김.
+- 원인:
+  1. 공간/차량 패널은 `module-list`가 아닌 `space-y` 블록을 사용해 divider 패턴이 적용되지 않았음.
+  2. 도서 관리 `register` 탭이 "목록 + 등록 전환"이 아닌 "등록 폼 고정"으로 설계되어 있었음.
+- 조치:
+  1. 공간/차량 패널 구조를 `module-list` 기반으로 교체하고, 자원관리 전용 divider 클래스로 시각 밀도를 맞춤.
+  2. 도서 관리에 등록 도서 목록 쿼리/필터를 추가하고, 버튼 기반 폼 전환 UX로 변경.
+- 재발 방지:
+  1. 관리형 리스트 신규 구현 시 `module-list` primitive 사용 여부를 PR 체크리스트에 포함.
+  2. "등록" 탭은 기본 목록 노출 후 액션으로 입력 폼을 여는 패턴을 기본값으로 채택.
 
 ## 4) 다음 실행 순서
 1. UI-003 착수: 내 신청 통합 표기 + 승인 취소 사유 플로우

@@ -4,6 +4,18 @@
 
 ## 2026-02-28
 - 상태: 확정
+- 결정: 자원관리 리스트(물품/공간/차량)는 `module-list-resources` divider 변형을 공통 적용해 행 구분선을 동일 톤/인셋으로 맞춘다
+- 이유: 자원 유형별 패널 구현 방식이 달라 같은 관리 페이지 내에서도 항목 경계 인지가 들쭉날쭉했기 때문
+- 영향: `AssetAdminPanel`, `SpaceAdminPanel`, `VehicleAdminPanel`, `globals.css`
+
+## 2026-02-28
+- 상태: 확정
+- 결정: 도서 관리 `register` 탭의 기본 화면은 "등록 도서 목록"으로 두고, `도서 등록` 버튼 클릭 시에만 ISBN 등록 폼으로 전환한다
+- 이유: 즉시 입력 폼 노출보다 현재 등록 도서 파악이 운영 동선의 선행 단계이기 때문
+- 영향: `src/app/books/manage/page.tsx` (탭 라벨/목록 조회/폼 토글 UX)
+
+## 2026-02-28
+- 상태: 확정
 - 결정: 승인정책 목록(`ApprovalPolicyManager`)도 전용 divider 톤(`module-list-approvals`)으로 행 구분선을 강화한다
 - 이유: 정책 항목이 긴 세로 리스트로 렌더될 때 항목 경계가 약해 스캔성이 떨어졌기 때문
 - 영향: `ApprovalPolicyManager`, `globals.css` 리스트 스타일 변형

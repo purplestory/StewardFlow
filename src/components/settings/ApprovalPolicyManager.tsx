@@ -348,7 +348,7 @@ export default function ApprovalPolicyManager() {
           </div>
         ) : (
           <ModuleList className="module-list-approvals text-sm">
-            <div className="list-row-muted hidden items-center gap-3 text-xs text-neutral-500 xl:grid xl:grid-cols-[minmax(0,1fr)_11rem_3.5rem]">
+            <div className="list-row-muted hidden items-center gap-3 text-xs text-neutral-500 md:grid md:grid-cols-[minmax(0,1fr)_13rem_3.5rem]">
               <span>정책</span>
               <span className="text-center">권한</span>
               <span className="text-right">관리</span>
@@ -356,17 +356,14 @@ export default function ApprovalPolicyManager() {
             {policies.map((policy) => (
               <div
                 key={policy.id}
-                className="list-row flex flex-col gap-3 xl:grid xl:grid-cols-[minmax(0,1fr)_11rem_3.5rem] xl:items-center"
+                className="list-row flex flex-col gap-3 md:grid md:grid-cols-[minmax(0,1fr)_13rem_3.5rem] md:items-center"
               >
                 <div className="min-w-0">
                   <p className="font-medium text-neutral-900">
                     {scopeLabels[policy.scope]} · {policy.department ?? "기관 공용"}
                   </p>
-                  <p className="mt-1 text-xs text-neutral-500">
-                    승인 권한: {roleLabels[policy.required_role]}
-                  </p>
                 </div>
-                <div className="w-full xl:max-w-[11rem]">
+                <div className="w-full md:max-w-[13rem]">
                   <select
                     value={policy.required_role}
                     onChange={(event) =>
@@ -382,7 +379,7 @@ export default function ApprovalPolicyManager() {
                     <option value="user">일반 사용자</option>
                   </select>
                 </div>
-                <div className="flex justify-end xl:justify-self-end">
+                <div className="flex justify-end md:justify-self-end">
                   <button
                     type="button"
                     onClick={() => handleDelete(policy.id)}

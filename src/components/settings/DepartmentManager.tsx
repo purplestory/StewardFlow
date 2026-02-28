@@ -425,7 +425,7 @@ export default function DepartmentManager({ organizationId }: DepartmentManagerP
             <ModuleListHeader
               left="부서 정보"
               right="관리"
-              className="lg:grid-cols-[minmax(0,1fr)_168px]"
+              className="md:grid-cols-[minmax(0,1fr)_168px]"
             />
             {departments.map((dept, index) => (
               <div
@@ -439,7 +439,7 @@ export default function DepartmentManager({ organizationId }: DepartmentManagerP
                 onTouchStart={(e) => handleTouchStart(e, index)}
                 onTouchMove={handleTouchMove}
                 onTouchEnd={handleTouchEnd}
-                className={`list-row transition-all lg:grid lg:grid-cols-[minmax(0,1fr)_168px] lg:items-center ${
+                className={`list-row transition-all md:grid md:grid-cols-[minmax(0,1fr)_168px] md:items-center ${
                   draggedIndex === index
                     ? "opacity-50 cursor-grabbing"
                     : dragOverIndex === index
@@ -450,7 +450,7 @@ export default function DepartmentManager({ organizationId }: DepartmentManagerP
                 }`}
               >
                 {editingId === dept.id ? (
-                    <div className="flex-1 space-y-2 lg:pr-3">
+                    <div className="flex-1 space-y-2 md:pr-3">
                       <input
                         type="text"
                         value={editName}
@@ -510,7 +510,7 @@ export default function DepartmentManager({ organizationId }: DepartmentManagerP
                         </div>
                       </div>
                     </div>
-                    <div className="flex items-center gap-1 self-end lg:justify-self-end">
+                    <div className="flex items-center justify-end gap-1 md:justify-self-end">
                       <button
                         type="button"
                         onClick={() => startEdit(dept)}

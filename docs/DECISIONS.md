@@ -22,6 +22,12 @@
 
 ## 2026-02-28
 - 상태: 확정
+- 결정: `부서 목록`과 `승인정책` 리스트도 데스크톱에서 1행 스캔이 가능하도록 `md` 기준 grid 정렬을 사용하고, 승인정책 중복 상태 텍스트는 제거한다
+- 이유: 섹션마다 행 밀도와 정보배치가 달라 같은 관리 화면에서도 스캔 비용이 달랐기 때문
+- 영향: `src/components/settings/DepartmentManager.tsx`, `src/components/settings/ApprovalPolicyManager.tsx`
+
+## 2026-02-28
+- 상태: 확정
 - 결정: 자원관리 리스트(물품/공간/차량)는 `module-list-resources` divider 변형을 공통 적용해 행 구분선을 동일 톤/인셋으로 맞춘다
 - 이유: 자원 유형별 패널 구현 방식이 달라 같은 관리 페이지 내에서도 항목 경계 인지가 들쭉날쭉했기 때문
 - 영향: `AssetAdminPanel`, `SpaceAdminPanel`, `VehicleAdminPanel`, `globals.css`

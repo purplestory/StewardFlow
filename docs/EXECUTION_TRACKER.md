@@ -150,6 +150,16 @@
   - 조치: `UserRoleManager` 등록 사용자 행에서 우측 컨트롤 영역을 `nowrap + 고정폭`으로 조정해 데스크톱에서 한 줄 정렬을 강제.
   - 반영 파일: `src/components/settings/UserRoleManager.tsx`
   - 검증: `npm run lint -- src/components/settings/UserRoleManager.tsx` (통과)
+- [DONE] 부서 목록/승인정책 데스크톱 1행 정렬 보정
+  - 요청: `부서 목록`, `승인정책 관리`도 사용자 리스트와 같은 수준의 1행 스캔 구조로 정리.
+  - 조치:
+    1. `DepartmentManager` 리스트 헤더/행 grid 적용 시점을 `lg -> md`로 조정하고 액션 컬럼 우측 정렬 고정.
+    2. `ApprovalPolicyManager` 정책 리스트를 `md` 기준 3열(`정책/권한/관리`) 1행 정렬로 전환.
+    3. 승인정책 행의 중복 문구(`승인 권한: ...`) 제거.
+  - 반영 파일:
+    - `src/components/settings/DepartmentManager.tsx`
+    - `src/components/settings/ApprovalPolicyManager.tsx`
+  - 검증: `npm run lint -- src/components/settings/DepartmentManager.tsx src/components/settings/ApprovalPolicyManager.tsx` (통과)
 
 ## 3) 이슈 / RCA 로그
 

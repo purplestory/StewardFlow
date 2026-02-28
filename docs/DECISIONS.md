@@ -4,6 +4,12 @@
 
 ## 2026-02-28
 - 상태: 확정
+- 결정: 승인정책 목록(`ApprovalPolicyManager`)도 전용 divider 톤(`module-list-approvals`)으로 행 구분선을 강화한다
+- 이유: 정책 항목이 긴 세로 리스트로 렌더될 때 항목 경계가 약해 스캔성이 떨어졌기 때문
+- 영향: `ApprovalPolicyManager`, `globals.css` 리스트 스타일 변형
+
+## 2026-02-28
+- 상태: 확정
 - 결정: 부서 목록(`DepartmentManager`)은 전용 divider 톤(`module-list-departments`)을 사용해 행 구분선을 한 단계 더 강조한다
 - 이유: 드래그 핸들/액션 버튼이 함께 있는 리스트에서 항목 경계 인지가 일반 리스트보다 더 약하게 보였기 때문
 - 영향: `DepartmentManager`, `globals.css` 리스트 스타일 변형

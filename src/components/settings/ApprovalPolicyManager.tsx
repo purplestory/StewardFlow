@@ -346,7 +346,7 @@ export default function ApprovalPolicyManager() {
             </p>
           </div>
         ) : (
-          <div className="module-list text-sm">
+          <div className="module-list module-list-approvals text-sm">
             <div className="list-row-muted hidden items-center gap-3 text-xs text-neutral-500 xl:grid xl:grid-cols-[minmax(0,1fr)_11rem_3.5rem]">
               <span>정책</span>
               <span className="text-center">권한</span>

@@ -532,6 +532,12 @@ input[type="time"] {
   border-top-color: rgb(148 163 184 / 0.8);
 }
 
+.module-list-approvals > * + *::before {
+  left: 0.75rem;
+  right: 0.75rem;
+  border-top-color: rgb(148 163 184 / 0.78);
+}
+
 .toggle-switch {
   @apply relative inline-flex h-7 w-12 items-center rounded-full bg-neutral-300 transition-colors duration-200;
 }

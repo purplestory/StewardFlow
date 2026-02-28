@@ -100,6 +100,11 @@
   - 조치: `DepartmentManager`에 전용 클래스(`module-list-departments`) 적용, divider 톤/인셋을 강화.
   - 반영 파일: `src/components/settings/DepartmentManager.tsx`, `src/app/globals.css`
   - 검증: `npm run lint -- src/components/settings/DepartmentManager.tsx`, `npm run lint:mobile` (통과)
+- [DONE] 승인정책 리스트 divider 가시성 강화
+  - 요청: 승인정책 리스트도 기능/메뉴 리스트처럼 행 구분선 강화.
+  - 조치: `ApprovalPolicyManager`에 전용 클래스(`module-list-approvals`) 적용, divider 톤/인셋 강화.
+  - 반영 파일: `src/components/settings/ApprovalPolicyManager.tsx`, `src/app/globals.css`
+  - 검증: `npm run lint -- src/components/settings/ApprovalPolicyManager.tsx`, `npm run lint:mobile` (통과)
 
 ## 3) 이슈 / RCA 로그
 
@@ -203,6 +208,15 @@
   1. 부서 목록 전용 divider 변형(`module-list-departments`)을 도입해 구분선을 강화.
 - 재발 방지:
   1. 조작 UI(드래그/액션) 포함 리스트는 공통 divider 대비를 별도 점검해 필요 시 변형 클래스를 사용.
+
+### RCA-2026-02-28-09
+- 증상: 승인정책 목록에서 항목 사이 경계 인지가 약함.
+- 원인:
+  1. 정책 리스트도 액션/선택 컨트롤이 포함된 세로 밀집형 구조라 기본 divider 대비가 약했음.
+- 조치:
+  1. 승인정책 목록 전용 divider 변형(`module-list-approvals`)을 추가 적용.
+- 재발 방지:
+  1. 정책/승인/권한 계열 리스트는 공통 `module-list` 적용 후 divider 대비를 별도 QA 체크.
 
 ## 4) 다음 실행 순서
 1. UI-003 착수: 내 신청 통합 표기 + 승인 취소 사유 플로우

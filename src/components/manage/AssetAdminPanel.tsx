@@ -8,8 +8,10 @@ import Notice from "@/components/common/Notice";
 import AssetForm from "@/components/assets/AssetForm";
 import type { Asset } from "@/types/database";
 import { isUUID } from "@/lib/short-id";
-import StatusFilterPills from "@/components/ui/StatusFilterPills";
 import ResourceStatusBadge from "@/components/ui/ResourceStatusBadge";
+import ManageFilterToolbar from "@/components/manage/ManageFilterToolbar";
+import ManageBulkStatusBar from "@/components/manage/ManageBulkStatusBar";
+import ManageResourceList from "@/components/manage/ManageResourceList";
 import {
   Select,
   SelectItem,
@@ -206,67 +208,29 @@ export default function AssetAdminPanel() {
       ) : (
         <>
 
-      <div className="module-toolbar space-y-3">
-        <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-neutral-600">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="module-kpi">총 {assets.length}건</span>
-            <button
-              type="button"
-              onClick={load}
-              className="btn-outline"
-            >
-              새로고침
-            </button>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <input
-              className="form-input text-sm md:w-72"
-              placeholder="자산명/소유 부서 검색"
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-            />
-          </div>
-        </div>
-        <StatusFilterPills
-          options={statusFilterOptions}
-          value={statusFilter}
-          onChange={(next) => setStatusFilter(next as Asset["status"] | "all")}
-        />
-      </div>
+      <ManageFilterToolbar
+        totalCount={assets.length}
+        onRefresh={load}
+        searchPlaceholder="자산명/소유 부서 검색"
+        query={query}
+        onQueryChange={setQuery}
+        filterOptions={statusFilterOptions}
+        filterValue={statusFilter}
+        onFilterChange={setStatusFilter}
+      />
 
-      {/* 일괄 변경 - 선택된 항목이 있을 때만 표시 */}
-      {selectedIds.size > 0 && (
-        <div className="mt-3 list-row-muted flex flex-wrap items-center gap-2 text-xs">
-          <span className="text-neutral-600 font-medium">
-            선택된 항목({selectedIds.size}건):
-          </span>
-          <Select
-            value=""
-            onValueChange={(next) => {
-              const status = next as Asset["status"];
-              if (status) {
-                bulkUpdateStatus(status);
-              }
-            }}
-            disabled={updating}
-          >
-            <SelectTrigger className="form-select h-9 text-xs">
-              <SelectItem value="">일괄 상태 변경...</SelectItem>
-              <SelectItem value="available">→ 대여 가능</SelectItem>
-              <SelectItem value="rented">→ 대여 중</SelectItem>
-              <SelectItem value="repair">→ 수리 중</SelectItem>
-              <SelectItem value="retired">→ 불용품</SelectItem>
-            </SelectTrigger>
-          </Select>
-          <button
-            type="button"
-            onClick={() => setSelectedIds(new Set())}
-            className="btn-ghost text-xs"
-          >
-            선택 해제
-          </button>
-        </div>
-      )}
+      <ManageBulkStatusBar
+        selectedCount={selectedIds.size}
+        disabled={updating}
+        options={[
+          { value: "available", label: "대여 가능" },
+          { value: "rented", label: "대여 중" },
+          { value: "repair", label: "수리 중" },
+          { value: "retired", label: "불용품" },
+        ]}
+        onSelect={bulkUpdateStatus}
+        onClear={() => setSelectedIds(new Set())}
+      />
 
       {message && (
         <Notice variant="error" className="p-3 text-xs">
@@ -291,22 +255,13 @@ export default function AssetAdminPanel() {
           </button>
         </Notice>
       ) : (
-        <div className="module-list module-list-resources">
-          <div className="list-row-muted hidden items-center text-xs text-neutral-500 lg:grid lg:grid-cols-[minmax(0,1fr)_8rem]">
-            <span>물품 정보</span>
-            <span className="text-right">관리</span>
-          </div>
-          <div className="list-row-muted flex items-center gap-2 text-sm text-neutral-600">
-            <input
-              type="checkbox"
-              checked={
-                selectedIds.size > 0 &&
-                selectedIds.size === filteredAssets.length
-              }
-              onChange={toggleSelectAll}
-            />
-            <span>전체 선택</span>
-          </div>
+        <ManageResourceList
+          infoLabel="물품 정보"
+          allSelected={
+            selectedIds.size > 0 && selectedIds.size === filteredAssets.length
+          }
+          onToggleAll={toggleSelectAll}
+        >
           {filteredAssets.map((asset) => (
             <div
               key={asset.id}
@@ -353,7 +308,7 @@ export default function AssetAdminPanel() {
               </div>
             </div>
           ))}
-        </div>
+        </ManageResourceList>
       )}
 
       <Dialog

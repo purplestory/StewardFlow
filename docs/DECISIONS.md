@@ -4,6 +4,18 @@
 
 ## 2026-02-28
 - 상태: 확정
+- 결정: 자원관리(물품/공간/차량) 화면은 `ManageFilterToolbar` / `ManageBulkStatusBar` / `ManageResourceList` 공통 컴포넌트를 사용한다
+- 이유: 동일한 UI 패턴(검색/필터/일괄변경/리스트 프레임)이 화면별로 중복 구현되어 시각/동작 일관성과 유지보수성이 떨어졌기 때문
+- 영향: `AssetAdminPanel`, `SpaceAdminPanel`, `VehicleAdminPanel`, `src/components/manage/*` 공통 컴포넌트
+
+## 2026-02-28
+- 상태: 확정
+- 결정: 설정 페이지 리스트(부서/승인정책/등록사용자)의 공통 래퍼는 `ModuleList` / `ModuleListHeader`로 표준화한다
+- 이유: 섹션별 리스트 헤더/테두리/간격이 미세하게 달라 UI 일관성과 유지보수성이 떨어졌기 때문
+- 영향: `DepartmentManager`, `ApprovalPolicyManager`, `UserRoleManager`, `src/components/ui/ModuleList.tsx`
+
+## 2026-02-28
+- 상태: 확정
 - 결정: 자원관리 리스트(물품/공간/차량)는 `module-list-resources` divider 변형을 공통 적용해 행 구분선을 동일 톤/인셋으로 맞춘다
 - 이유: 자원 유형별 패널 구현 방식이 달라 같은 관리 페이지 내에서도 항목 경계 인지가 들쭉날쭉했기 때문
 - 영향: `AssetAdminPanel`, `SpaceAdminPanel`, `VehicleAdminPanel`, `globals.css`

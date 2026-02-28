@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import Notice from "@/components/common/Notice";
 import SectionCard from "@/components/ui/SectionCard";
+import { ModuleList, ModuleListHeader } from "@/components/ui/ModuleList";
 
 type Department = {
   id: string;
@@ -261,7 +262,8 @@ export default function DepartmentManager({ organizationId }: DepartmentManagerP
 
     const newDepartments = [...departments];
     const [draggedItem] = newDepartments.splice(dragIndex, 1);
-    newDepartments.splice(dropIndex, 0, draggedItem);
+    const insertionIndex = dragIndex < dropIndex ? dropIndex - 1 : dropIndex;
+    newDepartments.splice(insertionIndex, 0, draggedItem);
     setDepartments(newDepartments);
 
     // 순서를 데이터베이스에 저장
@@ -419,11 +421,12 @@ export default function DepartmentManager({ organizationId }: DepartmentManagerP
             등록된 부서가 없습니다.
           </Notice>
         ) : (
-          <div className="module-list module-list-departments">
-            <div className="list-row-muted hidden items-center text-xs text-neutral-500 lg:grid lg:grid-cols-[minmax(0,1fr)_168px]">
-              <span>부서 정보</span>
-              <span className="text-right">관리</span>
-            </div>
+          <ModuleList className="module-list-departments">
+            <ModuleListHeader
+              left="부서 정보"
+              right="관리"
+              className="lg:grid-cols-[minmax(0,1fr)_168px]"
+            />
             {departments.map((dept, index) => (
               <div
                 key={dept.id}
@@ -534,7 +537,7 @@ export default function DepartmentManager({ organizationId }: DepartmentManagerP
                 )}
               </div>
             ))}
-          </div>
+          </ModuleList>
         )}
       </SectionCard>
 

@@ -193,7 +193,8 @@ export default function FeatureSettings({ organizationId }: FeatureSettingsProps
 
     const newOrder = [...menuOrder];
     const [removed] = newOrder.splice(dragIndex, 1);
-    newOrder.splice(dropIndex, 0, removed);
+    const insertionIndex = dragIndex < dropIndex ? dropIndex - 1 : dropIndex;
+    newOrder.splice(insertionIndex, 0, removed);
     setMenuOrder(newOrder);
     setDraggedIndex(null);
     setDragOverIndex(null);

@@ -11,6 +11,7 @@ import {
   reassignUserOrganizationForAdmin,
 } from "@/actions/admin-organization-actions";
 import Notice from "@/components/common/Notice";
+import { ModuleList, ModuleListHeader } from "@/components/ui/ModuleList";
 import type {
   DeletionRequestRow,
   DepartmentRequestWithProfile,
@@ -2430,11 +2431,12 @@ export default function UserRoleManager() {
             </p>
           </div>
         ) : (
-          <div className="module-list mt-3">
-            <div className="list-row-muted hidden lg:grid lg:grid-cols-[minmax(0,1fr)_500px] lg:items-center">
-              <span>사용자</span>
-              <span className="text-right">부서 / 권한 / 관리</span>
-            </div>
+          <ModuleList className="mt-3">
+            <ModuleListHeader
+              left="사용자"
+              right="부서 / 권한 / 관리"
+              className="lg:grid-cols-[minmax(0,1fr)_500px]"
+            />
             {sortedProfiles.map((profile) => (
               <div
                 key={profile.id}
@@ -2445,10 +2447,6 @@ export default function UserRoleManager() {
                     {profile.name ?? "이름 없음"}
                   </p>
                   <p className="text-xs text-neutral-500">{profile.email}</p>
-                  <p className="mt-1 text-xs text-neutral-400">
-                    현재 부서: {profile.department ?? "미지정"} · 권한:{" "}
-                    {roleLabel[profile.role]}
-                  </p>
                 </div>
                 <div className="grid w-full grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] lg:w-[500px]">
                   {currentUserRole === "admin" ? (
@@ -2527,7 +2525,7 @@ export default function UserRoleManager() {
                 </div>
               </div>
             ))}
-          </div>
+          </ModuleList>
         )}
       </section>
 

@@ -322,7 +322,8 @@ export default function AssetCategoryManager({
     try {
       const newCategories = [...categories];
       const [removed] = newCategories.splice(dragIndex, 1);
-      newCategories.splice(dropIndex, 0, removed);
+      const insertionIndex = dragIndex < dropIndex ? dropIndex - 1 : dropIndex;
+      newCategories.splice(insertionIndex, 0, removed);
 
       const { error } = await supabase
         .from("organizations")

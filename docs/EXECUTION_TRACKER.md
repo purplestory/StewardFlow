@@ -117,6 +117,34 @@
   - 검증:
     - `npm run lint` (통과)
     - `npm run build` (실패: sandbox 네트워크 제한으로 Google Fonts(`Geist`, `Geist Mono`) fetch 불가)
+- [DONE] UI 표준화 1차 (관리페이지 공통 컴포넌트 변환)
+  - 범위: `물품/공간/차량` 관리 화면의 반복 UI를 공통 컴포넌트로 추출해 일관성 확보.
+  - 조치:
+    1. `ManageFilterToolbar`: 건수/새로고침/검색/상태필터 영역 공통화.
+    2. `ManageBulkStatusBar`: 선택 항목 일괄 상태 변경 바 공통화.
+    3. `ManageResourceList`: 헤더/전체선택/행 영역 리스트 프레임 공통화.
+    4. `AssetAdminPanel`, `SpaceAdminPanel`, `VehicleAdminPanel`에 위 컴포넌트 적용.
+  - 반영 파일:
+    - `src/components/manage/ManageFilterToolbar.tsx`
+    - `src/components/manage/ManageBulkStatusBar.tsx`
+    - `src/components/manage/ManageResourceList.tsx`
+    - `src/components/manage/AssetAdminPanel.tsx`
+    - `src/components/manage/SpaceAdminPanel.tsx`
+    - `src/components/manage/VehicleAdminPanel.tsx`
+  - 검증: `npm run lint` (통과)
+- [DONE] UI 표준화 2차 (설정 리스트 공통 프레임 도입)
+  - 범위: 설정 페이지 리스트(`부서 목록`, `승인정책`, `등록된 사용자`)의 래퍼/헤더 구조 통일.
+  - 조치:
+    1. `ModuleList`, `ModuleListHeader` 공통 컴포넌트 추가.
+    2. `DepartmentManager` 부서 목록을 공통 프레임으로 전환.
+    3. `ApprovalPolicyManager` 정책 목록 래퍼를 공통 프레임으로 전환.
+    4. `UserRoleManager` 등록된 사용자 리스트 헤더/래퍼를 공통 프레임으로 전환.
+  - 반영 파일:
+    - `src/components/ui/ModuleList.tsx`
+    - `src/components/settings/DepartmentManager.tsx`
+    - `src/components/settings/ApprovalPolicyManager.tsx`
+    - `src/components/settings/UserRoleManager.tsx`
+  - 검증: `npm run lint` (통과)
 
 ## 3) 이슈 / RCA 로그
 

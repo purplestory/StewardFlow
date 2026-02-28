@@ -519,28 +519,29 @@ input[type="time"] {
 .module-list > * + *::before {
   content: "";
   position: absolute;
-  left: 1rem;
-  right: 1rem;
+  left: 0;
+  right: 0;
   top: 0;
   border-top: 1px solid rgb(203 213 225 / 0.95);
+  pointer-events: none;
 }
 
 /* Department list needs stronger row boundaries for scanning */
 .module-list-departments > * + *::before {
-  left: 0.75rem;
-  right: 0.75rem;
+  left: 0;
+  right: 0;
   border-top-color: rgb(148 163 184 / 0.8);
 }
 
 .module-list-approvals > * + *::before {
-  left: 0.75rem;
-  right: 0.75rem;
+  left: 0;
+  right: 0;
   border-top-color: rgb(148 163 184 / 0.78);
 }
 
 .module-list-resources > * + *::before {
-  left: 0.75rem;
-  right: 0.75rem;
+  left: 0;
+  right: 0;
   border-top-color: rgb(148 163 184 / 0.8);
 }
 

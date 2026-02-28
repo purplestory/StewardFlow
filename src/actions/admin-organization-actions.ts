@@ -9,7 +9,9 @@ type AdminContext =
   | {
       ok: true;
       actorId: string;
-      supabaseAdmin: ReturnType<typeof createClient>;
+      supabaseAdmin: ReturnType<typeof getServiceRoleClient> extends null
+        ? never
+        : NonNullable<ReturnType<typeof getServiceRoleClient>>;
     }
   | {
       ok: false;

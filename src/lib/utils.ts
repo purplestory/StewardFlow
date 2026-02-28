@@ -16,6 +16,11 @@ function normalizeOrigin(origin?: string | null): string | null {
   }
 }
 
+function isCommitPreviewHostname(hostname?: string | null): boolean {
+  if (!hostname) return false;
+  return /-[a-z0-9]{9}-[a-z0-9-]+\.vercel\.app$/.test(hostname.toLowerCase());
+}
+
 /** OAuth 리다이렉트 시 next 파라미터가 유실되는 문제 해결: 카카오 로그인 전에 토큰 저장 (localStorage + 쿠키) */
 export function setJoinRedirectCookie(nextPath: string): void {
   if (typeof window === "undefined") return;
@@ -85,9 +90,24 @@ export function getOrigin(): string {
  * Get OAuth redirect origin. If configured, prefer fixed domain to avoid preview-host mismatches.
  */
 export function getOAuthOrigin(): string {
-  return (
-    normalizeOrigin(process.env.NEXT_PUBLIC_OAUTH_REDIRECT_ORIGIN) ??
-    normalizeOrigin(process.env.NEXT_PUBLIC_APP_URL) ??
-    getOrigin()
-  );
+  const envOAuthOrigin = normalizeOrigin(process.env.NEXT_PUBLIC_OAUTH_REDIRECT_ORIGIN);
+  const envAppOrigin = normalizeOrigin(process.env.NEXT_PUBLIC_APP_URL);
+
+  if (typeof window !== "undefined") {
+    const currentOrigin = normalizeOrigin(window.location.origin);
+    if (currentOrigin) {
+      try {
+        const currentHostname = new URL(currentOrigin).hostname;
+        if (isCommitPreviewHostname(currentHostname)) {
+          return envOAuthOrigin ?? envAppOrigin ?? currentOrigin;
+        }
+      } catch {
+        /* ignore */
+      }
+      // 안정 호스트(프로덕션/브랜치 고정 alias/localhost)는 현재 origin을 우선 사용한다.
+      return currentOrigin;
+    }
+  }
+
+  return envOAuthOrigin ?? envAppOrigin ?? getOrigin();
 }

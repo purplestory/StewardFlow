@@ -4,6 +4,12 @@
 
 ## 2026-02-28
 - 상태: 확정
+- 결정: OAuth 원본 계산은 "안정 호스트(현재 origin) 우선, 커밋 프리뷰 호스트만 환경변수 기준으로 정규화"로 운영한다
+- 이유: `git-main` 같은 브랜치 고정 alias에서도 production으로 강제 리다이렉트되는 부작용을 방지하기 위함
+- 영향: `src/lib/utils.ts` (`getOAuthOrigin`)
+
+## 2026-02-28
+- 상태: 확정
 - 결정: 카카오 OAuth `redirectTo` 원본은 `NEXT_PUBLIC_OAUTH_REDIRECT_ORIGIN`을 우선 사용한다
 - 이유: 프리뷰 호스트 정규화 이전/이후 모두에서 OAuth 리다이렉트 도메인을 예측 가능하게 고정하기 위함
 - 영향: `src/lib/utils.ts`, `AuthCard`, `join` 로그인 경로, Vercel 환경변수 운영 가이드

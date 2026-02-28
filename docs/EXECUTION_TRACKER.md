@@ -75,6 +75,11 @@
   - 목적: 프리뷰/운영에서 OAuth `redirectTo`를 환경별 고정 도메인으로 강제해 리다이렉트 불일치 리스크를 낮춤.
   - 문서 갱신: `README.md`, `docs/kakao_oauth_setup.md`, `docs/vercel_deployment_guide.md`.
   - 검증: `npm run lint -- src/lib/utils.ts src/components/auth/AuthCard.tsx src/app/join/page.tsx` (오류 0)
+- [DONE] OAuth origin 우선순위 보정 (git-main -> production 강제 이동 회귀 수정)
+  - 증상: `git-main` alias에서 카카오 로그인 시 production 도메인으로 이동.
+  - 원인: `getOAuthOrigin()`이 환경변수 원본을 무조건 우선해 현재 안정 호스트를 덮어씀.
+  - 조치: 안정 호스트는 `window.location.origin` 우선, 커밋 프리뷰 호스트 패턴에서만 환경변수 정규화 적용.
+  - 검증: `npm run lint -- src/lib/utils.ts` (오류 0)
 
 ## 3) 이슈 / RCA 로그
 
@@ -132,6 +137,16 @@
 - 재발 방지:
   1. OAuth 테스트는 커밋 URL 대신 브랜치 고정 URL/스테이징 도메인만 사용.
   2. 새 배포 환경 추가 시 카카오 + Supabase Redirect URI를 같은 기준 URL로 동시 등록.
+
+### RCA-2026-02-28-05
+- 증상: 브랜치 고정 프리뷰(`git-main`)에서 카카오 로그인 후 production 도메인으로 리다이렉트됨.
+- 원인:
+  1. OAuth 원본 계산이 환경변수 우선으로 고정되어 현재 요청 origin이 무시됨.
+- 조치:
+  1. `getOAuthOrigin()`에서 안정 호스트는 현재 origin 우선 사용.
+  2. 커밋 프리뷰 호스트(`*-<hash>-*.vercel.app`)에서만 환경변수 기반 canonical origin을 사용.
+- 재발 방지:
+  1. OAuth origin 결정 로직 변경 시 `production / git-main / commit preview` 3개 케이스 회귀 테스트 포함.
 
 ## 4) 다음 실행 순서
 1. UI-003 착수: 내 신청 통합 표기 + 승인 취소 사유 플로우

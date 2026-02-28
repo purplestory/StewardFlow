@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { generateShortId } from "@/lib/short-id";
 import { deleteUserAccount } from "@/actions/auth-actions";
@@ -50,12 +50,19 @@ export default function UserRoleManager() {
     DepartmentRequestWithProfile[]
   >([]);
   const [pendingUsers, setPendingUsers] = useState<ProfileRow[]>([]);
+  const [allUsers, setAllUsers] = useState<ProfileRow[]>([]);
   const [allOrganizations, setAllOrganizations] = useState<Array<{ id: string; name: string }>>([]);
   const [approvingUserId, setApprovingUserId] = useState<string | null>(null);
   const [approvalOrganizationId, setApprovalOrganizationId] = useState<string>("");
   const [approvalDepartment, setApprovalDepartment] = useState<string>("");
   const [approvalRole, setApprovalRole] = useState<ProfileRow["role"]>("user");
   const [approvalDepartments, setApprovalDepartments] = useState<string[]>([]);
+  const [transferUserId, setTransferUserId] = useState<string>("");
+  const [transferOrganizationId, setTransferOrganizationId] = useState<string>("");
+  const [transferDepartment, setTransferDepartment] = useState<string>("");
+  const [transferRole, setTransferRole] = useState<ProfileRow["role"]>("user");
+  const [transferDepartments, setTransferDepartments] = useState<string[]>([]);
+  const [isTransferringUser, setIsTransferringUser] = useState(false);
   const [showInviteLinkModal, setShowInviteLinkModal] = useState(false);
   const [generatedInviteLink, setGeneratedInviteLink] = useState<string | null>(null);
   const [inviteLinkCopied, setInviteLinkCopied] = useState(false);
@@ -76,6 +83,7 @@ export default function UserRoleManager() {
 
     if (!user) {
       setProfiles([]);
+      setAllUsers([]);
       setLoading(false);
       return;
     }
@@ -188,6 +196,7 @@ export default function UserRoleManager() {
       setProfiles([]);
       setInvites([]);
       setPendingUsers([]);
+      setAllUsers([]);
       setLoading(false);
       setMessage("일반 사용자는 이 페이지에 접근할 수 없습니다.");
       return;
@@ -212,7 +221,9 @@ export default function UserRoleManager() {
         });
         setMessage(`사용자 조회 실패: ${allUsersError.message}`);
         setPendingUsers([]);
+        setAllUsers([]);
       } else if (allUsersData) {
+        setAllUsers(allUsersData as ProfileRow[]);
         // 클라이언트에서 organization_id가 null인 사용자만 필터링
         const pendingUsersData = allUsersData.filter(user => 
           user.organization_id === null || user.organization_id === undefined
@@ -235,6 +246,7 @@ export default function UserRoleManager() {
       } else {
         debugLog("전체 사용자 데이터가 null입니다");
         setPendingUsers([]);
+        setAllUsers([]);
       }
 
       // 모든 기관 목록 조회 (최고관리자만)
@@ -248,6 +260,7 @@ export default function UserRoleManager() {
       }
     } else {
       setPendingUsers([]);
+      setAllUsers([]);
       setAllOrganizations([]);
     }
 
@@ -333,6 +346,7 @@ export default function UserRoleManager() {
         setProfiles([]);
         setInvites([]);
         setPendingUsers([]);
+        setAllUsers([]);
         setLoading(false);
         setMessage("부서가 지정되지 않은 부서 관리자는 사용자 목록을 볼 수 없습니다.");
         return;
@@ -1202,6 +1216,143 @@ export default function UserRoleManager() {
     }
   };
 
+  const organizationNameById = useMemo(
+    () => new Map(allOrganizations.map((organization) => [organization.id, organization.name] as const)),
+    [allOrganizations]
+  );
+
+  const loadTransferDepartments = async (orgId: string) => {
+    if (!orgId) {
+      setTransferDepartments([]);
+      return;
+    }
+
+    const { data: departments, error } = await supabase
+      .from("departments")
+      .select("name")
+      .eq("organization_id", orgId)
+      .order("name", { ascending: true });
+
+    if (error) {
+      console.error("Error loading transfer departments:", error);
+      setTransferDepartments([]);
+      return;
+    }
+
+    setTransferDepartments((departments ?? []).map((department) => department.name));
+  };
+
+  const handleTransferUserChange = async (userId: string) => {
+    setTransferUserId(userId);
+
+    const selectedUser = allUsers.find((user) => user.id === userId);
+    if (!selectedUser) {
+      setTransferOrganizationId("");
+      setTransferDepartment("");
+      setTransferRole("user");
+      setTransferDepartments([]);
+      return;
+    }
+
+    setTransferRole(selectedUser.role ?? "user");
+    const nextOrganizationId = selectedUser.organization_id ?? "";
+    setTransferOrganizationId(nextOrganizationId);
+    await loadTransferDepartments(nextOrganizationId);
+    setTransferDepartment(selectedUser.department ?? "");
+  };
+
+  const handleTransferOrganizationSelect = async (orgId: string) => {
+    setTransferOrganizationId(orgId);
+    setTransferDepartment("");
+    await loadTransferDepartments(orgId);
+  };
+
+  const assignUserOrganization = async () => {
+    setMessage(null);
+
+    if (currentUserRole !== "admin") {
+      setMessage("기관 지정/이관은 최고 관리자만 가능합니다.");
+      return;
+    }
+
+    if (!currentUserId) {
+      setMessage("현재 사용자 정보를 확인할 수 없습니다.");
+      return;
+    }
+
+    if (!transferUserId) {
+      setMessage("대상을 선택해주세요.");
+      return;
+    }
+
+    if (!transferOrganizationId) {
+      setMessage("대상 기관을 선택해주세요.");
+      return;
+    }
+
+    if (transferUserId === currentUserId) {
+      setMessage("현재 로그인한 본인 계정은 이 화면에서 기관을 변경할 수 없습니다.");
+      return;
+    }
+
+    const targetUser = allUsers.find((user) => user.id === transferUserId);
+    if (!targetUser) {
+      setMessage("대상 사용자를 찾을 수 없습니다.");
+      return;
+    }
+
+    const nextDepartment = transferDepartment || null;
+    const isNoChange =
+      targetUser.organization_id === transferOrganizationId &&
+      (targetUser.department ?? null) === nextDepartment &&
+      targetUser.role === transferRole;
+
+    if (isNoChange) {
+      setMessage("변경할 내용이 없습니다.");
+      return;
+    }
+
+    setIsTransferringUser(true);
+    const previousOrganizationId = targetUser.organization_id;
+    const previousDepartment = targetUser.department;
+    const previousRole = targetUser.role;
+
+    const { error } = await supabase
+      .from("profiles")
+      .update({
+        organization_id: transferOrganizationId,
+        department: nextDepartment,
+        role: transferRole,
+      })
+      .eq("id", transferUserId);
+
+    if (error) {
+      setMessage(`기관 지정/이관 실패: ${error.message}`);
+      setIsTransferringUser(false);
+      return;
+    }
+
+    await supabase.from("audit_logs").insert({
+      organization_id: transferOrganizationId,
+      actor_id: currentUserId,
+      action: "user_org_reassigned",
+      target_type: "profile",
+      target_id: transferUserId,
+      metadata: {
+        from_organization_id: previousOrganizationId,
+        to_organization_id: transferOrganizationId,
+        from_department: previousDepartment,
+        to_department: nextDepartment,
+        from_role: previousRole,
+        to_role: transferRole,
+      },
+    });
+
+    setMessage("사용자 기관/권한이 업데이트되었습니다.");
+    setIsTransferringUser(false);
+    await load();
+  };
+
   const handleApproveUser = async () => {
     if (!approvingUserId || !approvalOrganizationId) {
       setMessage("기관을 선택해주세요.");
@@ -1974,6 +2125,104 @@ export default function UserRoleManager() {
                 </div>
               </div>
             ))}
+          </div>
+        </section>
+      )}
+
+      {currentUserRole === "admin" && allUsers.length > 0 && (
+        <section className="surface-card border-indigo-200 p-5 md:p-6">
+          <h3 className="text-sm font-semibold text-slate-900">사용자 기관 지정/이관</h3>
+          <p className="mt-1 text-xs text-neutral-500">
+            이미 가입한 사용자를 다른 기관으로 지정하거나, 동시에 부서/권한을 재설정할 수 있습니다.
+          </p>
+          <div className="mt-3 grid gap-3 md:grid-cols-2">
+            <div className="space-y-1.5">
+              <label className="form-label">대상 사용자</label>
+              <select
+                className="form-select"
+                value={transferUserId}
+                onChange={(event) => {
+                  void handleTransferUserChange(event.target.value);
+                }}
+                disabled={isTransferringUser}
+              >
+                <option value="">사용자를 선택하세요</option>
+                {allUsers
+                  .filter((user) => user.id !== currentUserId)
+                  .map((user) => {
+                    const organizationLabel = user.organization_id
+                      ? organizationNameById.get(user.organization_id) ?? "기관"
+                      : "미소속";
+                    const displayName = user.name || user.email;
+                    return (
+                      <option key={user.id} value={user.id}>
+                        {displayName} ({organizationLabel})
+                      </option>
+                    );
+                  })}
+              </select>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="form-label">대상 기관</label>
+              <select
+                className="form-select"
+                value={transferOrganizationId}
+                onChange={(event) => {
+                  void handleTransferOrganizationSelect(event.target.value);
+                }}
+                disabled={isTransferringUser || !transferUserId}
+              >
+                <option value="">기관을 선택하세요</option>
+                {allOrganizations.map((organization) => (
+                  <option key={organization.id} value={organization.id}>
+                    {organization.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div className="mt-3 grid gap-3 md:grid-cols-[minmax(0,1fr)_minmax(0,180px)_auto]">
+            <select
+              className="form-select"
+              value={transferDepartment}
+              onChange={(event) => setTransferDepartment(event.target.value)}
+              disabled={isTransferringUser || !transferOrganizationId}
+            >
+              <option value="">부서 없음</option>
+              {transferDepartments.map((department) => (
+                <option key={department} value={department}>
+                  {department}
+                </option>
+              ))}
+            </select>
+
+            <select
+              className="form-select"
+              value={transferRole}
+              onChange={(event) =>
+                setTransferRole(event.target.value as ProfileRow["role"])
+              }
+              disabled={isTransferringUser || !transferUserId}
+            >
+              {roleOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+
+            <button
+              type="button"
+              onClick={assignUserOrganization}
+              disabled={
+                isTransferringUser || !transferUserId || !transferOrganizationId
+              }
+              className="btn-primary w-full md:w-auto"
+            >
+              {isTransferringUser ? "적용 중..." : "기관 지정 적용"}
+            </button>
           </div>
         </section>
       )}

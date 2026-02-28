@@ -465,11 +465,11 @@ input[type="time"] {
 }
 
 .module-list .list-row {
-  @apply rounded-none border-0 bg-transparent;
+  @apply rounded-none border-0 bg-transparent px-4 py-3;
 }
 
 .module-list .list-row-muted {
-  @apply rounded-none border-0 bg-transparent;
+  @apply rounded-none border-0 bg-transparent px-4 py-2.5;
 }
 
 /* Manage module primitives */
@@ -510,7 +510,7 @@ input[type="time"] {
 }
 
 .module-list > * + * {
-  @apply border-t border-neutral-200;
+  @apply border-t border-neutral-300;
 }
 
 .toggle-switch {

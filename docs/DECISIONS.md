@@ -2,6 +2,36 @@
 
 프로젝트 의사결정 로그 (변경 시 계속 추가)
 
+## 2026-02-28
+- 상태: 확정
+- 결정: 예약승인 달력의 파생 경로(`calendarCurrentDate`, 달력 클릭 상세 매핑)도 `filteredReservations` 기준으로 통일한다
+- 이유: 렌더 데이터만 통일하면 필터 조건에서 달력 기준 월/상세 연동이 어긋나는 체감 불일치가 남기 때문
+- 영향: `ReservationManager`, `SpaceReservationManager`, `VehicleReservationManager`
+
+## 2026-02-28
+- 상태: 확정
+- 결정: 예약승인 달력 이벤트 최소정보는 "리소스명 + 상태 라벨", 팝오버 최소정보는 "리소스/상태/기간/신청자"로 고정한다
+- 이유: 월/주/일 셀에서 식별 가능한 최소 정보를 유지하면서 상세 진입 전 판단 비용을 줄이기 위함
+- 영향: `ReservationCalendarView`
+
+## 2026-02-28
+- 상태: 확정
+- 결정: 장기 작업은 `docs/EXECUTION_TRACKER.md`를 단일 실행 기준 문서(작업목록/진행로그/RCA)로 운영
+- 이유: 컨텍스트 압축 시 맥락 손실과 재작업을 줄이고, 원인 분석 및 재발방지 기록을 강제하기 위함
+- 영향: 세션 재개 루틴, 커밋 전 문서 업데이트 절차, 이슈 대응 방식 전반
+
+## 2026-02-28
+- 상태: 확정
+- 결정: 관리형 리스트의 고정폭 액션 컬럼은 `lg/xl` 이상에서만 적용하고, `md` 이하는 스택 레이아웃을 기본으로 사용
+- 이유: 중간 해상도(`md~lg`)에서 우측 액션 버튼 잘림/겹침이 반복 발생했기 때문
+- 영향: `ApprovalPolicyManager`, `UserRoleManager` 등 리스트 기반 관리 화면의 반응형 컬럼 규칙
+
+## 2026-02-28
+- 상태: 확정
+- 결정: 예약승인 화면의 달력/목록 데이터 소스를 `filteredReservations`로 통일하고, 날짜 파싱은 range 단일 문자열(`~`) fallback을 포함한다
+- 이유: 목록에는 보이는데 달력에는 비어 보이는 불일치와 비정형 날짜 포맷 파싱 실패를 동시에 방지하기 위함
+- 영향: `ReservationManager`, `SpaceReservationManager`, `VehicleReservationManager`, `reservation-manager-shared`
+
 ## 2026-02-20
 - 상태: 확정
 - 결정: 카카오 OAuth 콜백에서 `code exchange` 오류 발생 시 세션 복구 대기 후 성공 리다이렉트 우선 처리

@@ -420,6 +420,10 @@ export default function DepartmentManager({ organizationId }: DepartmentManagerP
           </Notice>
         ) : (
           <div className="module-list">
+            <div className="list-row-muted hidden items-center text-xs text-neutral-500 lg:grid lg:grid-cols-[minmax(0,1fr)_168px]">
+              <span>부서 정보</span>
+              <span className="text-right">관리</span>
+            </div>
             {departments.map((dept, index) => (
               <div
                 key={dept.id}
@@ -432,7 +436,7 @@ export default function DepartmentManager({ organizationId }: DepartmentManagerP
                 onTouchStart={(e) => handleTouchStart(e, index)}
                 onTouchMove={handleTouchMove}
                 onTouchEnd={handleTouchEnd}
-                className={`list-row transition-all ${
+                className={`list-row transition-all lg:grid lg:grid-cols-[minmax(0,1fr)_168px] lg:items-center ${
                   draggedIndex === index
                     ? "opacity-50 cursor-grabbing"
                     : dragOverIndex === index
@@ -443,10 +447,10 @@ export default function DepartmentManager({ organizationId }: DepartmentManagerP
                 }`}
               >
                 {editingId === dept.id ? (
-                  <div className="flex-1 space-y-2">
-                    <input
-                      type="text"
-                      value={editName}
+                    <div className="flex-1 space-y-2 lg:pr-3">
+                      <input
+                        type="text"
+                        value={editName}
                       onChange={(e) => setEditName(e.target.value)}
                       className="form-input"
                       required
@@ -478,30 +482,32 @@ export default function DepartmentManager({ organizationId }: DepartmentManagerP
                   </div>
                 ) : (
                   <>
-                    <svg
-                      className="w-5 h-5 text-neutral-400 flex-shrink-0"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M4 8h16M4 16h16"
-                      />
-                    </svg>
-                    <div className="flex-1 min-w-0">
-                      <div className="font-medium flex items-center gap-2">
-                        <span>{dept.name}</span>
-                        {dept.description && (
-                          <span className="text-sm text-neutral-500">
-                            ({dept.description})
-                          </span>
-                        )}
+                    <div className="flex min-w-0 items-center gap-2">
+                      <svg
+                        className="h-5 w-5 flex-shrink-0 text-neutral-400"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M4 8h16M4 16h16"
+                        />
+                      </svg>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2 font-medium">
+                          <span>{dept.name}</span>
+                          {dept.description && (
+                            <span className="text-sm text-neutral-500">
+                              ({dept.description})
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </div>
-                    <div className="flex items-center gap-1 flex-shrink-0">
+                    <div className="flex items-center gap-1 self-end lg:justify-self-end">
                       <button
                         type="button"
                         onClick={() => startEdit(dept)}

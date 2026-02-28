@@ -35,10 +35,11 @@
 
 ## 5. 세션 재개 루틴(컨텍스트 절약용)
 새 세션 시작 시 아래 순서로만 읽고 시작:
-1. `docs/PROJECT_STATE.md`
-2. `docs/NEXT_TASKS.md`
-3. `docs/DECISIONS.md` 최근 항목
-4. `docs/DB_MIGRATION_STATUS.md` 환경 상태
+1. `docs/EXECUTION_TRACKER.md`
+2. `docs/PROJECT_STATE.md`
+3. `docs/NEXT_TASKS.md`
+4. `docs/DECISIONS.md` 최근 항목
+5. `docs/DB_MIGRATION_STATUS.md` 환경 상태
 
 그리고 터미널에서:
 1. `git status --short`

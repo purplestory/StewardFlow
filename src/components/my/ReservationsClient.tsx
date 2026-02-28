@@ -27,6 +27,18 @@ const statusBadgeClass: Record<"pending" | "approved" | "returned" | "rejected",
   rejected: "bg-rose-100 text-rose-700",
 };
 
+const resourceTypeLabel: Record<"asset" | "space" | "vehicle", string> = {
+  asset: "물품",
+  space: "공간",
+  vehicle: "차량",
+};
+
+const reservationVerbByType: Record<"asset" | "space" | "vehicle", string> = {
+  asset: "대여",
+  space: "예약",
+  vehicle: "예약",
+};
+
 const toDateTimeLocal = (value: string) => {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "";
@@ -66,6 +78,7 @@ export default function ReservationsClient() {
   const [draftStartDate, setDraftStartDate] = useState("");
   const [draftEndDate, setDraftEndDate] = useState("");
   const [draftNote, setDraftNote] = useState("");
+  const [cancelReasonDraft, setCancelReasonDraft] = useState("");
   const [updating, setUpdating] = useState(false);
   const [actionMessage, setActionMessage] = useState<string | null>(null);
 
@@ -83,6 +96,7 @@ export default function ReservationsClient() {
     setDraftStartDate(toDateTimeLocal(target.start_date));
     setDraftEndDate(toDateTimeLocal(target.end_date));
     setDraftNote(target.note ?? "");
+    setCancelReasonDraft("");
     setActionMessage(null);
   };
 
@@ -118,6 +132,7 @@ export default function ReservationsClient() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           reservationId: selectedReservation.id,
+          resourceType: selectedReservation.resource_type,
           startDate: `${draftStartDate}:00`,
           endDate: `${draftEndDate}:00`,
           note: draftNote,
@@ -156,6 +171,8 @@ export default function ReservationsClient() {
 
   const cancelReservation = async (reservationId: string, closeModalAfterCancel = false) => {
     if (!reservationId) return;
+    const target = reservations.find((item) => item.id === reservationId);
+    if (!target) return;
 
     setUpdating(true);
     setActionMessage(null);
@@ -172,6 +189,7 @@ export default function ReservationsClient() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           reservationId,
+          resourceType: target.resource_type,
           accessToken,
         }),
       });
@@ -220,6 +238,64 @@ export default function ReservationsClient() {
     await cancelReservation(reservationId, false);
   };
 
+  const requestCancelReservation = async (reservationId: string, closeModalAfterRequest = false) => {
+    if (!reservationId) return;
+    const target = reservations.find((item) => item.id === reservationId);
+    if (!target) return;
+    if (target.status !== "approved") {
+      setActionMessage("승인된 신청 건에서만 취소 요청을 보낼 수 있습니다.");
+      return;
+    }
+    if (cancelReasonDraft.trim().length < 5) {
+      setActionMessage("취소 사유를 5자 이상 입력해 주세요.");
+      return;
+    }
+
+    setUpdating(true);
+    setActionMessage(null);
+    try {
+      const accessToken = await getAccessToken();
+      if (!accessToken) {
+        setActionMessage("로그인이 필요합니다.");
+        return;
+      }
+
+      const response = await fetch("/api/reservations/my", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          reservationId,
+          resourceType: target.resource_type,
+          cancelReason: cancelReasonDraft.trim(),
+          accessToken,
+        }),
+      });
+      const result = await response.json().catch(() => null);
+      if (!response.ok || !result?.ok) {
+        setActionMessage(result?.message ?? "취소 요청에 실패했습니다.");
+        return;
+      }
+
+      await queryClient.invalidateQueries({ queryKey: ["userReservations"] });
+      setActionMessage("관리자에게 취소 요청을 보냈습니다.");
+      if (closeModalAfterRequest) {
+        setSelectedId(null);
+      }
+      setCancelReasonDraft("");
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : "취소 요청 중 오류가 발생했습니다.";
+      setActionMessage(errorMessage);
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  const handleCancelRequest = async () => {
+    if (!selectedReservation) return;
+    await requestCancelReservation(selectedReservation.id, true);
+  };
+
   if (loading) {
     return (
       <Notice>예약 내역을 불러오는 중입니다.</Notice>
@@ -265,15 +341,17 @@ export default function ReservationsClient() {
           {actionMessage}
         </Notice>
       )}
-      {reservations.map((reservation) => (
-        <div
-          key={reservation.id}
-          className="rounded-xl border border-neutral-200 bg-white px-4 py-4"
-        >
-          <div className="flex flex-wrap items-start justify-between gap-4">
+      <div className="module-list">
+        <div className="list-row-muted hidden items-center text-xs text-neutral-500 md:grid md:grid-cols-[minmax(0,1fr)_auto]">
+          <span>신청 정보</span>
+          <span className="text-right">상태 / 액션</span>
+        </div>
+        {reservations.map((reservation) => (
+          <div key={reservation.id} className="list-row flex-col gap-3 md:flex-row md:items-start md:justify-between">
             <div className="min-w-0 flex-1">
-              <p className="truncate text-xl font-semibold tracking-tight text-slate-900">
-                {reservation.assets?.name ?? "자산"} 대여
+              <p className="truncate text-lg font-semibold tracking-tight text-slate-900">
+                {reservation.resource_name} {resourceTypeLabel[reservation.resource_type]}{" "}
+                {reservationVerbByType[reservation.resource_type]}
               </p>
               <p className="mt-1 text-xs text-neutral-400">
                 신청번호: {shortReservationId(reservation.id)}
@@ -282,10 +360,10 @@ export default function ReservationsClient() {
                 {formatDateTime(reservation.start_date)} ~ {formatDateTime(reservation.end_date)}
               </p>
               {reservation.note && (
-                <p className="mt-2 text-sm text-neutral-600">메모: {reservation.note}</p>
+                <p className="mt-1 text-sm text-neutral-600">메모: {reservation.note}</p>
               )}
             </div>
-            <div className="flex shrink-0 flex-col items-end gap-2">
+            <div className="flex w-full shrink-0 flex-wrap items-center justify-end gap-2 md:w-auto md:flex-nowrap">
               <span
                 className={`rounded-full px-2 py-1 text-xs font-medium ${
                   statusBadgeClass[reservation.status]
@@ -294,7 +372,7 @@ export default function ReservationsClient() {
                 {statusLabel[reservation.status]}
               </span>
               {reservation.status === "pending" ? (
-                <div className="flex items-center gap-2">
+                <>
                   <button
                     type="button"
                     className="btn-ghost h-8 px-3 text-xs"
@@ -311,7 +389,25 @@ export default function ReservationsClient() {
                   >
                     삭제
                   </button>
-                </div>
+                </>
+              ) : reservation.status === "approved" ? (
+                <>
+                  <button
+                    type="button"
+                    className="h-8 rounded-lg border border-amber-200 bg-white px-3 text-xs font-medium text-amber-700 hover:bg-amber-50 disabled:opacity-60"
+                    onClick={() => openDetail(reservation.id)}
+                    disabled={updating}
+                  >
+                    취소 요청
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-ghost h-8 px-3 text-xs"
+                    onClick={() => openDetail(reservation.id)}
+                  >
+                    상세 보기
+                  </button>
+                </>
               ) : (
                 <button
                   type="button"
@@ -323,8 +419,8 @@ export default function ReservationsClient() {
               )}
             </div>
           </div>
-        </div>
-      ))}
+        ))}
+      </div>
 
       <Dialog open={Boolean(selectedReservation)} onOpenChange={(open) => !open && closeDetail()}>
         {selectedReservation && (
@@ -336,7 +432,7 @@ export default function ReservationsClient() {
             <div className="space-y-4 px-6 py-4">
               <div>
                 <p className="text-sm text-neutral-600">
-                  자산: {selectedReservation.assets?.name ?? "자산"}
+                  {resourceTypeLabel[selectedReservation.resource_type]}: {selectedReservation.resource_name}
                 </p>
                 <p className="mt-1 text-xs text-neutral-400">
                   신청번호: {shortReservationId(selectedReservation.id)}
@@ -387,8 +483,23 @@ export default function ReservationsClient() {
 
               {selectedReservation.status !== "pending" && (
                 <p className="text-xs text-neutral-500">
-                  승인 대기 상태에서만 신청 내용을 수정/취소할 수 있습니다.
+                  {selectedReservation.status === "approved"
+                    ? "승인된 신청은 취소 요청을 통해 관리자 확인 후 처리됩니다."
+                    : "승인 대기 상태에서만 신청 내용을 수정/취소할 수 있습니다."}
                 </p>
+              )}
+
+              {selectedReservation.status === "approved" && (
+                <label className="flex flex-col gap-2">
+                  <span className="text-sm font-medium text-neutral-700">취소 사유</span>
+                  <textarea
+                    className="form-textarea"
+                    value={cancelReasonDraft}
+                    onChange={(event) => setCancelReasonDraft(event.target.value)}
+                    placeholder="예: 일정 변경으로 더 이상 대여가 필요하지 않습니다."
+                    disabled={updating}
+                  />
+                </label>
               )}
 
               {actionMessage && (
@@ -425,6 +536,16 @@ export default function ReservationsClient() {
                     {updating ? "저장 중..." : "내용 저장"}
                   </button>
                 </>
+              )}
+              {selectedReservation.status === "approved" && (
+                <button
+                  type="button"
+                  className="h-10 rounded-xl border border-amber-200 px-3 text-sm font-medium text-amber-700 hover:bg-amber-50 disabled:opacity-60"
+                  onClick={handleCancelRequest}
+                  disabled={updating}
+                >
+                  {updating ? "요청 중..." : "취소 요청"}
+                </button>
               )}
               <button
                 type="button"

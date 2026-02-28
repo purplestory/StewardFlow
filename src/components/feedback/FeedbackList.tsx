@@ -163,49 +163,47 @@ export default function FeedbackList() {
       {filteredFeedbacks.length === 0 ? (
         <Notice>{filter === "all" ? "피드백이 없습니다." : "해당 상태의 피드백이 없습니다."}</Notice>
       ) : (
-        <div className="space-y-3">
+        <div className="module-list">
+          <div className="list-row-muted hidden items-center text-xs text-neutral-500 lg:grid lg:grid-cols-[minmax(0,1fr)_10rem]">
+            <span>피드백</span>
+            <span className="text-right">작성/상태</span>
+          </div>
           {filteredFeedbacks.map((feedback) => (
             <Link
               key={feedback.id}
               href={`/feedback/${feedback.id}`}
-              className="block rounded-xl border border-neutral-200 bg-white p-4 transition-all hover:border-neutral-300 hover:shadow-sm"
+              className="list-row block transition-colors hover:bg-neutral-50 lg:grid lg:grid-cols-[minmax(0,1fr)_10rem] lg:items-start"
             >
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="text-xs font-medium text-neutral-500">
-                      {categoryLabels[feedback.category] || feedback.category}
-                    </span>
-                    <span
-                      className={`rounded-full border px-2 py-0.5 text-xs font-medium ${
-                        statusColors[feedback.status] || "bg-neutral-100 text-neutral-700"
-                      }`}
-                    >
-                      {statusLabels[feedback.status] || feedback.status}
-                    </span>
-                  </div>
-                  <h3 className="text-base font-semibold text-neutral-900 mb-1 line-clamp-1">
-                    {feedback.title}
-                  </h3>
-                  <p className="text-sm text-neutral-600 line-clamp-2 mb-2">
-                    {feedback.content}
-                  </p>
-                  <div className="flex items-center gap-4 text-xs text-neutral-500">
-                    <span>
-                      {feedback.author_name || feedback.author_email || "익명"}
-                    </span>
-                    <span>
-                      {new Date(feedback.created_at).toLocaleDateString("ko-KR", {
-                        year: "numeric",
-                        month: "long",
-                        day: "numeric",
-                      })}
-                    </span>
-                    {feedback.admin_response && (
-                      <span className="text-emerald-600">답변 완료</span>
-                    )}
-                  </div>
+              <div className="flex min-w-0 flex-1 flex-col gap-2 lg:pr-3">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-xs font-medium text-neutral-500">
+                    {categoryLabels[feedback.category] || feedback.category}
+                  </span>
+                  <span
+                    className={`rounded-full border px-2 py-0.5 text-xs font-medium ${
+                      statusColors[feedback.status] || "bg-neutral-100 text-neutral-700"
+                    }`}
+                  >
+                    {statusLabels[feedback.status] || feedback.status}
+                  </span>
                 </div>
+                <h3 className="line-clamp-1 text-base font-semibold text-neutral-900">
+                  {feedback.title}
+                </h3>
+                <p className="line-clamp-2 text-sm text-neutral-600">{feedback.content}</p>
+                <div className="flex flex-wrap items-center gap-3 text-xs text-neutral-500">
+                  <span>{feedback.author_name || feedback.author_email || "익명"}</span>
+                  {feedback.admin_response && <span className="text-emerald-600">답변 완료</span>}
+                </div>
+              </div>
+              <div className="mt-2 flex items-start justify-end text-xs text-neutral-500 lg:mt-0">
+                <span>
+                  {new Date(feedback.created_at).toLocaleDateString("ko-KR", {
+                    year: "numeric",
+                    month: "2-digit",
+                    day: "2-digit",
+                  })}
+                </span>
               </div>
             </Link>
           ))}

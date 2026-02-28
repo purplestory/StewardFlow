@@ -504,13 +504,13 @@ export default function ProfileEditor() {
             조회 정보는 텍스트로 표시하고, 필요한 항목만 편집 액션을 제공합니다.
           </p>
         </div>
-        <div className="space-y-3">
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+        <div className="module-list">
+          <div className="list-row flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
             <label className="text-sm font-medium text-neutral-700 sm:min-w-[88px]">이름</label>
             <div className="read-value flex-1 min-w-0">{profile.name || "미등록"}</div>
           </div>
 
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+          <div className="list-row flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
             <label className="text-sm font-medium text-neutral-700 sm:min-w-[80px]">전화번호</label>
             <div className="flex flex-1 min-w-0 flex-col gap-2 sm:flex-row sm:items-center">
               {editingPhone ? (
@@ -572,17 +572,17 @@ export default function ProfileEditor() {
             </div>
           </div>
 
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+          <div className="list-row flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
             <label className="text-sm font-medium text-neutral-700 sm:min-w-[80px]">이메일</label>
             <div className="read-value flex-1 min-w-0">{profile.email || "미등록"}</div>
           </div>
 
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+          <div className="list-row flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
             <label className="text-sm font-medium text-neutral-700 sm:min-w-[80px]">기관</label>
             <div className="read-value flex-1 min-w-0">{organization?.name || "기관 정보 없음"}</div>
           </div>
 
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+          <div className="list-row flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
             <label className="text-sm font-medium text-neutral-700 sm:min-w-[80px]">소속 부서</label>
             <div className="flex flex-1 min-w-0 flex-col gap-2 sm:flex-row sm:items-center">
               {editingDepartment ? (
@@ -666,7 +666,7 @@ export default function ProfileEditor() {
             </div>
           </div>
           {pendingRequest && (
-            <div className="mt-2 rounded-lg border border-blue-200 bg-blue-50 p-3 sm:ml-[92px]">
+            <div className="list-row bg-blue-50">
               <p className="text-sm text-blue-900 font-medium">부서 변경 요청 대기 중</p>
               <p className="text-xs text-blue-700 mt-1">
                 {profile.department || "(없음)"} → {pendingRequest.to_department}
@@ -685,7 +685,7 @@ export default function ProfileEditor() {
             </div>
           )}
           {editingDepartment && (
-            <div className="mt-2 sm:ml-[92px]">
+            <div className="list-row flex-col items-start gap-2">
               <label className="text-xs text-neutral-600 mb-1 block">변경 사유 (선택)</label>
               <textarea
                 value={requestNote}
@@ -696,7 +696,7 @@ export default function ProfileEditor() {
             </div>
           )}
 
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+          <div className="list-row flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
             <label className="text-sm font-medium text-neutral-700 sm:min-w-[80px]">역할</label>
             <div className="read-value flex-1 min-w-0">
               {roleLabel[profile.role || "user"] || profile.role || "일반 사용자"}

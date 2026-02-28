@@ -2,7 +2,10 @@
 
 import { useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent } from "react";
 import StatusFilterPills from "@/components/ui/StatusFilterPills";
-import { formatDateTimeRange } from "./reservation-manager-shared";
+import {
+  formatDateTimeRange,
+  parseReservationDateRange,
+} from "./reservation-manager-shared";
 
 type Reservation = {
   id: string;
@@ -18,6 +21,7 @@ type ViewMode = "month" | "week" | "day";
 type ReservationCalendarViewProps = {
   reservations: Reservation[];
   viewMode: ViewMode;
+  modeOptions?: ViewMode[];
   currentDate: Date;
   onDateChange: (date: Date) => void;
   onViewModeChange: (mode: ViewMode) => void;
@@ -41,6 +45,7 @@ const statusLabels: Record<Reservation["status"], string> = {
 export default function ReservationCalendarView({
   reservations,
   viewMode,
+  modeOptions,
   currentDate,
   onDateChange,
   onViewModeChange,
@@ -50,11 +55,23 @@ export default function ReservationCalendarView({
   const [selectedReservation, setSelectedReservation] = useState<Reservation | null>(null);
   const [popoverPosition, setPopoverPosition] = useState<{ x: number; y: number } | null>(null);
   const popoverRef = useRef<HTMLDivElement | null>(null);
-  const calendarModeOptions = [
-    { value: "month", label: "월간" },
-    { value: "week", label: "주간" },
-    { value: "day", label: "일간" },
-  ] as const;
+  const enabledModes = useMemo<ViewMode[]>(
+    () =>
+      modeOptions?.length
+        ? modeOptions
+        : (["month", "week", "day"] as ViewMode[]),
+    [modeOptions]
+  );
+  const calendarModeOptions = enabledModes.map((mode) => ({
+    value: mode,
+    label: mode === "month" ? "월간" : mode === "week" ? "주간" : "일간",
+  }));
+
+  useEffect(() => {
+    if (!enabledModes.includes(viewMode)) {
+      onViewModeChange(enabledModes[0]);
+    }
+  }, [enabledModes, onViewModeChange, viewMode]);
 
   // 주간 뷰: 현재 날짜가 포함된 주의 시작일과 종료일
   const weekRange = useMemo(() => {
@@ -70,49 +87,45 @@ export default function ReservationCalendarView({
     return { start, end };
   }, [currentDate]);
 
-  // 일간 뷰: 현재 날짜의 시작과 종료
-  const dayRange = useMemo(() => {
-    const start = new Date(currentDate);
-    start.setHours(0, 0, 0, 0);
+  const resolveReservationRange = (reservation: Reservation) => {
+    const range = parseReservationDateRange(
+      reservation.start_date,
+      reservation.end_date
+    );
+    if (!range) {
+      if (process.env.NODE_ENV !== "production") {
+        console.warn("[ReservationCalendarView] parse failed", {
+          id: reservation.id,
+          start_date: reservation.start_date,
+          end_date: reservation.end_date,
+        });
+      }
+      return null;
+    }
+    return range;
+  };
 
-    const end = new Date(currentDate);
-    end.setHours(23, 59, 59, 999);
-
-    return { start, end };
-  }, [currentDate]);
-
-  // 월간 뷰: 현재 달의 첫 날과 마지막 날
-  const monthRange = useMemo(() => {
-    const start = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
-    start.setHours(0, 0, 0, 0);
-
-    const end = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
-    end.setHours(23, 59, 59, 999);
-
-    return { start, end };
-  }, [currentDate]);
-
-  // 현재 뷰 모드에 맞는 날짜 범위
-  const dateRange = useMemo(() => {
-    if (viewMode === "week") return weekRange;
-    if (viewMode === "day") return dayRange;
-    return monthRange;
-  }, [viewMode, weekRange, dayRange, monthRange]);
-
-  // 날짜 범위 내의 예약 필터링
-  const filteredReservations = useMemo(() => {
-    return reservations.filter((reservation) => {
-      const start = new Date(reservation.start_date);
-      const end = new Date(reservation.end_date);
-
-      // 예약이 날짜 범위와 겹치는지 확인
-      return (
-        (start >= dateRange.start && start <= dateRange.end) ||
-        (end >= dateRange.start && end <= dateRange.end) ||
-        (start <= dateRange.start && end >= dateRange.end)
+  const reservationRanges = useMemo(() => {
+    return reservations
+      .map((reservation) => {
+      const range = resolveReservationRange(reservation);
+      if (!range) {
+        return null;
+      }
+      const start = range.start <= range.end ? range.start : range.end;
+      const end = range.start <= range.end ? range.end : range.start;
+      return { reservation, start, end };
+    })
+      .filter(
+        (
+          item
+        ): item is {
+          reservation: Reservation;
+          start: Date;
+          end: Date;
+        } => item !== null
       );
-    });
-  }, [reservations, dateRange]);
+  }, [reservations]);
 
   // 월간 뷰: 달력 그리드 생성
   const calendarDays = useMemo(() => {
@@ -166,16 +179,16 @@ export default function ReservationCalendarView({
 
   // 특정 날짜의 예약 가져오기
   const getReservationsForDate = (date: Date) => {
-    return filteredReservations.filter((reservation) => {
-      const start = new Date(reservation.start_date);
-      const end = new Date(reservation.end_date);
+    return reservationRanges
+      .filter(({ start, end }) => {
       const dayStart = new Date(date);
       dayStart.setHours(0, 0, 0, 0);
       const dayEnd = new Date(date);
       dayEnd.setHours(23, 59, 59, 999);
 
       return start <= dayEnd && end >= dayStart;
-    });
+      })
+      .map(({ reservation }) => reservation);
   };
 
   // 날짜 포맷
@@ -309,7 +322,7 @@ export default function ReservationCalendarView({
                   {dayReservations.slice(0, 3).map((reservation) => (
                     <div
                       key={reservation.id}
-                      className={`text-xs px-1 py-0.5 rounded border truncate cursor-pointer ${
+                      className={`cursor-pointer overflow-hidden rounded border px-1 py-0.5 text-xs ${
                         statusColors[reservation.status]
                       } ${
                         hoveredReservation === reservation.id
@@ -321,7 +334,12 @@ export default function ReservationCalendarView({
                       onMouseLeave={() => setHoveredReservation(null)}
                       title={`${reservation.resource_name} - ${statusLabels[reservation.status]}`}
                     >
-                      {reservation.resource_name}
+                      <div className="truncate font-medium">
+                        {reservation.resource_name}
+                      </div>
+                      <div className="truncate text-[10px] leading-tight opacity-80">
+                        {statusLabels[reservation.status]}
+                      </div>
                     </div>
                   ))}
                   {dayReservations.length > 3 && (
@@ -360,8 +378,12 @@ export default function ReservationCalendarView({
                   {dayReservations.map((reservation) => (
                     <div
                       key={reservation.id}
-                      className={`text-xs px-2 py-1 rounded border cursor-pointer ${
+                      className={`cursor-pointer rounded border px-2 py-1 text-xs ${
                         statusColors[reservation.status]
+                      } ${
+                        hoveredReservation === reservation.id
+                          ? "ring-2 ring-slate-500"
+                          : ""
                       }`}
                       onClick={(event) => handleReservationClick(event, reservation)}
                       onMouseEnter={() => setHoveredReservation(reservation.id)}
@@ -369,6 +391,9 @@ export default function ReservationCalendarView({
                     >
                       <div className="font-medium truncate">
                         {reservation.resource_name}
+                      </div>
+                      <div className="mt-0.5 truncate text-[11px] opacity-80">
+                        {statusLabels[reservation.status]}
                       </div>
                     </div>
                   ))}
@@ -400,8 +425,12 @@ export default function ReservationCalendarView({
               dayReservations.map((reservation) => (
                 <div
                   key={reservation.id}
-                  className={`p-3 rounded border cursor-pointer ${
+                  className={`cursor-pointer rounded border p-3 ${
                     statusColors[reservation.status]
+                  } ${
+                    hoveredReservation === reservation.id
+                      ? "ring-2 ring-slate-500"
+                      : ""
                   }`}
                   onClick={(event) => handleReservationClick(event, reservation)}
                   onMouseEnter={() => setHoveredReservation(reservation.id)}
@@ -409,6 +438,9 @@ export default function ReservationCalendarView({
                 >
                   <div className="font-medium mb-1">
                     {reservation.resource_name}
+                  </div>
+                  <div className="text-xs opacity-80">
+                    {statusLabels[reservation.status]}
                   </div>
                 </div>
               ))
@@ -457,11 +489,13 @@ export default function ReservationCalendarView({
           </div>
         </div>
 
-        <StatusFilterPills
-          options={calendarModeOptions}
-          value={viewMode}
-          onChange={(next) => onViewModeChange(next as ViewMode)}
-        />
+        {calendarModeOptions.length > 1 ? (
+          <StatusFilterPills
+            options={calendarModeOptions}
+            value={viewMode}
+            onChange={(next) => onViewModeChange(next as ViewMode)}
+          />
+        ) : null}
       </div>
 
       {/* 달력 뷰 */}
@@ -474,7 +508,7 @@ export default function ReservationCalendarView({
       {selectedReservation && popoverPosition && (
         <div
           ref={popoverRef}
-          className="fixed z-50 w-[280px] rounded-xl border border-neutral-200 bg-white p-3 shadow-xl"
+          className="fixed z-50 w-[calc(100vw-24px)] max-w-[280px] rounded-xl border border-neutral-200 bg-white p-3 shadow-xl"
           style={{
             left: popoverPosition.x,
             top: popoverPosition.y,
@@ -498,7 +532,7 @@ export default function ReservationCalendarView({
               selectedReservation.end_date
             )}
           </p>
-          <p className="mt-1 text-xs text-neutral-500">
+          <p className="mt-1 break-all text-xs text-neutral-500">
             신청자: {selectedReservation.borrower_id}
           </p>
           <div className="mt-3 flex justify-end gap-2">

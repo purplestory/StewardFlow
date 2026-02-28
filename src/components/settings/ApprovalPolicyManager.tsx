@@ -312,7 +312,10 @@ export default function ApprovalPolicyManager() {
         bodyClassName="space-y-4"
       >
         <div className="module-toolbar">
-          <form onSubmit={handleCreate} className="grid gap-2 md:grid-cols-4">
+          <form
+            onSubmit={handleCreate}
+            className="grid gap-2 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_auto]"
+          >
             <select name="scope" className="form-select">
               <option value="asset">물품</option>
               <option value="space">공간</option>
@@ -331,7 +334,7 @@ export default function ApprovalPolicyManager() {
               <option value="admin">관리자</option>
               <option value="user">일반 사용자</option>
             </select>
-            <button className="btn-primary w-full md:w-auto">정책 추가</button>
+            <button className="btn-primary w-full md:w-auto md:justify-self-end">정책 추가</button>
           </form>
         </div>
 
@@ -344,12 +347,17 @@ export default function ApprovalPolicyManager() {
           </div>
         ) : (
           <div className="module-list text-sm">
+            <div className="list-row-muted hidden items-center gap-3 text-xs text-neutral-500 xl:grid xl:grid-cols-[minmax(0,1fr)_11rem_3.5rem]">
+              <span>정책</span>
+              <span className="text-center">권한</span>
+              <span className="text-right">관리</span>
+            </div>
             {policies.map((policy) => (
               <div
                 key={policy.id}
-                className="list-row flex-col gap-3 md:flex-row md:items-center md:justify-between"
+                className="list-row flex flex-col gap-3 xl:grid xl:grid-cols-[minmax(0,1fr)_11rem_3.5rem] xl:items-center"
               >
-                <div className="min-w-0 flex-1">
+                <div className="min-w-0">
                   <p className="font-medium text-neutral-900">
                     {scopeLabels[policy.scope]} · {policy.department ?? "기관 공용"}
                   </p>
@@ -357,7 +365,7 @@ export default function ApprovalPolicyManager() {
                     승인 권한: {roleLabels[policy.required_role]}
                   </p>
                 </div>
-                <div className="flex w-full items-center gap-2 md:w-auto">
+                <div className="w-full xl:max-w-[11rem]">
                   <select
                     value={policy.required_role}
                     onChange={(event) =>
@@ -366,16 +374,18 @@ export default function ApprovalPolicyManager() {
                         event.target.value as ApprovalPolicy["required_role"]
                       )
                     }
-                    className="form-select h-10 min-w-0 flex-1 md:min-w-[170px] md:flex-none"
+                    className="form-select h-10 w-full"
                   >
                     <option value="manager">부서 관리자</option>
                     <option value="admin">관리자</option>
                     <option value="user">일반 사용자</option>
                   </select>
+                </div>
+                <div className="flex justify-end xl:justify-self-end">
                   <button
                     type="button"
                     onClick={() => handleDelete(policy.id)}
-                    className="icon-button icon-button-danger"
+                    className="icon-button icon-button-danger shrink-0"
                     title="삭제"
                   >
                     <svg

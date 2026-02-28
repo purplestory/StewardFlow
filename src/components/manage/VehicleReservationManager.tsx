@@ -14,6 +14,8 @@ import {
 import {
   formatBorrowerName,
   formatDateTimeRange,
+  parseReservationDateRange,
+  parseReservationDateTimeSafe,
   reservationStatusLabel,
   reservationStatusOptions,
   roleLabel,
@@ -96,7 +98,6 @@ export default function VehicleReservationManager() {
   const [selectedReservation, setSelectedReservation] = useState<ReservationRow | null>(null);
   const [query, setQuery] = useState("");
   const [viewMode, setViewMode] = useState<"list" | "calendar">("list");
-  const [calendarViewMode, setCalendarViewMode] = useState<"month" | "week" | "day">("month");
   const [currentDate, setCurrentDate] = useState(new Date());
 
   const roleRank: Record<ProfileRole, number> = {
@@ -189,6 +190,60 @@ export default function VehicleReservationManager() {
     return () => clearTimeout(timer);
   }, []);
 
+  const filteredReservations = useMemo(() => {
+    const normalized = query.trim().toLowerCase();
+    return reservations.filter((reservation) => {
+      if (statusFilter !== "all" && reservation.status !== statusFilter) {
+        return false;
+      }
+      if (!normalized) {
+        return true;
+      }
+      const name = reservation.vehicles?.name?.toLowerCase() ?? "";
+      const borrowerId = reservation.borrower_id.toLowerCase();
+      const borrowerName = reservation.borrower?.name?.toLowerCase() ?? "";
+      const borrowerDepartment = reservation.borrower?.department?.toLowerCase() ?? "";
+      return (
+        name.includes(normalized) ||
+        borrowerId.includes(normalized) ||
+        borrowerName.includes(normalized) ||
+        borrowerDepartment.includes(normalized)
+      );
+    });
+  }, [reservations, query, statusFilter]);
+
+  const calendarCurrentDate = useMemo(() => {
+    if (viewMode !== "calendar" || filteredReservations.length === 0) {
+      return currentDate;
+    }
+
+    const monthStart = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
+    monthStart.setHours(0, 0, 0, 0);
+    const monthEnd = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
+    monthEnd.setHours(23, 59, 59, 999);
+
+    const hasReservationInCurrentMonth = filteredReservations.some((reservation) => {
+      const range = parseReservationDateRange(
+        reservation.start_date,
+        reservation.end_date
+      );
+      if (!range) {
+        return false;
+      }
+      return range.start <= monthEnd && range.end >= monthStart;
+    });
+
+    if (hasReservationInCurrentMonth) {
+      return currentDate;
+    }
+
+    const nextDate = filteredReservations
+      .map((reservation) => parseReservationDateTimeSafe(reservation.start_date))
+      .find((date): date is Date => date !== null);
+
+    return nextDate ?? currentDate;
+  }, [currentDate, filteredReservations, viewMode]);
+
   const handleStatusChange = async (
     reservationId: string,
     nextStatus: ReservationRow["status"]
@@ -242,28 +297,6 @@ export default function VehicleReservationManager() {
     );
     setUpdatingId(null);
   };
-
-  const filteredReservations = useMemo(() => {
-    const normalized = query.trim().toLowerCase();
-    return reservations.filter((reservation) => {
-      if (statusFilter !== "all" && reservation.status !== statusFilter) {
-        return false;
-      }
-      if (!normalized) {
-        return true;
-      }
-      const name = reservation.vehicles?.name?.toLowerCase() ?? "";
-      const borrowerId = reservation.borrower_id.toLowerCase();
-      const borrowerName = reservation.borrower?.name?.toLowerCase() ?? "";
-      const borrowerDepartment = reservation.borrower?.department?.toLowerCase() ?? "";
-      return (
-        name.includes(normalized) ||
-        borrowerId.includes(normalized) ||
-        borrowerName.includes(normalized) ||
-        borrowerDepartment.includes(normalized)
-      );
-    });
-  }, [reservations, query, statusFilter]);
 
   // 달력 뷰용 예약 데이터 변환
   const calendarReservations = useMemo(() => {
@@ -319,15 +352,16 @@ export default function VehicleReservationManager() {
   }
 
   return (
-    <div className="space-y-4 p-4 md:p-5">
-      <div className="surface-card space-y-3 p-3 md:p-4">
+    <section className="surface-card p-4 md:p-5">
+      <div className="space-y-4">
+      <div className="module-toolbar space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-neutral-600">
           <div className="flex flex-wrap items-center gap-2">
-            <span>총 {reservations.length}건</span>
+            <span className="module-kpi">총 {reservations.length}건</span>
             <button
               type="button"
               onClick={load}
-              className="btn-ghost"
+              className="btn-outline"
             >
               새로고침
             </button>
@@ -367,10 +401,11 @@ export default function VehicleReservationManager() {
       {viewMode === "calendar" ? (
         <ReservationCalendarView
           reservations={calendarReservations}
-          viewMode={calendarViewMode}
-          currentDate={currentDate}
+          viewMode="month"
+          modeOptions={["month"]}
+          currentDate={calendarCurrentDate}
           onDateChange={setCurrentDate}
-          onViewModeChange={setCalendarViewMode}
+          onViewModeChange={() => undefined}
           onReservationClick={(reservation) => {
             const found = filteredReservations.find((r) => r.id === reservation.id);
             if (found) {
@@ -395,77 +430,86 @@ export default function VehicleReservationManager() {
               </button>
             </Notice>
           ) : (
-            filteredReservations.map((reservation) => (
-        <div
-          key={reservation.id}
-          className="cursor-pointer rounded-xl border border-neutral-200 bg-white px-4 py-3 transition-colors hover:bg-neutral-50"
-          onClick={() => setSelectedReservation(reservation)}
-        >
-          <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-            <div>
-              <p className="text-sm font-medium">
-                {reservation.vehicles?.name ?? "차량"} 예약
-              </p>
-              <p className="text-xs text-neutral-500">
-                {formatDateTimeRange(reservation.start_date, reservation.end_date)}
-              </p>
-              <p className="text-xs text-neutral-500">
-                신청자:{" "}
-                {formatBorrowerName(reservation.borrower, reservation.borrower_id)}
-              </p>
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                className="btn-ghost h-8 px-3 text-xs"
-                onClick={(event) => {
-                  event.stopPropagation();
-                  setSelectedReservation(reservation);
-                }}
-              >
-                상세
-              </button>
-              <span className="text-xs text-neutral-500">상태</span>
-              <Select
-                value={reservation.status}
-                onValueChange={(nextStatus) =>
-                  handleStatusChange(
-                    reservation.id,
-                    nextStatus as ReservationRow["status"]
-                  )
-                }
-                disabled={
-                  reservation.status === "returned" ||
-                  !context ||
-                  !reservation.vehicles ||
-                  updatingId === reservation.id ||
-                  roleRank[context.role] <
-                    roleRank[
-                      resolveRequiredRole(policies, reservation.vehicles)
-                    ]
-                }
-              >
-                <SelectTrigger
-                  className="form-select h-8 w-28 px-2 text-xs"
-                  onClick={(event) => event.stopPropagation()}
+            <div className="module-list">
+              <div className="list-row-muted hidden items-center text-xs text-neutral-500 lg:grid lg:grid-cols-[minmax(0,1fr)_320px]">
+                <span>신청 정보</span>
+                <span className="text-right">상세 / 상태</span>
+              </div>
+              {filteredReservations.map((reservation) => (
+                <div
+                  key={reservation.id}
+                  className="list-row cursor-pointer flex-col gap-3 text-sm transition-colors hover:bg-neutral-50 lg:grid lg:grid-cols-[minmax(0,1fr)_320px] lg:items-start"
+                  onClick={() => setSelectedReservation(reservation)}
                 >
-                  {statusOptions.map((status) => (
-                    <SelectItem key={status} value={status} disabled={status === "returned"}>
-                      {statusLabel[status]}
-                    </SelectItem>
-                  ))}
-                </SelectTrigger>
-              </Select>
+                  <div className="min-w-0 flex-1 lg:pr-3">
+                    <p className="text-sm font-medium text-neutral-900">
+                      {reservation.vehicles?.name ?? "차량"} 예약
+                    </p>
+                    <p className="text-xs text-neutral-500">
+                      {formatDateTimeRange(reservation.start_date, reservation.end_date)}
+                    </p>
+                    <p className="text-xs text-neutral-500">
+                      신청자:{" "}
+                      {formatBorrowerName(reservation.borrower, reservation.borrower_id)}
+                    </p>
+                    {context && reservation.vehicles && (
+                      <p className="mt-1 text-xs text-neutral-400">
+                        승인 필요 권한:{" "}
+                        {roleLabel[resolveRequiredRole(policies, reservation.vehicles)]}
+                      </p>
+                    )}
+                  </div>
+                  <div className="w-full space-y-2 lg:w-[320px] lg:justify-self-end">
+                    <div className="grid grid-cols-[72px_minmax(0,1fr)] items-center gap-2">
+                      <span className="whitespace-nowrap text-[11px] font-medium text-neutral-500">상세</span>
+                      <button
+                        type="button"
+                        className="btn-ghost h-8 px-2 text-xs"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          setSelectedReservation(reservation);
+                        }}
+                      >
+                        보기
+                      </button>
+                    </div>
+                    <div className="grid grid-cols-[72px_minmax(0,1fr)] items-center gap-2">
+                      <span className="whitespace-nowrap text-[11px] font-medium text-neutral-500">상태</span>
+                      <Select
+                        value={reservation.status}
+                        onValueChange={(nextStatus) =>
+                          handleStatusChange(
+                            reservation.id,
+                            nextStatus as ReservationRow["status"]
+                          )
+                        }
+                        disabled={
+                          reservation.status === "returned" ||
+                          !context ||
+                          !reservation.vehicles ||
+                          updatingId === reservation.id ||
+                          roleRank[context.role] <
+                            roleRank[
+                              resolveRequiredRole(policies, reservation.vehicles)
+                            ]
+                        }
+                      >
+                        <SelectTrigger
+                          className="form-select h-8 w-full px-2 text-xs"
+                          onClick={(event) => event.stopPropagation()}
+                        >
+                          {statusOptions.map((status) => (
+                            <SelectItem key={status} value={status} disabled={status === "returned"}>
+                              {statusLabel[status]}
+                            </SelectItem>
+                          ))}
+                        </SelectTrigger>
+                      </Select>
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
-          </div>
-          {context && reservation.vehicles && (
-            <p className="mt-2 text-xs text-neutral-400">
-              승인 필요 권한:{" "}
-              {roleLabel[resolveRequiredRole(policies, reservation.vehicles)]}
-            </p>
-          )}
-        </div>
-            ))
           )}
         </>
       )}
@@ -516,7 +560,8 @@ export default function VehicleReservationManager() {
         }}
         onClose={() => setSelectedReservation(null)}
       />
-    </div>
+      </div>
+    </section>
   );
 }
 

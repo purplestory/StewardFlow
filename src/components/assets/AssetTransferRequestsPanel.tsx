@@ -239,7 +239,7 @@ export default function AssetTransferRequestsPanel({
   }
 
   return (
-    <div className="space-y-3 rounded-xl border border-neutral-200 bg-white p-6">
+    <div className="module-panel space-y-3">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
           <h2 className="text-lg font-semibold">불용품 양도 요청 관리</h2>
@@ -259,14 +259,18 @@ export default function AssetTransferRequestsPanel({
       {requests.length === 0 ? (
         <Notice>이동 요청이 없습니다.</Notice>
       ) : (
-        <div className="space-y-2 text-sm">
+        <div className="module-list text-sm">
+          <div className="list-row-muted hidden items-center text-xs text-neutral-500 lg:grid lg:grid-cols-[minmax(0,1fr)_220px]">
+            <span>요청 정보</span>
+            <span className="text-right">처리</span>
+          </div>
           {requests.map((request) => (
             <div
               key={request.id}
-              className="rounded-lg border border-neutral-200 px-3 py-2"
+              className="list-row flex-col gap-3 lg:grid lg:grid-cols-[minmax(0,1fr)_220px] lg:items-start"
             >
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div>
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-2">
                   <p className="font-medium">
                     {request.from_department ?? "미등록"} →{" "}
                     {request.to_department ?? "미등록"}
@@ -275,13 +279,23 @@ export default function AssetTransferRequestsPanel({
                     상태: {statusLabel[request.status]}
                   </p>
                 </div>
-                {request.status === "pending" && canManage && (
-                  <div className="flex items-center gap-2">
+                {request.note && (
+                  <p className="mt-1 text-xs text-neutral-500">
+                    사유: {request.note}
+                  </p>
+                )}
+                <p className="mt-1 text-xs text-neutral-400">
+                  요청일: {formatDateTime(request.created_at)}
+                </p>
+              </div>
+              <div className="flex w-full items-center justify-end gap-2 lg:w-[220px] lg:justify-self-end">
+                {request.status === "pending" && canManage ? (
+                  <>
                     <button
                       type="button"
                       onClick={() => handleResolve(request, "approved")}
                       disabled={updatingId === request.id}
-                      className="px-4 py-2 rounded-lg text-sm font-medium transition-all bg-neutral-900 text-white hover:bg-neutral-800"
+                      className="btn-primary h-9 px-4 text-xs"
                     >
                       승인
                     </button>
@@ -289,21 +303,15 @@ export default function AssetTransferRequestsPanel({
                       type="button"
                       onClick={() => handleResolve(request, "rejected")}
                       disabled={updatingId === request.id}
-                      className="rounded-md border border-rose-200 px-3 py-1 text-xs text-rose-600"
+                      className="btn-danger h-9 px-3 text-xs"
                     >
                       거절
                     </button>
-                  </div>
+                  </>
+                ) : (
+                  <span className="text-xs text-neutral-400">처리 완료</span>
                 )}
               </div>
-              {request.note && (
-                <p className="mt-2 text-xs text-neutral-500">
-                  사유: {request.note}
-                </p>
-              )}
-              <p className="mt-1 text-xs text-neutral-400">
-                요청일: {formatDateTime(request.created_at)}
-              </p>
             </div>
           ))}
         </div>

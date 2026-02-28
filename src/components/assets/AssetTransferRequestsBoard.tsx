@@ -756,10 +756,14 @@ export default function AssetTransferRequestsBoard() {
           </Notice>
         ) : (
           <div className="module-list mt-3">
+            <div className="list-row-muted hidden items-center text-xs text-neutral-500 lg:grid lg:grid-cols-[minmax(0,1fr)_240px]">
+              <span>요청 정보</span>
+              <span className="text-right">처리</span>
+            </div>
             {filteredRequests.map((request) => (
               <div
                 key={request.id}
-                className="list-row flex-col gap-3 text-sm md:flex-row md:items-start md:justify-between"
+                className="list-row flex-col gap-3 text-sm lg:grid lg:grid-cols-[minmax(0,1fr)_240px] lg:items-start"
               >
                 <div className="min-w-0 flex-1">
                   <p className="font-medium text-neutral-900">
@@ -790,40 +794,44 @@ export default function AssetTransferRequestsBoard() {
                     )}
                   </p>
                 </div>
-                {request.status === "pending" && (
-                  <div className="flex w-full flex-wrap items-center justify-end gap-2 md:w-auto md:flex-nowrap">
-                    {request.requester_id === userId && (
-                      <button
-                        type="button"
-                        onClick={() => handleCancel(request)}
-                        disabled={updatingId === request.id}
-                        className="btn-outline h-[38px]"
-                      >
-                        취소
-                      </button>
-                    )}
-                    {canResolveRequest(request) && (
-                      <>
+                <div className="flex w-full flex-wrap items-center justify-end gap-2 lg:w-[240px] lg:flex-nowrap lg:justify-self-end">
+                  {request.status === "pending" ? (
+                    <>
+                      {request.requester_id === userId && (
                         <button
                           type="button"
-                          onClick={() => handleResolve(request, "approved")}
+                          onClick={() => handleCancel(request)}
                           disabled={updatingId === request.id}
-                          className="btn-primary h-[38px]"
+                          className="btn-outline h-[38px]"
                         >
-                          승인
+                          취소
                         </button>
-                        <button
-                          type="button"
-                          onClick={() => handleResolve(request, "rejected")}
-                          disabled={updatingId === request.id}
-                          className="btn-outline h-[38px] border-rose-200 text-rose-600 hover:bg-rose-50"
-                        >
-                          거절
-                        </button>
-                      </>
-                    )}
-                  </div>
-                )}
+                      )}
+                      {canResolveRequest(request) && (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => handleResolve(request, "approved")}
+                            disabled={updatingId === request.id}
+                            className="btn-primary h-[38px]"
+                          >
+                            승인
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleResolve(request, "rejected")}
+                            disabled={updatingId === request.id}
+                            className="btn-outline h-[38px] border-rose-200 text-rose-600 hover:bg-rose-50"
+                          >
+                            거절
+                          </button>
+                        </>
+                      )}
+                    </>
+                  ) : (
+                    <span className="text-xs text-neutral-400">처리 완료</span>
+                  )}
+                </div>
               </div>
             ))}
           </div>

@@ -4,6 +4,9 @@ import { useEffect, useMemo, useState } from "react";
 import Calendar from "react-calendar";
 import "react-calendar/dist/Calendar.css";
 import { getCurrentYearHolidays, type Holiday } from "@/lib/korean-holidays";
+import {
+  parseReservationDateRange,
+} from "@/components/manage/reservation-manager-shared";
 
 type ReservationItem = {
   start_date: string;
@@ -67,11 +70,24 @@ export default function ReservationCalendar({
 
   const normalized = useMemo(
     () =>
-      reservations.map((reservation) => ({
-        ...reservation,
-        start: new Date(reservation.start_date),
-        end: new Date(reservation.end_date),
-      })),
+      reservations
+        .map((reservation) => {
+          const range = parseReservationDateRange(
+            reservation.start_date,
+            reservation.end_date
+          );
+          if (!range) {
+            if (process.env.NODE_ENV !== "production") {
+              console.warn("[ReservationCalendar] parse failed", {
+                start_date: reservation.start_date,
+                end_date: reservation.end_date,
+              });
+            }
+            return null;
+          }
+          return { ...reservation, ...range };
+        })
+        .filter((reservation): reservation is ReservationItem & { start: Date; end: Date } => reservation !== null),
     [reservations]
   );
 

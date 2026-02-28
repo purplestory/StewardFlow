@@ -1796,10 +1796,14 @@ export default function UserRoleManager() {
           </div>
         ) : (
           <div className="module-list mt-3">
+            <div className="list-row-muted hidden items-center text-xs text-neutral-500 lg:grid lg:grid-cols-[minmax(0,1fr)_320px]">
+              <span>초대 정보</span>
+              <span className="text-right">액션</span>
+            </div>
             {invites.map((invite) => (
               <div
                 key={invite.id}
-                className="list-row flex-col justify-between gap-3 text-xs sm:flex-row sm:items-center"
+                className="list-row flex-col justify-between gap-3 text-xs lg:grid lg:grid-cols-[minmax(0,1fr)_320px] lg:items-center"
               >
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-medium text-neutral-900">
@@ -1819,7 +1823,7 @@ export default function UserRoleManager() {
                     만료: {formatDateTime(getExpiresAt(invite.created_at, invite.expires_at, inviteExpiresDays))}
                   </p>
                 </div>
-                <div className="flex flex-wrap items-center gap-2">
+                <div className="flex w-full flex-wrap items-center justify-end gap-2 lg:w-[320px] lg:flex-nowrap">
                   {invite.token && (
                     <button
                       type="button"
@@ -1854,10 +1858,14 @@ export default function UserRoleManager() {
         <section className="surface-card border-blue-200 p-5 md:p-6">
           <h3 className="text-sm font-semibold text-slate-900">부서 변경 요청</h3>
           <div className="module-list mt-3">
+            <div className="list-row-muted hidden items-center text-xs text-neutral-500 lg:grid lg:grid-cols-[minmax(0,1fr)_200px]">
+              <span>요청 정보</span>
+              <span className="text-right">처리</span>
+            </div>
             {departmentChangeRequests.map((request) => (
               <div
                 key={request.id}
-                className="list-row flex-col items-start justify-between gap-3 sm:flex-row sm:items-center"
+                className="list-row flex-col items-start justify-between gap-3 lg:grid lg:grid-cols-[minmax(0,1fr)_200px] lg:items-center"
               >
                 <div className="flex-1">
                   <p className="text-sm font-medium text-neutral-900">
@@ -1873,7 +1881,7 @@ export default function UserRoleManager() {
                     {formatDateTime(request.created_at)}
                   </p>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex w-full justify-end gap-2 lg:w-[200px]">
                   <button
                     type="button"
                     onClick={() => approveDepartmentChange(request)}
@@ -1902,9 +1910,13 @@ export default function UserRoleManager() {
             부서 관리자의 탈퇴 요청입니다. 승인 시 계정이 영구적으로 삭제됩니다.
           </p>
           <div className="module-list mt-3">
+            <div className="list-row-muted hidden items-center text-xs text-neutral-500 lg:grid lg:grid-cols-[minmax(0,1fr)_20rem]">
+              <span>요청 정보</span>
+              <span className="text-right">승인 처리</span>
+            </div>
             {deletionRequests.map((request) => (
-              <div key={request.id} className="list-row flex-col items-stretch gap-3">
-                <div>
+              <div key={request.id} className="list-row flex-col items-stretch gap-3 lg:grid lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start">
+                <div className="min-w-0">
                   <p className="text-sm font-medium text-neutral-900">
                     {request.requester_name || request.requester_email}
                   </p>
@@ -1936,7 +1948,7 @@ export default function UserRoleManager() {
                     disabled={processingRequestId === request.id}
                   />
                 </div>
-                <div className="flex gap-2">
+                <div className="flex justify-end gap-2 lg:col-start-2">
                   <button
                     type="button"
                     onClick={() => {
@@ -1973,10 +1985,14 @@ export default function UserRoleManager() {
             초대코드 없이 가입한 사용자입니다. 기관, 부서, 권한을 지정해 승인해주세요.
           </p>
           <div className="module-list mt-3">
+            <div className="list-row-muted hidden items-center text-xs text-neutral-500 lg:grid lg:grid-cols-[minmax(0,1fr)_120px]">
+              <span>사용자</span>
+              <span className="text-right">승인</span>
+            </div>
             {pendingUsers.map((user) => (
               <div
                 key={user.id}
-                className="list-row flex-col items-start justify-between gap-3 sm:flex-row sm:items-center"
+                className="list-row flex-col items-start justify-between gap-3 lg:grid lg:grid-cols-[minmax(0,1fr)_120px] lg:items-center"
               >
                 <div className="flex-1">
                   <p className="text-sm font-medium text-neutral-900">
@@ -1987,13 +2003,15 @@ export default function UserRoleManager() {
                     가입일: {formatDateTime(user.created_at || new Date().toISOString())}
                   </p>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => handleStartApproval(user.id)}
-                  className="btn-primary h-9 px-3 text-xs"
-                >
-                  승인하기
-                </button>
+                <div className="flex w-full justify-end lg:w-[120px]">
+                  <button
+                    type="button"
+                    onClick={() => handleStartApproval(user.id)}
+                    className="btn-primary h-9 px-3 text-xs"
+                  >
+                    승인하기
+                  </button>
+                </div>
               </div>
             ))}
           </div>
@@ -2097,10 +2115,14 @@ export default function UserRoleManager() {
           </div>
         ) : (
           <div className="module-list mt-3">
+            <div className="list-row-muted hidden lg:grid lg:grid-cols-[minmax(0,1fr)_500px] lg:items-center">
+              <span>사용자</span>
+              <span className="text-right">부서 / 권한 / 관리</span>
+            </div>
             {profiles.map((profile) => (
               <div
                 key={profile.id}
-                className="list-row flex-col items-start justify-between gap-3 text-xs lg:flex-row lg:items-center"
+                className="list-row flex-col items-start justify-between gap-3 text-xs lg:grid lg:grid-cols-[minmax(0,1fr)_500px] lg:items-center"
               >
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-medium text-neutral-900">
@@ -2112,7 +2134,7 @@ export default function UserRoleManager() {
                     {roleLabel[profile.role]}
                   </p>
                 </div>
-                <div className="grid w-full grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] lg:w-auto lg:min-w-[420px]">
+                <div className="grid w-full grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] lg:w-[500px]">
                   {currentUserRole === "admin" ? (
                     <select
                       className="form-select h-[38px] w-full"
@@ -2164,7 +2186,7 @@ export default function UserRoleManager() {
                         </option>
                       ))}
                   </select>
-                  {currentUserRole === "admin" && profile.id !== currentUserId && (
+                  {currentUserRole === "admin" && profile.id !== currentUserId ? (
                     <button
                       type="button"
                       onClick={() => deleteUser(profile.id, profile.name || "이름 없음")}
@@ -2183,6 +2205,8 @@ export default function UserRoleManager() {
                         </svg>
                       )}
                     </button>
+                  ) : (
+                    <div className="hidden h-10 w-10 lg:block" aria-hidden="true" />
                   )}
                 </div>
               </div>

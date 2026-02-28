@@ -292,6 +292,10 @@ export default function AssetAdminPanel() {
         </Notice>
       ) : (
         <div className="module-list">
+          <div className="list-row-muted hidden items-center text-xs text-neutral-500 lg:grid lg:grid-cols-[minmax(0,1fr)_8rem]">
+            <span>물품 정보</span>
+            <span className="text-right">관리</span>
+          </div>
           <div className="list-row-muted flex items-center gap-2 text-sm text-neutral-600">
             <input
               type="checkbox"
@@ -306,7 +310,7 @@ export default function AssetAdminPanel() {
           {filteredAssets.map((asset) => (
             <div
               key={asset.id}
-              className="list-row justify-between text-sm"
+              className="list-row text-sm lg:grid lg:grid-cols-[minmax(0,1fr)_8rem] lg:items-center"
             >
               <label className="flex min-w-0 flex-1 items-center gap-2">
                 <input
@@ -322,7 +326,7 @@ export default function AssetAdminPanel() {
                   className="shrink-0"
                 />
               </label>
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-1 lg:justify-self-end">
                 <Link
                   href={`/assets/${asset.short_id || asset.id}/edit`}
                   className="icon-button"

@@ -25,6 +25,9 @@ import {
 const initialState = { ok: false, message: "" };
 
 const MINUTES_PER_DAY = 24 * 60;
+const WHEEL_ITEM_HEIGHT = 40;
+const WHEEL_VIEWPORT_HEIGHT = 208;
+const WHEEL_EDGE_SPACER = (WHEEL_VIEWPORT_HEIGHT - WHEEL_ITEM_HEIGHT) / 2;
 
 const parseTimeValue = (value: string, fallback = "09:00") => {
   const source = value || fallback;
@@ -169,14 +172,16 @@ function WheelColumn({
   disabled = false,
 }: WheelColumnProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const itemHeight = 40;
 
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
     const targetIndex = options.findIndex((option) => option.value === value);
     if (targetIndex < 0) return;
-    el.scrollTo({ top: targetIndex * itemHeight, behavior: "smooth" });
+    const targetTop = targetIndex * WHEEL_ITEM_HEIGHT;
+    if (Math.abs(el.scrollTop - targetTop) > 1) {
+      el.scrollTo({ top: targetTop, behavior: "auto" });
+    }
   }, [options, value]);
 
   useEffect(() => {
@@ -187,10 +192,13 @@ function WheelColumn({
     const handleScroll = () => {
       if (timeoutId) clearTimeout(timeoutId);
       timeoutId = setTimeout(() => {
-        const index = Math.round(el.scrollTop / itemHeight);
+        const index = Math.round(el.scrollTop / WHEEL_ITEM_HEIGHT);
         const safeIndex = Math.max(0, Math.min(options.length - 1, index));
         const selected = options[safeIndex];
-        el.scrollTo({ top: safeIndex * itemHeight, behavior: "smooth" });
+        const targetTop = safeIndex * WHEEL_ITEM_HEIGHT;
+        if (Math.abs(el.scrollTop - targetTop) > 1) {
+          el.scrollTo({ top: targetTop, behavior: "smooth" });
+        }
         if (selected && selected.value !== value) {
           onChange(selected.value);
         }
@@ -210,9 +218,16 @@ function WheelColumn({
       <div className="relative">
         <div
           ref={containerRef}
-          className="h-52 overflow-y-auto overscroll-contain py-20 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          className="h-[208px] overflow-y-auto overscroll-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          style={{ scrollSnapType: "y mandatory" }}
         >
-          <div className="space-y-0">
+          <div
+            className="space-y-0"
+            style={{
+              paddingTop: `${WHEEL_EDGE_SPACER}px`,
+              paddingBottom: `${WHEEL_EDGE_SPACER}px`,
+            }}
+          >
             {options.map((option, index) => {
               const isSelected = option.value === value;
               return (
@@ -222,9 +237,12 @@ function WheelColumn({
                   onClick={() => {
                     if (disabled) return;
                     onChange(option.value);
-                    containerRef.current?.scrollTo({ top: index * itemHeight, behavior: "smooth" });
+                    containerRef.current?.scrollTo({
+                      top: index * WHEEL_ITEM_HEIGHT,
+                      behavior: "smooth",
+                    });
                   }}
-                  className={`h-10 w-full text-center text-lg tabular-nums transition-colors ${
+                  className={`h-10 w-full snap-center text-center text-lg tabular-nums transition-colors ${
                     isSelected ? "font-semibold text-slate-900" : "text-neutral-400"
                   }`}
                   disabled={disabled}
@@ -605,7 +623,7 @@ export default function ReservationForm({
           </div>
 
           <div className="space-y-3 md:hidden">
-            <div className="rounded-xl border border-neutral-200 bg-white">
+            <div className="overflow-hidden rounded-xl border border-neutral-200 bg-white">
               <button
                 type="button"
                 onClick={() => {
@@ -615,12 +633,12 @@ export default function ReservationForm({
                 className="flex w-full items-center justify-between px-3 py-2.5 text-left"
               >
                 <span className="text-sm font-semibold text-neutral-800">시작일시</span>
-                <span className="text-sm tabular-nums text-neutral-700">
+                <span className="min-w-0 truncate text-right text-sm tabular-nums text-neutral-700">
                   {formatDateTimeSummary(startDate, startTime, "09:00")}
                 </span>
               </button>
               {mobileStartOpen ? (
-                <div className="grid gap-2 border-t border-neutral-200 p-3">
+                <div className="grid min-w-0 gap-2 border-t border-neutral-200 p-3">
                   <input
                     id="start-date-mobile"
                     type="date"
@@ -647,7 +665,7 @@ export default function ReservationForm({
               ) : null}
             </div>
 
-            <div className="rounded-xl border border-neutral-200 bg-white">
+            <div className="overflow-hidden rounded-xl border border-neutral-200 bg-white">
               <button
                 type="button"
                 onClick={() => {
@@ -657,12 +675,12 @@ export default function ReservationForm({
                 className="flex w-full items-center justify-between px-3 py-2.5 text-left"
               >
                 <span className="text-sm font-semibold text-neutral-800">종료일시</span>
-                <span className="text-sm tabular-nums text-neutral-700">
+                <span className="min-w-0 truncate text-right text-sm tabular-nums text-neutral-700">
                   {formatDateTimeSummary(endDate, endTime, "18:00")}
                 </span>
               </button>
               {mobileEndOpen ? (
-                <div className="grid gap-2 border-t border-neutral-200 p-3">
+                <div className="grid min-w-0 gap-2 border-t border-neutral-200 p-3">
                   <input
                     id="end-date-mobile"
                     type="date"

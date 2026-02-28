@@ -247,6 +247,9 @@ input[type="datetime-local"]::-webkit-datetime-edit-minute-field {
 input[type="date"],
 input[type="datetime-local"] {
   min-height: 38px;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
   padding: 8px 16px;
   font-size: 16px;
   box-sizing: border-box;

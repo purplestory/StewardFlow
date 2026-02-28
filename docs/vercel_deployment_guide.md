@@ -55,6 +55,7 @@ Vercel이 자동으로 Next.js 프로젝트를 감지합니다. 다음 설정을
 NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
 SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+NEXT_PUBLIC_OAUTH_REDIRECT_ORIGIN=https://your-project-git-main-your-team.vercel.app
 ```
 
 #### 환경 변수 설정 방법
@@ -98,6 +99,15 @@ SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
    - **Key**: `SUPABASE_SERVICE_ROLE_KEY`
    - **Value**: Supabase `service_role` 키 (⚠️ 보안 주의)
    - **Environment**: 
+     - ✅ `Production` 체크
+     - ✅ `Preview` 체크
+   - **"Save"** 클릭
+
+   **네 번째 변수(권장): `NEXT_PUBLIC_OAUTH_REDIRECT_ORIGIN`**
+   - **Key**: `NEXT_PUBLIC_OAUTH_REDIRECT_ORIGIN`
+   - **Value**: OAuth 리다이렉트 기준 URL (브랜치 고정 URL 권장)
+   - 예: `https://your-project-git-main-your-team.vercel.app`
+   - **Environment**:
      - ✅ `Production` 체크
      - ✅ `Preview` 체크
    - **"Save"** 클릭

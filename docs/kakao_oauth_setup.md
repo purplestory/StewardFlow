@@ -125,7 +125,11 @@ Kakao Provider 설정 화면에서 다음 정보를 입력합니다:
 # .env.local (필요시)
 NEXT_PUBLIC_SUPABASE_URL=https://[your-project-ref].supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+NEXT_PUBLIC_OAUTH_REDIRECT_ORIGIN=https://your-project-git-main-your-team.vercel.app
 ```
+
+> `NEXT_PUBLIC_OAUTH_REDIRECT_ORIGIN`은 OAuth `redirectTo`를 고정 도메인으로 강제할 때 사용합니다.  
+> 프리뷰 테스트에서는 브랜치 고정 URL을 권장합니다.
 
 ## 4. 테스트
 

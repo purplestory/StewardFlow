@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import { getOrigin } from "@/lib/utils";
+import { getOAuthOrigin } from "@/lib/utils";
 
 type AuthState = {
   userId: string | null;
@@ -287,7 +287,7 @@ export default function AuthCard() {
     setLoading(true);
 
     try {
-      const origin = getOrigin();
+      const origin = getOAuthOrigin();
       const redirectUrl = `${origin}/auth/callback?next=/`;
       
       // OAuth URL 생성 - redirectTo를 명시적으로 설정하고 queryParams에도 추가

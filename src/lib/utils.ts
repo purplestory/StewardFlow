@@ -1,5 +1,21 @@
 const JOIN_REDIRECT_KEY = "join_redirect";
 
+function normalizeOrigin(origin?: string | null): string | null {
+  if (!origin) return null;
+  const trimmed = origin.trim();
+  if (!trimmed) return null;
+
+  const withProtocol = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+
+  try {
+    const url = new URL(withProtocol);
+    const normalizedHost = url.hostname === "0.0.0.0" ? "localhost" : url.hostname;
+    return `${url.protocol}//${normalizedHost}${url.port ? `:${url.port}` : ""}`;
+  } catch {
+    return null;
+  }
+}
+
 /** OAuth 리다이렉트 시 next 파라미터가 유실되는 문제 해결: 카카오 로그인 전에 토큰 저장 (localStorage + 쿠키) */
 export function setJoinRedirectCookie(nextPath: string): void {
   if (typeof window === "undefined") return;
@@ -52,16 +68,26 @@ export function clearJoinRedirectCookie(): void {
  * Get the origin URL, converting 0.0.0.0 to localhost for Safari compatibility
  */
 export function getOrigin(): string {
+  const fallback = "http://localhost:3000";
+  const serverOrigin =
+    normalizeOrigin(process.env.NEXT_PUBLIC_APP_URL) ??
+    normalizeOrigin(process.env.NEXT_PUBLIC_OAUTH_REDIRECT_ORIGIN) ??
+    fallback;
+
   if (typeof window === "undefined") {
-    return process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+    return serverOrigin;
   }
 
-  const origin = window.location.origin;
-  
-  // Convert 0.0.0.0 to localhost for Safari compatibility
-  if (origin.includes("0.0.0.0")) {
-    return origin.replace("0.0.0.0", "localhost");
-  }
-  
-  return origin;
+  return normalizeOrigin(window.location.origin) ?? serverOrigin;
+}
+
+/**
+ * Get OAuth redirect origin. If configured, prefer fixed domain to avoid preview-host mismatches.
+ */
+export function getOAuthOrigin(): string {
+  return (
+    normalizeOrigin(process.env.NEXT_PUBLIC_OAUTH_REDIRECT_ORIGIN) ??
+    normalizeOrigin(process.env.NEXT_PUBLIC_APP_URL) ??
+    getOrigin()
+  );
 }

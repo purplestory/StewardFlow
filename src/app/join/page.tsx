@@ -12,7 +12,7 @@ import {
 import Link from "next/link";
 import LogoIcon from "@/components/common/LogoIcon";
 import { 
-  getOrigin, 
+  getOAuthOrigin, 
   setJoinRedirectCookie, 
   getJoinRedirectCookie, 
   clearJoinRedirectCookie 
@@ -208,7 +208,7 @@ function JoinPageContent() {
     setSigningUp(true);
 
     try {
-      const origin = getOrigin();
+      const origin = getOAuthOrigin();
       const nextUrl = token ? `/join?token=${encodeURIComponent(token)}` : `/join`;
       setJoinRedirectCookie(nextUrl);
 

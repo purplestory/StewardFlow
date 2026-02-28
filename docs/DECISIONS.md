@@ -4,6 +4,12 @@
 
 ## 2026-02-28
 - 상태: 확정
+- 결정: 카카오 OAuth `redirectTo` 원본은 `NEXT_PUBLIC_OAUTH_REDIRECT_ORIGIN`을 우선 사용한다
+- 이유: 프리뷰 호스트 정규화 이전/이후 모두에서 OAuth 리다이렉트 도메인을 예측 가능하게 고정하기 위함
+- 영향: `src/lib/utils.ts`, `AuthCard`, `join` 로그인 경로, Vercel 환경변수 운영 가이드
+
+## 2026-02-28
+- 상태: 확정
 - 결정: Vercel 프리뷰의 OAuth 기준 호스트를 커밋 URL이 아닌 브랜치 고정 URL로 정규화한다
 - 이유: 카카오 Redirect URI는 고정 허용 목록 기반이라 커밋마다 바뀌는 프리뷰 URL에서 로그인 실패가 반복되기 때문
 - 영향: `middleware.ts`, 카카오/Supabase Redirect URL 운영 절차, 배포 가이드 문서

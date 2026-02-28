@@ -37,7 +37,10 @@ npm run dev
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
+NEXT_PUBLIC_OAUTH_REDIRECT_ORIGIN=https://your-project-git-main-your-team.vercel.app
 ```
+
+> OAuth(카카오) 프리뷰 테스트 시 `NEXT_PUBLIC_OAUTH_REDIRECT_ORIGIN`을 브랜치 고정 URL로 설정하면 커밋 프리뷰 URL 변경에 영향받지 않습니다.
 
 ### 3. 데이터베이스 마이그레이션 실행 ⚠️
 

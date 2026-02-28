@@ -70,6 +70,11 @@
     - 현재 호스트가 `.vercel.app` 랜덤 프리뷰이고 정규화 대상 호스트가 있으면 307 리다이렉트
   - 문서 갱신: `docs/kakao_oauth_setup.md`, `docs/vercel_deployment_guide.md`에 브랜치 고정 URL 등록 절차 추가.
   - 검증: `npm run lint -- src/middleware.ts` (오류 0)
+- [DONE] OAuth redirect origin 고정값 지원
+  - 조치: `getOAuthOrigin()` 추가(`NEXT_PUBLIC_OAUTH_REDIRECT_ORIGIN` 우선), 카카오 로그인 호출부(`AuthCard`, `join`)에 적용.
+  - 목적: 프리뷰/운영에서 OAuth `redirectTo`를 환경별 고정 도메인으로 강제해 리다이렉트 불일치 리스크를 낮춤.
+  - 문서 갱신: `README.md`, `docs/kakao_oauth_setup.md`, `docs/vercel_deployment_guide.md`.
+  - 검증: `npm run lint -- src/lib/utils.ts src/components/auth/AuthCard.tsx src/app/join/page.tsx` (오류 0)
 
 ## 3) 이슈 / RCA 로그
 

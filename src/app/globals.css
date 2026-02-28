@@ -509,11 +509,20 @@ input[type="time"] {
 }
 
 .module-list {
-  @apply overflow-hidden rounded-xl border border-neutral-200 bg-white;
+  @apply overflow-hidden rounded-xl border border-slate-200 bg-white;
 }
 
-.module-list > * + * {
-  @apply border-t border-neutral-300;
+.module-list > * {
+  @apply relative;
+}
+
+.module-list > * + *::before {
+  content: "";
+  position: absolute;
+  left: 1rem;
+  right: 1rem;
+  top: 0;
+  border-top: 1px solid rgb(203 213 225 / 0.95);
 }
 
 .toggle-switch {

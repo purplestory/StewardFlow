@@ -90,6 +90,11 @@
   - 검증:
     - `npm run lint -- src/actions/admin-organization-actions.ts src/components/settings/UserRoleManager.tsx src/components/settings/OrganizationManager.tsx` (오류 0)
     - `npm run lint:mobile` (통과)
+- [DONE] 리스트 가로 구분선 스타일 통일
+  - 요청: "기능 및 메뉴 설정" 리스트처럼 항목별 가로선 구분을 다른 리스트에도 일관 적용.
+  - 조치: `module-list` 공통 스타일을 행 사이 divider 기반으로 보강(인셋 가로선 + 외곽선 톤 통일).
+  - 반영 파일: `src/app/globals.css`
+  - 검증: `npm run lint:mobile` (통과)
 
 ## 3) 이슈 / RCA 로그
 
@@ -174,6 +179,16 @@
 - 재발 방지:
   1. 관리자 교차-기관 기능은 클라이언트 직접 쿼리 대신 서버 액션 경로를 기본값으로 유지.
   2. 리스트 정렬 기준은 UI 텍스트와 동일하게 명시하고 변경 시 문서/QA 항목 동시 갱신.
+
+### RCA-2026-02-28-07
+- 증상: 관리형 리스트에서 항목 구분이 약해 스캔 속도/가독성이 떨어짐.
+- 원인:
+  1. 카드 경계/여백 위주 표현으로 행 단위 분리 인지가 화면마다 달랐음.
+- 조치:
+  1. `module-list` 공통 스타일에 행 사이 인셋 가로 divider를 적용.
+  2. 외곽 border 톤을 리스트 패턴과 맞춰 통일.
+- 재발 방지:
+  1. 신규 리스트 UI는 `module-list` 공통 primitive 사용을 기본값으로 강제.
 
 ## 4) 다음 실행 순서
 1. UI-003 착수: 내 신청 통합 표기 + 승인 취소 사유 플로우

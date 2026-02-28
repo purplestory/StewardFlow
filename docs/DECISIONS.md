@@ -4,6 +4,12 @@
 
 ## 2026-02-28
 - 상태: 확정
+- 결정: 관리형 리스트(`module-list`)는 카드 분리 대신 공통 가로 구분선(행 사이 divider) 패턴을 기본으로 사용한다
+- 이유: 화면마다 리스트 밀도/경계 인지가 달라 사용자가 항목 구분을 어렵게 느꼈기 때문
+- 영향: `src/app/globals.css` (`module-list` 공통 스타일), 설정/관리 전반 리스트 가독성
+
+## 2026-02-28
+- 상태: 확정
 - 결정: 기관 간 사용자 지정/이관 관련 읽기/쓰기(`organizations`, `departments`, `profiles update`)는 관리자 서버액션(service role) 경로를 우선 사용한다
 - 이유: 클라이언트 RLS 정책(본인 소속 기관만 조회)으로 인해 신규 기관 생성 후 대상 기관/부서 선택이 막히는 문제가 반복되기 때문
 - 영향: `src/actions/admin-organization-actions.ts`, `UserRoleManager`, `OrganizationManager`

@@ -598,33 +598,6 @@ input[type="time"] {
     grid-template-columns: minmax(0, 1fr) 320px;
     align-items: start;
   }
-
-  .user-role-list-row {
-    display: grid !important;
-    grid-template-columns: minmax(0, 1fr) 520px;
-    align-items: center;
-  }
-
-  .user-role-actions {
-    width: 520px;
-    flex-wrap: nowrap;
-    justify-content: flex-end;
-  }
-
-  .user-role-field {
-    width: 220px;
-    flex-shrink: 0;
-  }
-
-  .user-role-delete-btn {
-    margin-left: 0.25rem;
-    flex-shrink: 0;
-  }
-
-  .user-role-delete-spacer {
-    display: block;
-    flex-shrink: 0;
-  }
 }
 
 @media (min-width: 768px) {

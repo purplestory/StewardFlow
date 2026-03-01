@@ -1839,6 +1839,13 @@ export default function UserRoleManager() {
     if (byName !== 0) return byName;
     return collator.compare(a.email, b.email);
   });
+  const normalizedAvailableDepartments = Array.from(
+    new Set(
+      availableDepartments
+        .map((dept) => dept.trim())
+        .filter((dept) => dept.length > 0)
+    )
+  );
 
   return (
     <div className="manage-stack">
@@ -2437,94 +2444,103 @@ export default function UserRoleManager() {
               right="부서 / 권한 / 관리"
               className="lg:grid-cols-[minmax(0,1fr)_500px]"
             />
-            {sortedProfiles.map((profile) => (
-              <div
-                key={profile.id}
-                className="list-row flex-col items-start justify-between gap-3 text-xs md:grid md:grid-cols-[minmax(0,1fr)_520px] md:items-center"
-              >
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium text-neutral-900">
-                    {profile.name ?? "이름 없음"}
-                  </p>
-                  <p className="text-xs text-neutral-500">{profile.email}</p>
-                </div>
-                <div className="flex w-full flex-wrap items-center gap-2 md:w-[520px] md:flex-nowrap md:justify-end">
-                  {currentUserRole === "admin" ? (
+            {sortedProfiles.map((profile) => {
+              const normalizedProfileDepartment = (profile.department ?? "").trim();
+              const hasUnknownDepartment =
+                normalizedProfileDepartment.length > 0 &&
+                !normalizedAvailableDepartments.includes(normalizedProfileDepartment);
+
+              return (
+                <div
+                  key={profile.id}
+                  className="px-4 py-3 text-xs lg:grid lg:grid-cols-[minmax(0,1fr)_500px] lg:items-center lg:gap-3"
+                >
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-neutral-900">
+                      {profile.name ?? "이름 없음"}
+                    </p>
+                    <p className="text-xs text-neutral-500">{profile.email}</p>
+                  </div>
+                  <div className="mt-3 flex w-full flex-wrap items-center gap-2 lg:mt-0 lg:w-auto lg:flex-nowrap lg:justify-end">
+                    {currentUserRole === "admin" ? (
+                      <select
+                        className="form-select h-10 min-w-[11rem] flex-1 lg:max-w-[220px] lg:flex-none"
+                        value={normalizedProfileDepartment}
+                        onChange={(event) =>
+                          updateDepartment(profile.id, event.target.value || null)
+                        }
+                        disabled={currentUserId === profile.id}
+                      >
+                        <option value="">부서 미지정</option>
+                        {hasUnknownDepartment ? (
+                          <option value={normalizedProfileDepartment}>
+                            {normalizedProfileDepartment} (목록 외)
+                          </option>
+                        ) : null}
+                        {normalizedAvailableDepartments.map((dept) => (
+                          <option key={dept} value={dept}>
+                            {dept}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <span className="flex h-10 min-w-[11rem] flex-1 items-center rounded-lg border border-neutral-200 bg-neutral-50 px-3 text-xs text-neutral-500 lg:max-w-[220px] lg:flex-none">
+                        {normalizedProfileDepartment || "부서 미지정"}
+                      </span>
+                    )}
                     <select
-                      className="form-select h-[38px] w-full md:w-[220px] md:shrink-0"
-                      value={profile.department || ""}
+                      className="form-select h-10 min-w-[11rem] flex-1 lg:max-w-[220px] lg:flex-none"
+                      value={profile.role}
                       onChange={(event) =>
-                        updateDepartment(
+                        updateRole(
                           profile.id,
-                          event.target.value || null
+                          event.target.value as ProfileRow["role"]
                         )
                       }
-                      disabled={currentUserId === profile.id}
+                      disabled={
+                        currentUserId === profile.id ||
+                        currentUserRole === "user" ||
+                        (currentUserRole === "manager" && profile.role === "admin")
+                      }
                     >
-                      <option value="">부서 미지정</option>
-                      {availableDepartments.map((dept) => (
-                        <option key={dept} value={dept}>
-                          {dept}
-                        </option>
-                      ))}
+                      {roleOptions
+                        .filter((option) =>
+                          currentUserRole === "manager"
+                            ? profile.role === "admin" || option.value !== "admin"
+                            : true
+                        )
+                        .map((option) => (
+                          <option key={option.value} value={option.value}>
+                            {option.label}
+                          </option>
+                        ))}
                     </select>
-                  ) : (
-                    <span className="flex h-[38px] w-full items-center rounded-lg border border-neutral-200 bg-neutral-50 px-3 text-xs text-neutral-500 md:w-[220px] md:shrink-0">
-                      {profile.department ?? "부서 미등록"}
-                    </span>
-                  )}
-                  <select
-                    className="form-select h-10 w-full md:w-[220px] md:shrink-0"
-                    value={profile.role}
-                    onChange={(event) =>
-                      updateRole(
-                        profile.id,
-                        event.target.value as ProfileRow["role"]
-                      )
-                    }
-                    disabled={
-                      currentUserId === profile.id ||
-                      currentUserRole === "user" ||
-                      (currentUserRole === "manager" && profile.role === "admin")
-                    }
-                  >
-                    {roleOptions
-                      .filter((option) =>
-                        currentUserRole === "manager"
-                          ? profile.role === "admin" || option.value !== "admin"
-                          : true
-                      )
-                      .map((option) => (
-                        <option key={option.value} value={option.value}>
-                          {option.label}
-                        </option>
-                      ))}
-                  </select>
-                  {currentUserRole === "admin" && profile.id !== currentUserId ? (
-                    <button
-                      type="button"
-                      onClick={() => deleteUser(profile.id, profile.name || "이름 없음")}
-                      disabled={deletingUserId === profile.id || loading}
-                      className="icon-button icon-button-danger md:ml-1 md:shrink-0"
-                      title="사용자 삭제"
-                    >
-                      {deletingUserId === profile.id ? (
-                        <svg className="h-5 w-5 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                        </svg>
-                      ) : (
-                        <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                        </svg>
-                      )}
-                    </button>
-                  ) : (
-                    <div className="hidden h-10 w-10 md:block md:shrink-0" aria-hidden="true" />
-                  )}
+                    {currentUserRole === "admin" && profile.id !== currentUserId ? (
+                      <button
+                        type="button"
+                        onClick={() => deleteUser(profile.id, profile.name || "이름 없음")}
+                        disabled={deletingUserId === profile.id || loading}
+                        className="icon-button icon-button-danger shrink-0"
+                        title="사용자 삭제"
+                      >
+                        {deletingUserId === profile.id ? (
+                          <svg className="h-5 w-5 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          </svg>
+                        ) : (
+                          <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        )}
+                      </button>
+                    ) : (
+                      <div className="hidden h-9 w-9 shrink-0 lg:block" aria-hidden="true" />
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </ModuleList>
         )}
       </section>

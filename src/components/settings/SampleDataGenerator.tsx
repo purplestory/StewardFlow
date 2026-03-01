@@ -1254,7 +1254,7 @@ export default function SampleDataGenerator({
           type="button"
           onClick={deleteSampleData}
           disabled={generating || deleting}
-          className="btn-outline h-10 w-full border-rose-200 text-rose-600 hover:bg-rose-50"
+          className="btn-outline btn-outline-danger h-10 w-full"
         >
           {deleting ? "삭제 중..." : "샘플 데이터 삭제"}
         </button>

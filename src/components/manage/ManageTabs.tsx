@@ -36,7 +36,7 @@ export default function ManageTabs() {
   ];
 
   return (
-    <div className="tab-shell">
+    <div className="tab-shell tab-shell-primary">
       <div className="tab-scroll">
         <nav className="tab-nav" aria-label="관리 탭">
           {tabs.map((tab) => {
@@ -54,7 +54,7 @@ export default function ManageTabs() {
               <Link
                 key={tab.key}
                 href={tab.href}
-                className={`tab-chip ${isActive ? "tab-chip-active" : ""}`}
+                className={`tab-chip tab-chip-primary ${isActive ? "tab-chip-primary-active" : ""}`}
               >
                 {tab.label}
               </Link>

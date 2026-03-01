@@ -365,7 +365,7 @@ export default function FeedbackDetail({ feedbackId }: { feedbackId: string }) {
                 type="button"
                 onClick={handleUpdate}
                 disabled={submitting}
-                className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
+                className="btn-primary"
               >
                 {submitting ? "저장 중..." : "저장"}
               </button>

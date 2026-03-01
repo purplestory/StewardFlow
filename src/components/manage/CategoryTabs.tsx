@@ -124,7 +124,7 @@ export default function CategoryTabs() {
   }
 
   return (
-    <div className="tab-shell">
+    <div className="tab-shell tab-shell-secondary">
       <div className="tab-scroll">
         <nav className="tab-nav" aria-label="카테고리 탭">
           {tabs.map((tab) => {
@@ -133,7 +133,7 @@ export default function CategoryTabs() {
               <Link
                 key={tab.key}
                 href={tab.href}
-                className={`tab-chip ${isActive ? "tab-chip-active" : ""}`}
+                className={`tab-chip tab-chip-secondary ${isActive ? "tab-chip-secondary-active" : ""}`}
               >
                 {tab.label}
               </Link>

@@ -25,7 +25,7 @@ export default function ManageSubmenuLayout<T extends string>({
 }: ManageSubmenuLayoutProps<T>) {
   return (
     <>
-      <div className="tab-shell lg:hidden">
+      <div className="tab-shell tab-shell-tertiary lg:hidden">
         <div className="tab-scroll">
           <nav className="tab-nav" aria-label={`${menuTitle} 탭`}>
             {items.map((item) => {
@@ -34,14 +34,14 @@ export default function ManageSubmenuLayout<T extends string>({
                 <button
                   key={item.key}
                   type="button"
-                  className={`tab-chip ${isActive ? "tab-chip-active" : ""}`}
+                  className={`tab-chip tab-chip-tertiary ${isActive ? "tab-chip-tertiary-active" : ""}`}
                   onClick={() => onChange(item.key)}
                 >
                   <span>{item.label}</span>
                   {typeof item.count === "number" ? (
                     <span
                       className={`ml-2 inline-flex min-w-5 items-center justify-center rounded-full px-1.5 py-0.5 text-[11px] font-semibold ${
-                        isActive ? "bg-white/20 text-white" : "bg-neutral-200 text-neutral-600"
+                        isActive ? "bg-slate-100 text-slate-700" : "bg-neutral-200 text-neutral-600"
                       }`}
                     >
                       {item.count}
@@ -69,7 +69,7 @@ export default function ManageSubmenuLayout<T extends string>({
                     type="button"
                     className={`flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-left text-sm font-medium transition-colors ${
                       isActive
-                        ? "bg-slate-900 text-white"
+                        ? "bg-[#1f4b99] text-white shadow-[0_4px_10px_rgba(31,75,153,0.3)]"
                         : "text-neutral-700 hover:bg-neutral-100 hover:text-neutral-900"
                     }`}
                     onClick={() => onChange(item.key)}
@@ -78,7 +78,7 @@ export default function ManageSubmenuLayout<T extends string>({
                     {typeof item.count === "number" ? (
                       <span
                         className={`inline-flex min-w-5 items-center justify-center rounded-full px-1.5 py-0.5 text-[11px] font-semibold ${
-                          isActive ? "bg-white/20 text-white" : "bg-neutral-200 text-neutral-600"
+                          isActive ? "bg-white/25 text-white" : "bg-neutral-200 text-neutral-600"
                         }`}
                       >
                         {item.count}

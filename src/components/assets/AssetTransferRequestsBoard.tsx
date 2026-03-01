@@ -821,7 +821,7 @@ export default function AssetTransferRequestsBoard() {
                             type="button"
                             onClick={() => handleResolve(request, "rejected")}
                             disabled={updatingId === request.id}
-                            className="btn-outline h-[38px] border-rose-200 text-rose-600 hover:bg-rose-50"
+                            className="btn-outline btn-outline-danger h-[38px]"
                           >
                             거절
                           </button>

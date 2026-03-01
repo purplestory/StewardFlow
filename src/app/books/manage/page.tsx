@@ -1167,7 +1167,7 @@ export default function BooksManagePage() {
                             </button>
                             <button
                               type="button"
-                              className="btn-ghost h-10 px-4 text-rose-700 hover:bg-rose-50"
+                              className="btn-ghost btn-ghost-danger h-10 px-4"
                               onClick={() => void handleLoanDecision(item.id, "rejected")}
                               disabled={decidingLoanId === item.id}
                             >
@@ -1267,7 +1267,7 @@ export default function BooksManagePage() {
                             </button>
                             <button
                               type="button"
-                              className="btn-ghost h-10 px-4 text-rose-700 hover:bg-rose-50"
+                              className="btn-ghost btn-ghost-danger h-10 px-4"
                               onClick={() => void handleVerifyReturn(item.id, "rejected")}
                               disabled={verifyingLoanId === item.id}
                             >

@@ -46,24 +46,9 @@ const formatTimeValue = (hour24: number, minute: number) =>
 const normalizeTotalMinutes = (totalMinutes: number) =>
   ((totalMinutes % MINUTES_PER_DAY) + MINUTES_PER_DAY) % MINUTES_PER_DAY;
 
-const formatDateLabel = (value: string) => {
-  if (!value) return "날짜 선택";
-  const [year, month, day] = value.split("-");
-  if (!year || !month || !day) return value;
-  return `${year}. ${month}. ${day}.`;
-};
-
 const toNormalizedTime = (value: string, fallback = "09:00") => {
   const { hour24, minute } = parseTimeValue(value, fallback);
   return formatTimeValue(hour24, minute);
-};
-
-const formatDateTimeSummary = (dateValue: string, timeValue: string, fallbackTime: string) => {
-  if (!dateValue) return "선택해 주세요";
-  const dateLabel = formatDateLabel(dateValue);
-  if (!timeValue.trim()) return `${dateLabel} 시간 선택`;
-  const normalizedTime = toNormalizedTime(timeValue, fallbackTime);
-  return `${dateLabel} ${normalizedTime}`;
 };
 
 const buildTimeDraft = (value: string, fallbackTime: string) => {
@@ -440,8 +425,6 @@ export default function ReservationForm({
   const [recurrenceEndDate, setRecurrenceEndDate] = useState("");
   const [selectedDaysOfWeek, setSelectedDaysOfWeek] = useState<number[]>([]);
   const [dayOfMonth, setDayOfMonth] = useState<number>(1);
-  const [mobileStartOpen, setMobileStartOpen] = useState(false);
-  const [mobileEndOpen, setMobileEndOpen] = useState(false);
   const [mobileTimeSheetTarget, setMobileTimeSheetTarget] = useState<"start" | "end" | null>(null);
 
   useEffect(() => {
@@ -644,87 +627,57 @@ export default function ReservationForm({
           </div>
 
           <div className="space-y-3 md:hidden">
-            <div className="overflow-hidden rounded-xl border border-neutral-200 bg-white">
-              <button
-                type="button"
-                onClick={() => {
-                  setMobileStartOpen((prev) => !prev);
-                  setMobileEndOpen(false);
-                }}
-                className="flex w-full items-center justify-between px-3 py-2.5 text-left"
-              >
-                <span className="text-sm font-semibold text-neutral-800">시작일시</span>
-                <span className="min-w-0 truncate text-right text-sm tabular-nums text-neutral-700">
-                  {formatDateTimeSummary(startDate, startTime, "09:00")}
-                </span>
-              </button>
-              {mobileStartOpen ? (
-                <div className="grid min-w-0 gap-2 border-t border-neutral-200 p-3">
-                  <input
-                    id="start-date-mobile"
-                    type="date"
-                    value={startDate}
-                    onChange={(e) => handleStartDateChange(e.target.value)}
-                    className="form-input min-w-0 text-base"
-                    required
-                    disabled={formDisabled}
-                  />
-                  <button
-                    id="start-time-mobile"
-                    type="button"
-                    onClick={() => setMobileTimeSheetTarget("start")}
-                    className="form-input flex h-10 items-center justify-between px-3 text-sm tabular-nums text-neutral-700"
-                    disabled={formDisabled}
-                  >
-                    <span className="text-neutral-500">시간</span>
-                    <span className="font-medium text-neutral-900">
-                      {toNormalizedTime(startTime, "09:00")}
-                    </span>
-                  </button>
-                </div>
-              ) : null}
+            <div className="space-y-2 rounded-xl border border-neutral-200 bg-white p-3">
+              <label className="form-label" htmlFor="start-date-mobile">시작일시</label>
+              <div className="grid grid-cols-[minmax(0,1fr)_116px] gap-2">
+                <input
+                  id="start-date-mobile"
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => handleStartDateChange(e.target.value)}
+                  className="form-input min-w-0 text-base"
+                  required
+                  disabled={formDisabled}
+                />
+                <button
+                  id="start-time-mobile"
+                  type="button"
+                  onClick={() => setMobileTimeSheetTarget("start")}
+                  className="form-input flex h-10 items-center justify-between px-3 text-sm tabular-nums text-neutral-700"
+                  disabled={formDisabled}
+                >
+                  <span className="font-medium text-neutral-900">
+                    {toNormalizedTime(startTime, "09:00")}
+                  </span>
+                </button>
+              </div>
             </div>
 
-            <div className="overflow-hidden rounded-xl border border-neutral-200 bg-white">
-              <button
-                type="button"
-                onClick={() => {
-                  setMobileEndOpen((prev) => !prev);
-                  setMobileStartOpen(false);
-                }}
-                className="flex w-full items-center justify-between px-3 py-2.5 text-left"
-              >
-                <span className="text-sm font-semibold text-neutral-800">종료일시</span>
-                <span className="min-w-0 truncate text-right text-sm tabular-nums text-neutral-700">
-                  {formatDateTimeSummary(endDate, endTime, "18:00")}
-                </span>
-              </button>
-              {mobileEndOpen ? (
-                <div className="grid min-w-0 gap-2 border-t border-neutral-200 p-3">
-                  <input
-                    id="end-date-mobile"
-                    type="date"
-                    value={endDate}
-                    onChange={(e) => setEndDate(e.target.value)}
-                    min={startDate || undefined}
-                    className="form-input min-w-0 text-base"
-                    required
-                    disabled={formDisabled}
-                  />
-                  <button
-                    id="end-time-mobile"
-                    type="button"
-                    onClick={() => setMobileTimeSheetTarget("end")}
-                    className="form-input flex h-10 items-center justify-between px-3 text-sm tabular-nums text-neutral-700"
-                    disabled={formDisabled || !startDate}
-                  >
-                    <span className="text-neutral-500">시간</span>
-                    <span className="font-medium text-neutral-900">
-                      {endTime.trim() ? toNormalizedTime(endTime, "18:00") : "선택"}
-                    </span>
-                  </button>
-                </div>
-              ) : null}
+            <div className="space-y-2 rounded-xl border border-neutral-200 bg-white p-3">
+              <label className="form-label" htmlFor="end-date-mobile">종료일시</label>
+              <div className="grid grid-cols-[minmax(0,1fr)_116px] gap-2">
+                <input
+                  id="end-date-mobile"
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  min={startDate || undefined}
+                  className="form-input min-w-0 text-base"
+                  required
+                  disabled={formDisabled}
+                />
+                <button
+                  id="end-time-mobile"
+                  type="button"
+                  onClick={() => setMobileTimeSheetTarget("end")}
+                  className="form-input flex h-10 items-center justify-between px-3 text-sm tabular-nums text-neutral-700"
+                  disabled={formDisabled || !startDate}
+                >
+                  <span className="font-medium text-neutral-900">
+                    {endTime.trim() ? toNormalizedTime(endTime, "18:00") : "선택"}
+                  </span>
+                </button>
+              </div>
             </div>
           </div>
 

@@ -162,7 +162,7 @@ export default function FeedbackForm() {
         <button
           type="submit"
           disabled={submitting}
-          className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed sm:min-w-[140px]"
+          className="btn-primary sm:min-w-[140px]"
         >
           {submitting ? "제출 중..." : "피드백 제출"}
         </button>

@@ -505,14 +505,14 @@ export default function ProfileEditor() {
           </p>
         </div>
         <div className="module-list">
-          <div className="list-row flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
-            <label className="text-sm font-medium text-neutral-700 sm:min-w-[88px]">이름</label>
-            <div className="read-value flex-1 min-w-0">{profile.name || "미등록"}</div>
+          <div className="list-row gap-3">
+            <label className="text-sm font-medium text-neutral-700 min-w-[88px]">이름</label>
+            <div className="read-value w-full flex-1 min-w-0">{profile.name || "미등록"}</div>
           </div>
 
-          <div className="list-row flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
-            <label className="text-sm font-medium text-neutral-700 sm:min-w-[80px]">전화번호</label>
-            <div className="flex flex-1 min-w-0 flex-col gap-2 sm:flex-row sm:items-center">
+          <div className="list-row gap-3">
+            <label className="text-sm font-medium text-neutral-700 min-w-[88px]">전화번호</label>
+            <div className="flex w-full flex-1 min-w-0 flex-col gap-2 sm:flex-row sm:items-center">
               {editingPhone ? (
                 <>
                   <input
@@ -572,19 +572,19 @@ export default function ProfileEditor() {
             </div>
           </div>
 
-          <div className="list-row flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
-            <label className="text-sm font-medium text-neutral-700 sm:min-w-[80px]">이메일</label>
-            <div className="read-value flex-1 min-w-0">{profile.email || "미등록"}</div>
+          <div className="list-row gap-3">
+            <label className="text-sm font-medium text-neutral-700 min-w-[88px]">이메일</label>
+            <div className="read-value w-full flex-1 min-w-0">{profile.email || "미등록"}</div>
           </div>
 
-          <div className="list-row flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
-            <label className="text-sm font-medium text-neutral-700 sm:min-w-[80px]">기관</label>
-            <div className="read-value flex-1 min-w-0">{organization?.name || "기관 정보 없음"}</div>
+          <div className="list-row gap-3">
+            <label className="text-sm font-medium text-neutral-700 min-w-[88px]">기관</label>
+            <div className="read-value w-full flex-1 min-w-0">{organization?.name || "기관 정보 없음"}</div>
           </div>
 
-          <div className="list-row flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
-            <label className="text-sm font-medium text-neutral-700 sm:min-w-[80px]">소속 부서</label>
-            <div className="flex flex-1 min-w-0 flex-col gap-2 sm:flex-row sm:items-center">
+          <div className="list-row gap-3">
+            <label className="text-sm font-medium text-neutral-700 min-w-[88px]">소속 부서</label>
+            <div className="flex w-full flex-1 min-w-0 flex-col gap-2 sm:flex-row sm:items-center">
               {editingDepartment ? (
                 <>
                   <select
@@ -696,9 +696,9 @@ export default function ProfileEditor() {
             </div>
           )}
 
-          <div className="list-row flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
-            <label className="text-sm font-medium text-neutral-700 sm:min-w-[80px]">역할</label>
-            <div className="read-value flex-1 min-w-0">
+          <div className="list-row gap-3">
+            <label className="text-sm font-medium text-neutral-700 min-w-[88px]">역할</label>
+            <div className="read-value w-full flex-1 min-w-0">
               {roleLabel[profile.role || "user"] || profile.role || "일반 사용자"}
             </div>
           </div>
@@ -726,7 +726,7 @@ export default function ProfileEditor() {
                 type="button"
                 onClick={handleCancelDeletionRequest}
                 disabled={requesting}
-                className="btn-outline border-neutral-300 text-neutral-700 hover:bg-neutral-50 text-sm"
+                className="btn-outline text-sm"
               >
                 {requesting ? "취소 중..." : "요청 취소"}
               </button>
@@ -738,7 +738,7 @@ export default function ProfileEditor() {
                 setShowDeleteConfirm(true);
               }}
               disabled={deleting}
-              className="btn-outline border-rose-300 text-rose-700 hover:bg-rose-50"
+              className="btn-outline btn-outline-danger"
             >
               계정 탈퇴
             </button>
@@ -844,7 +844,7 @@ export default function ProfileEditor() {
                   deleting || 
                   (profile.role === "manager" && (!transferToUserId || sameDepartmentUsers.length === 0))
                 }
-                className="flex-1 btn-primary bg-rose-600 hover:bg-rose-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="btn-danger flex-1"
               >
                 {deleting ? "탈퇴 중..." : "탈퇴하기"}
               </button>

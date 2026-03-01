@@ -15,6 +15,13 @@ export const reservationStatusLabel: Record<ReservationStatus, string> = {
   rejected: "반려",
 };
 
+export const reservationStatusBadgeClass: Record<ReservationStatus, string> = {
+  pending: "border-amber-200 bg-amber-50 text-amber-700",
+  approved: "border-emerald-200 bg-emerald-50 text-emerald-700",
+  returned: "border-slate-200 bg-slate-100 text-slate-700",
+  rejected: "border-rose-200 bg-rose-50 text-rose-700",
+};
+
 export const roleLabel: Record<ProfileRole, string> = {
   admin: "관리자",
   manager: "부서 관리자",

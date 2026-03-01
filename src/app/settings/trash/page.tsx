@@ -158,7 +158,7 @@ export default function TrashPage() {
                   type="button"
                   onClick={handleBulkPermanentDelete}
                   disabled={deletingId === "bulk"}
-                  className="btn-ghost text-sm text-rose-600 hover:text-rose-700"
+                  className="btn-ghost btn-ghost-danger text-sm"
                 >
                   {deletingId === "bulk" ? "삭제 중..." : `선택한 ${selectedIds.size}개 영구 삭제`}
                 </button>
@@ -208,7 +208,7 @@ export default function TrashPage() {
                         type="button"
                         onClick={() => handlePermanentDelete(asset.short_id || asset.id)}
                         disabled={restoringId === asset.id || deletingId === asset.id}
-                        className="btn-ghost text-sm text-rose-600 hover:text-rose-700"
+                        className="btn-ghost btn-ghost-danger text-sm"
                       >
                         {deletingId === asset.id ? "삭제 중..." : "영구 삭제"}
                       </button>

@@ -347,7 +347,10 @@ export default function ReservationsClient() {
           <span className="text-right">상태 / 액션</span>
         </div>
         {reservations.map((reservation) => (
-          <div key={reservation.id} className="list-row flex-col gap-3 md:flex-row md:items-start md:justify-between">
+          <div
+            key={reservation.id}
+            className="list-row flex-col gap-3 md:flex-row md:items-start md:justify-between"
+          >
             <div className="min-w-0 flex-1">
               <p className="truncate text-lg font-semibold tracking-tight text-slate-900">
                 {reservation.resource_name} {resourceTypeLabel[reservation.resource_type]}{" "}
@@ -383,7 +386,7 @@ export default function ReservationsClient() {
                   </button>
                   <button
                     type="button"
-                    className="h-8 rounded-lg border border-rose-200 bg-white px-3 text-xs font-medium text-rose-700 hover:bg-rose-50 disabled:opacity-60"
+                    className="btn-outline btn-outline-danger h-8 px-3 text-xs disabled:opacity-60"
                     onClick={() => handleDeleteFromList(reservation.id)}
                     disabled={updating}
                   >
@@ -394,7 +397,7 @@ export default function ReservationsClient() {
                 <>
                   <button
                     type="button"
-                    className="h-8 rounded-lg border border-amber-200 bg-white px-3 text-xs font-medium text-amber-700 hover:bg-amber-50 disabled:opacity-60"
+                    className="btn-outline btn-outline-warning h-8 px-3 text-xs disabled:opacity-60"
                     onClick={() => openDetail(reservation.id)}
                     disabled={updating}
                   >

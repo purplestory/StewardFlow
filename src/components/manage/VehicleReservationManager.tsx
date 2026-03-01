@@ -16,6 +16,7 @@ import {
   formatDateTimeRange,
   parseReservationDateRange,
   parseReservationDateTimeSafe,
+  reservationStatusBadgeClass,
   reservationStatusLabel,
   reservationStatusOptions,
   roleLabel,
@@ -442,26 +443,41 @@ export default function VehicleReservationManager() {
                   onClick={() => setSelectedReservation(reservation)}
                 >
                   <div className="min-w-0 flex-1 lg:pr-3">
-                    <p className="text-sm font-medium text-neutral-900">
-                      {reservation.vehicles?.name ?? "차량"} 예약
-                    </p>
-                    <p className="text-xs text-neutral-500">
-                      {formatDateTimeRange(reservation.start_date, reservation.end_date)}
-                    </p>
-                    <p className="text-xs text-neutral-500">
-                      신청자:{" "}
-                      {formatBorrowerName(reservation.borrower, reservation.borrower_id)}
-                    </p>
-                    {context && reservation.vehicles && (
-                      <p className="mt-1 text-xs text-neutral-400">
-                        승인 필요 권한:{" "}
-                        {roleLabel[resolveRequiredRole(policies, reservation.vehicles)]}
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="text-base font-semibold text-neutral-900">
+                        {reservation.vehicles?.name ?? "차량"} 예약
                       </p>
-                    )}
+                      <span
+                        className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold ${reservationStatusBadgeClass[reservation.status]}`}
+                      >
+                        {statusLabel[reservation.status]}
+                      </span>
+                    </div>
+                    <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                      <div className="rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2">
+                        <p className="text-[11px] font-medium text-neutral-500">일시</p>
+                        <p className="mt-0.5 text-sm font-medium text-neutral-800">
+                          {formatDateTimeRange(reservation.start_date, reservation.end_date)}
+                        </p>
+                      </div>
+                      <div className="rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2">
+                        <p className="text-[11px] font-medium text-neutral-500">신청자</p>
+                        <p className="mt-0.5 text-sm font-medium text-neutral-800">
+                          {formatBorrowerName(reservation.borrower, reservation.borrower_id)}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="mt-2 text-xs">
+                      {context && reservation.vehicles ? (
+                        <span className="chip-muted">
+                          승인 권한: {roleLabel[resolveRequiredRole(policies, reservation.vehicles)]}
+                        </span>
+                      ) : null}
+                    </div>
                   </div>
-                  <div className="w-full space-y-2 lg:w-[320px] lg:justify-self-end">
+                  <div className="w-full space-y-2 rounded-lg border border-neutral-200 bg-neutral-50 p-2.5 lg:w-[320px] lg:justify-self-end">
                     <div className="grid grid-cols-[72px_minmax(0,1fr)] items-center gap-2">
-                      <span className="whitespace-nowrap text-[11px] font-medium text-neutral-500">상세</span>
+                      <span className="whitespace-nowrap text-[11px] font-semibold text-neutral-500">상세</span>
                       <button
                         type="button"
                         className="btn-ghost h-8 px-2 text-xs"
@@ -474,7 +490,7 @@ export default function VehicleReservationManager() {
                       </button>
                     </div>
                     <div className="grid grid-cols-[72px_minmax(0,1fr)] items-center gap-2">
-                      <span className="whitespace-nowrap text-[11px] font-medium text-neutral-500">상태</span>
+                      <span className="whitespace-nowrap text-[11px] font-semibold text-neutral-500">상태</span>
                       <Select
                         value={reservation.status}
                         onValueChange={(nextStatus) =>

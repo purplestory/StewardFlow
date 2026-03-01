@@ -299,7 +299,7 @@ export default function AssetAdminActions({
           type="button"
           onClick={handleRetire}
           disabled={updating || localStatus === "retired"}
-          className="btn-ghost text-rose-700 hover:bg-rose-50"
+          className="btn-ghost btn-ghost-danger"
         >
           불용품 전환
         </button>

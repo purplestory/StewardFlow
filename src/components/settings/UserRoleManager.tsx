@@ -2038,7 +2038,7 @@ export default function UserRoleManager() {
                   <button
                     type="button"
                     onClick={() => revokeInvite(invite)}
-                    className="btn-outline h-9 border-rose-200 px-3 text-xs text-rose-600 hover:bg-rose-50"
+                    className="btn-outline btn-outline-danger h-9 px-3 text-xs"
                   >
                     취소
                   </button>
@@ -2080,14 +2080,14 @@ export default function UserRoleManager() {
                   <button
                     type="button"
                     onClick={() => approveDepartmentChange(request)}
-                    className="btn-outline h-9 border-emerald-200 px-3 text-xs text-emerald-700 hover:bg-emerald-50"
+                    className="btn-outline btn-outline-success h-9 px-3 text-xs"
                   >
                     승인
                   </button>
                   <button
                     type="button"
                     onClick={() => rejectDepartmentChange(request)}
-                    className="btn-outline h-9 border-rose-200 px-3 text-xs text-rose-600 hover:bg-rose-50"
+                    className="btn-outline btn-outline-danger h-9 px-3 text-xs"
                   >
                     거부
                   </button>
@@ -2151,7 +2151,7 @@ export default function UserRoleManager() {
                       approveDeletionRequest(request.id);
                     }}
                     disabled={processingRequestId !== null}
-                    className="btn-outline h-9 flex-1 border-emerald-200 px-3 text-xs text-emerald-700 hover:bg-emerald-50"
+                    className="btn-outline btn-outline-success h-9 flex-1 px-3 text-xs"
                   >
                     {processingRequestId === request.id ? "처리 중..." : "승인"}
                   </button>
@@ -2162,7 +2162,7 @@ export default function UserRoleManager() {
                       rejectDeletionRequest(request.id);
                     }}
                     disabled={processingRequestId !== null}
-                    className="btn-outline h-9 flex-1 border-rose-200 px-3 text-xs text-rose-600 hover:bg-rose-50"
+                    className="btn-outline btn-outline-danger h-9 flex-1 px-3 text-xs"
                   >
                     {processingRequestId === request.id ? "처리 중..." : "거부"}
                   </button>
@@ -2399,7 +2399,7 @@ export default function UserRoleManager() {
                 type="button"
                 onClick={handleApproveUser}
                 disabled={!approvalOrganizationId}
-                className="btn-primary flex-1 disabled:cursor-not-allowed disabled:opacity-50"
+                className="btn-primary flex-1"
               >
                 승인
               </button>

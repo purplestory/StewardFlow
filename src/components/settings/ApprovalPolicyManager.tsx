@@ -356,7 +356,7 @@ export default function ApprovalPolicyManager() {
             {policies.map((policy) => (
               <div
                 key={policy.id}
-                className="list-row flex flex-col gap-3 md:grid md:grid-cols-[minmax(0,1fr)_13rem_3.5rem] md:items-center"
+                className="list-row module-row-approval flex flex-col gap-3"
               >
                 <div className="min-w-0">
                   <p className="font-medium text-neutral-900">

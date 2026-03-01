@@ -423,7 +423,7 @@ export default function SpaceReservationManager() {
               {filteredReservations.map((reservation) => (
                 <div
                   key={reservation.id}
-                  className="list-row cursor-pointer flex-col gap-3 text-sm transition-colors hover:bg-neutral-50 lg:grid lg:grid-cols-[minmax(0,1fr)_320px] lg:items-start"
+                  className="list-row module-row-reservation cursor-pointer flex-col gap-3 text-sm transition-colors hover:bg-neutral-50"
                   onClick={() => setSelectedReservation(reservation)}
                 >
                   <div className="min-w-0 flex-1 lg:pr-3">
@@ -459,53 +459,47 @@ export default function SpaceReservationManager() {
                       ) : null}
                     </div>
                   </div>
-                  <div className="w-full space-y-2 rounded-lg border border-neutral-200 bg-neutral-50 p-2.5 lg:w-[320px] lg:justify-self-end">
-                    <div className="grid grid-cols-[72px_minmax(0,1fr)] items-center gap-2">
-                      <span className="whitespace-nowrap text-[11px] font-semibold text-neutral-500">상세</span>
-                      <button
-                        type="button"
-                        className="btn-ghost h-8 px-2 text-xs"
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          setSelectedReservation(reservation);
-                        }}
+                  <div className="flex w-full flex-wrap items-center justify-end gap-2 lg:w-[320px] lg:flex-nowrap lg:justify-self-end">
+                    <button
+                      type="button"
+                      className="btn-secondary h-9 px-3 text-xs"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        setSelectedReservation(reservation);
+                      }}
+                    >
+                      상세 보기
+                    </button>
+                    <Select
+                      value={reservation.status}
+                      onValueChange={(nextStatus) =>
+                        handleStatusChange(
+                          reservation.id,
+                          nextStatus as ReservationRow["status"]
+                        )
+                      }
+                      disabled={
+                        reservation.status === "returned" ||
+                        !context ||
+                        !reservation.spaces ||
+                        updatingId === reservation.id ||
+                        roleRank[context.role] <
+                          roleRank[
+                            resolveRequiredRole(policies, reservation.spaces)
+                          ]
+                      }
+                    >
+                      <SelectTrigger
+                        className="form-select h-9 min-w-[132px] px-3 text-xs"
+                        onClick={(event) => event.stopPropagation()}
                       >
-                        보기
-                      </button>
-                    </div>
-                    <div className="grid grid-cols-[72px_minmax(0,1fr)] items-center gap-2">
-                      <span className="whitespace-nowrap text-[11px] font-semibold text-neutral-500">상태</span>
-                      <Select
-                        value={reservation.status}
-                        onValueChange={(nextStatus) =>
-                          handleStatusChange(
-                            reservation.id,
-                            nextStatus as ReservationRow["status"]
-                          )
-                        }
-                        disabled={
-                          reservation.status === "returned" ||
-                          !context ||
-                          !reservation.spaces ||
-                          updatingId === reservation.id ||
-                          roleRank[context.role] <
-                            roleRank[
-                              resolveRequiredRole(policies, reservation.spaces)
-                            ]
-                        }
-                      >
-                        <SelectTrigger
-                          className="form-select h-8 w-full px-2 text-xs"
-                          onClick={(event) => event.stopPropagation()}
-                        >
-                          {statusOptions.map((status) => (
-                            <SelectItem key={status} value={status} disabled={status === "returned"}>
-                              {statusLabel[status]}
-                            </SelectItem>
-                          ))}
-                        </SelectTrigger>
-                      </Select>
-                    </div>
+                        {statusOptions.map((status) => (
+                          <SelectItem key={status} value={status} disabled={status === "returned"}>
+                            {statusLabel[status]}
+                          </SelectItem>
+                        ))}
+                      </SelectTrigger>
+                    </Select>
                   </div>
                 </div>
               ))}

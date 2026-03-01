@@ -439,7 +439,7 @@ export default function DepartmentManager({ organizationId }: DepartmentManagerP
                 onTouchStart={(e) => handleTouchStart(e, index)}
                 onTouchMove={handleTouchMove}
                 onTouchEnd={handleTouchEnd}
-                className={`list-row transition-all md:grid md:grid-cols-[minmax(0,1fr)_168px] md:items-center ${
+                className={`list-row module-row-department transition-all ${
                   draggedIndex === index
                     ? "opacity-50 cursor-grabbing"
                     : dragOverIndex === index

@@ -2442,7 +2442,7 @@ export default function UserRoleManager() {
             <ModuleListHeader
               left="사용자"
               right="부서 / 권한 / 관리"
-              className="md:grid-cols-[minmax(0,1fr)_500px]"
+              className="md:grid-cols-[minmax(260px,1fr)_400px]"
             />
             {sortedProfiles.map((profile) => {
               const normalizedProfileDepartment = (profile.department ?? "").trim();
@@ -2453,7 +2453,7 @@ export default function UserRoleManager() {
               return (
                 <div
                   key={profile.id}
-                  className="px-4 py-3 text-xs md:grid md:grid-cols-[minmax(0,1fr)_500px] md:items-center md:gap-3"
+                  className="px-4 py-3 text-xs md:grid md:grid-cols-[minmax(260px,1fr)_188px_188px_44px] md:items-center md:gap-3"
                 >
                   <div className="min-w-0">
                     <p className="text-sm font-medium text-neutral-900">
@@ -2461,10 +2461,10 @@ export default function UserRoleManager() {
                     </p>
                     <p className="text-xs text-neutral-500">{profile.email}</p>
                   </div>
-                  <div className="mt-3 flex w-full flex-wrap items-center gap-2 md:mt-0 md:w-auto md:flex-nowrap md:justify-end">
+                  <div className="mt-3 md:mt-0">
                     {currentUserRole === "admin" ? (
                       <select
-                        className="form-select h-10 w-full md:w-[210px] md:flex-none"
+                        className="form-select h-10 w-full"
                         value={normalizedProfileDepartment}
                         onChange={(event) =>
                           updateDepartment(profile.id, event.target.value || null)
@@ -2484,12 +2484,14 @@ export default function UserRoleManager() {
                         ))}
                       </select>
                     ) : (
-                      <span className="flex h-10 w-full items-center rounded-lg border border-neutral-200 bg-neutral-50 px-3 text-xs text-neutral-500 md:w-[210px] md:flex-none">
+                      <span className="flex h-10 w-full items-center rounded-lg border border-neutral-200 bg-neutral-50 px-3 text-xs text-neutral-500">
                         {normalizedProfileDepartment || "부서 미지정"}
                       </span>
                     )}
+                  </div>
+                  <div className="mt-2 md:mt-0">
                     <select
-                      className="form-select h-10 w-full md:w-[210px] md:flex-none"
+                      className="form-select h-10 w-full"
                       value={profile.role}
                       onChange={(event) =>
                         updateRole(
@@ -2515,6 +2517,8 @@ export default function UserRoleManager() {
                           </option>
                         ))}
                     </select>
+                  </div>
+                  <div className="mt-2 flex justify-end md:mt-0">
                     {currentUserRole === "admin" && profile.id !== currentUserId ? (
                       <button
                         type="button"

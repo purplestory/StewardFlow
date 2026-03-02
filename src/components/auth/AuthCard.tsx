@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import { getOAuthOrigin } from "@/lib/utils";
+import { clearJoinRedirectCookie, getOAuthOrigin } from "@/lib/utils";
 
 type AuthState = {
   userId: string | null;
@@ -287,6 +287,8 @@ export default function AuthCard() {
     setLoading(true);
 
     try {
+      // 일반 로그인에서는 이전 join 리다이렉트 상태를 사용하지 않도록 초기화
+      clearJoinRedirectCookie();
       const origin = getOAuthOrigin();
       const redirectUrl = `${origin}/auth/callback?next=/`;
       

@@ -129,17 +129,23 @@ function AuthCallbackPageContent() {
             return;
           }
 
-          // 리다이렉트 대상: next 쿼리 → 서버 httpOnly 쿠키(초대 토큰) → 클라이언트 저장 → /
-          let next = searchParams.get("next") || "/";
-          if (!searchParams.get("next")) {
+          // 리다이렉트 대상 우선순위:
+          // 1) next 쿼리(명시값) 2) 서버 httpOnly 쿠키(초대 토큰) 3) 클라이언트 저장 4) /
+          const explicitNext = searchParams.get("next");
+          let next = explicitNext;
+          if (!explicitNext) {
             try {
               const { token: pendingToken } = await getAndClearPendingJoinTokenCookie();
-              if (pendingToken) next = `/join?token=${encodeURIComponent(pendingToken)}`;
+              if (pendingToken) {
+                next = `/join?token=${encodeURIComponent(pendingToken)}`;
+              }
             } catch (tokenError) {
               console.warn("Failed to restore pending join token:", tokenError);
             }
           }
-          if (!next || next === "/") next = getJoinRedirectCookie() || "/";
+          if (!next) {
+            next = getJoinRedirectCookie() || "/";
+          }
           clearJoinRedirectCookie();
           const currentOrigin = window.location.origin;
           const nextUrl = next.startsWith("http")

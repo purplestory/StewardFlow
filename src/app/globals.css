@@ -584,12 +584,39 @@ input[type="time"] {
   --module-divider-color: rgb(148 163 184 / 0.8);
 }
 
+.module-list-departments > .list-row-muted,
+.module-list-departments > .department-row {
+  border-bottom: 1px solid var(--module-divider-color);
+}
+
+.module-list-departments > .department-row:last-child {
+  border-bottom: 0;
+}
+
 .module-list-approvals {
   --module-divider-color: rgb(148 163 184 / 0.78);
 }
 
+.module-list-approvals > .list-row-muted,
+.module-list-approvals > .approval-row {
+  border-bottom: 1px solid var(--module-divider-color);
+}
+
+.module-list-approvals > .approval-row:last-child {
+  border-bottom: 0;
+}
+
 .module-list-resources {
   --module-divider-color: rgb(148 163 184 / 0.8);
+}
+
+.module-list-resources > .list-row-muted,
+.module-list-resources > .resource-row {
+  border-bottom: 1px solid var(--module-divider-color);
+}
+
+.module-list-resources > .resource-row:last-child {
+  border-bottom: 0;
 }
 
 @media (min-width: 1024px) {

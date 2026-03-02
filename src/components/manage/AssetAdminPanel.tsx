@@ -265,7 +265,7 @@ export default function AssetAdminPanel() {
           {filteredAssets.map((asset) => (
             <div
               key={asset.id}
-              className="list-row text-sm lg:grid lg:grid-cols-[minmax(0,1fr)_8rem] lg:items-center"
+              className="list-row resource-row text-sm lg:grid lg:grid-cols-[minmax(0,1fr)_8rem] lg:items-center"
             >
               <label className="flex min-w-0 flex-1 items-center gap-2">
                 <input

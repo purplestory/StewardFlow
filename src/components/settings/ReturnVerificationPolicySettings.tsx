@@ -97,8 +97,8 @@ export default function ReturnVerificationPolicySettings({ organizationId }: Ret
         title="반납 확인 정책"
         description="물품, 공간, 차량 사용 후 반납 시 확인 절차를 설정할 수 있습니다."
       >
-        <div className="module-list">
-          <div className="flex items-center justify-between gap-4 px-4 py-4">
+        <div className="module-list module-list-return-policy">
+          <div className="return-policy-row flex items-center justify-between gap-4 px-4 py-4">
             <div className="flex-1">
               <label className="text-sm font-medium">반납 확인 절차 활성화</label>
               <p className="mt-1 text-xs text-neutral-500">
@@ -122,7 +122,7 @@ export default function ReturnVerificationPolicySettings({ organizationId }: Ret
 
           {returnVerificationPolicy.enabled && (
             <>
-              <div className="flex items-center justify-between gap-4 px-4 py-4">
+              <div className="return-policy-row flex items-center justify-between gap-4 px-4 py-4">
                 <div className="flex-1">
                   <label className="text-sm font-medium">사진 촬영 필수</label>
                   <p className="mt-1 text-xs text-neutral-500">
@@ -144,7 +144,7 @@ export default function ReturnVerificationPolicySettings({ organizationId }: Ret
                 </label>
               </div>
 
-              <div className="flex items-center justify-between gap-4 px-4 py-4">
+              <div className="return-policy-row flex items-center justify-between gap-4 px-4 py-4">
                 <div className="flex-1">
                   <label className="text-sm font-medium">관리자 확인 필수</label>
                   <p className="mt-1 text-xs text-neutral-500">

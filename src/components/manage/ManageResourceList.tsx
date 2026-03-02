@@ -19,15 +19,17 @@ export default function ManageResourceList({
 }: ManageResourceListProps) {
   return (
     <div className="module-list module-list-resources">
-      <div className="list-row-muted hidden items-center text-xs text-neutral-500 lg:grid lg:grid-cols-[minmax(0,1fr)_8rem]">
+      <div className="list-row-muted resource-list-head hidden items-center text-xs text-neutral-500 lg:grid lg:grid-cols-[minmax(0,1fr)_8rem]">
         <span>{infoLabel}</span>
         <span className="text-right">{actionLabel}</span>
       </div>
-      <div className="list-row-muted flex items-center gap-2 text-sm text-neutral-600">
+      <div className="list-row-muted resource-list-select flex items-center gap-2 text-sm text-neutral-600">
         <input type="checkbox" checked={allSelected} onChange={onToggleAll} />
         <span>전체 선택</span>
       </div>
-      {children}
+      <div className="resource-list-body">
+        {children}
+      </div>
     </div>
   );
 }

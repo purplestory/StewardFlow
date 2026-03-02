@@ -581,41 +581,70 @@ input[type="time"] {
 
 /* Department list needs stronger row boundaries for scanning */
 .module-list-departments {
-  --module-divider-color: rgb(148 163 184 / 0.8);
+  --module-divider-color: rgb(148 163 184 / 0.92);
 }
 
-.module-list-departments > .list-row-muted,
-.module-list-departments > .department-row {
-  border-bottom: 1px solid var(--module-divider-color);
+.module-list-departments > .list-row-muted {
+  border-bottom: 1px solid var(--module-divider-color) !important;
 }
 
-.module-list-departments > .department-row:last-child {
+.module-list-departments > .department-list-body > .department-row {
+  border-bottom: 1px solid var(--module-divider-color) !important;
+}
+
+.module-list-departments > .department-list-body > .department-row:last-child {
   border-bottom: 0;
 }
 
 .module-list-approvals {
-  --module-divider-color: rgb(148 163 184 / 0.78);
+  --module-divider-color: rgb(148 163 184 / 0.92);
 }
 
-.module-list-approvals > .list-row-muted,
-.module-list-approvals > .approval-row {
-  border-bottom: 1px solid var(--module-divider-color);
+.module-list-approvals > .approval-list-head {
+  border-bottom: 1px solid var(--module-divider-color) !important;
 }
 
-.module-list-approvals > .approval-row:last-child {
+.module-list-approvals > .approval-list-body > .approval-row {
+  border-bottom: 1px solid var(--module-divider-color) !important;
+}
+
+.module-list-approvals > .approval-list-body > .approval-row:last-child {
   border-bottom: 0;
 }
 
 .module-list-resources {
-  --module-divider-color: rgb(148 163 184 / 0.8);
+  --module-divider-color: rgb(148 163 184 / 0.94);
 }
 
-.module-list-resources > .list-row-muted,
-.module-list-resources > .resource-row {
-  border-bottom: 1px solid var(--module-divider-color);
+.module-list-resources > .resource-list-head {
+  border-bottom: 1px solid var(--module-divider-color) !important;
 }
 
-.module-list-resources > .resource-row:last-child {
+.module-list-resources > .resource-list-select {
+  border-bottom: 0 !important;
+}
+
+.module-list-resources > .resource-list-body {
+  border-top: 1px solid var(--module-divider-color);
+}
+
+.module-list-resources > .resource-list-body > .resource-row {
+  border-bottom: 1px solid var(--module-divider-color) !important;
+}
+
+.module-list-resources > .resource-list-body > .resource-row:last-child {
+  border-bottom: 0;
+}
+
+.module-list-return-policy {
+  --module-divider-color: rgb(148 163 184 / 0.92);
+}
+
+.module-list-return-policy > .return-policy-row {
+  border-bottom: 1px solid var(--module-divider-color) !important;
+}
+
+.module-list-return-policy > .return-policy-row:last-child {
   border-bottom: 0;
 }
 

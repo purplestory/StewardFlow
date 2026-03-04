@@ -584,10 +584,6 @@ input[type="time"] {
 }
 
 /* Registered user list separators */
-.module-list-users {
-  --module-divider-color: rgb(203 213 225 / 0.95);
-}
-
 .module-list-users > * {
   border-bottom: 0 !important;
 }
@@ -601,10 +597,6 @@ input[type="time"] {
 }
 
 /* Department list needs stronger row boundaries for scanning */
-.module-list-departments {
-  --module-divider-color: rgb(203 213 225 / 0.95);
-}
-
 .module-list-departments > * {
   border-bottom: 0 !important;
 }
@@ -621,10 +613,6 @@ input[type="time"] {
   border-top: 1px solid var(--module-divider-color) !important;
 }
 
-.module-list-approvals {
-  --module-divider-color: rgb(203 213 225 / 0.95);
-}
-
 .module-list-approvals > * {
   border-bottom: 0 !important;
 }
@@ -639,10 +627,6 @@ input[type="time"] {
 
 .module-list-approvals > .approval-list-body > .approval-row + .approval-row {
   border-top: 1px solid var(--module-divider-color) !important;
-}
-
-.module-list-resources {
-  --module-divider-color: rgb(203 213 225 / 0.95);
 }
 
 .module-list-resources > * {
@@ -667,10 +651,6 @@ input[type="time"] {
 
 .module-list-resources > .resource-list-body > .resource-row:last-child {
   border-bottom: 0 !important;
-}
-
-.module-list-return-policy {
-  --module-divider-color: rgb(203 213 225 / 0.95);
 }
 
 .module-list-return-policy > * {

@@ -2438,7 +2438,7 @@ export default function UserRoleManager() {
             </p>
           </div>
         ) : (
-          <ModuleList className="mt-3">
+          <ModuleList className="module-list-users mt-3">
             <ModuleListHeader
               left="사용자"
               right="부서 / 권한 / 관리"
@@ -2453,7 +2453,7 @@ export default function UserRoleManager() {
               return (
                 <div
                   key={profile.id}
-                  className="px-4 py-3 text-xs md:grid md:grid-cols-[minmax(260px,1fr)_188px_188px_44px] md:items-center md:gap-3"
+                  className="user-list-row px-4 py-3 text-xs md:grid md:grid-cols-[minmax(260px,1fr)_188px_188px_44px] md:items-center md:gap-3"
                 >
                   <div className="min-w-0">
                     <p className="text-sm font-medium text-neutral-900">

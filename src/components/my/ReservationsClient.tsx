@@ -346,63 +346,73 @@ export default function ReservationsClient() {
           <span>신청 정보</span>
           <span className="text-right">상태 / 액션</span>
         </div>
-        {reservations.map((reservation) => (
-          <div
-            key={reservation.id}
-            className="list-row flex-col gap-3 md:flex-row md:items-start md:justify-between"
-          >
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-lg font-semibold tracking-tight text-slate-900">
-                {reservation.resource_name} {resourceTypeLabel[reservation.resource_type]}{" "}
-                {reservationVerbByType[reservation.resource_type]}
-              </p>
-              <p className="mt-1 text-xs text-neutral-400">
-                신청번호: {shortReservationId(reservation.id)}
-              </p>
-              <p className="mt-2 text-sm text-neutral-700">
-                {formatDateTime(reservation.start_date)} ~ {formatDateTime(reservation.end_date)}
-              </p>
-              {reservation.note && (
-                <p className="mt-1 text-sm text-neutral-600">메모: {reservation.note}</p>
-              )}
-            </div>
-            <div className="flex w-full shrink-0 flex-wrap items-center justify-end gap-2 md:w-auto md:flex-nowrap">
-              <span
-                className={`rounded-full px-2 py-1 text-xs font-medium ${
-                  statusBadgeClass[reservation.status]
-                }`}
-              >
-                {statusLabel[reservation.status]}
-              </span>
-              {reservation.status === "pending" ? (
-                <>
-                  <button
-                    type="button"
-                    className="btn-ghost h-8 px-3 text-xs"
-                    onClick={() => openDetail(reservation.id)}
-                    disabled={updating}
-                  >
-                    수정
-                  </button>
-                  <button
-                    type="button"
-                    className="btn-outline btn-outline-danger h-8 px-3 text-xs disabled:opacity-60"
-                    onClick={() => handleDeleteFromList(reservation.id)}
-                    disabled={updating}
-                  >
-                    삭제
-                  </button>
-                </>
-              ) : reservation.status === "approved" ? (
-                <>
-                  <button
-                    type="button"
-                    className="btn-outline btn-outline-warning h-8 px-3 text-xs disabled:opacity-60"
-                    onClick={() => openDetail(reservation.id)}
-                    disabled={updating}
-                  >
-                    취소 요청
-                  </button>
+        <div className="divide-y divide-neutral-200">
+          {reservations.map((reservation) => (
+            <div
+              key={reservation.id}
+              className="list-row flex-col gap-3 md:flex-row md:items-start md:justify-between"
+            >
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-lg font-semibold tracking-tight text-slate-900">
+                  {reservation.resource_name} {resourceTypeLabel[reservation.resource_type]}{" "}
+                  {reservationVerbByType[reservation.resource_type]}
+                </p>
+                <p className="mt-1 text-xs text-neutral-400">
+                  신청번호: {shortReservationId(reservation.id)}
+                </p>
+                <p className="mt-2 text-sm text-neutral-700">
+                  {formatDateTime(reservation.start_date)} ~ {formatDateTime(reservation.end_date)}
+                </p>
+                {reservation.note && (
+                  <p className="mt-1 text-sm text-neutral-600">메모: {reservation.note}</p>
+                )}
+              </div>
+              <div className="flex w-full shrink-0 flex-wrap items-center justify-end gap-2 md:w-auto md:flex-nowrap">
+                <span
+                  className={`rounded-full px-2 py-1 text-xs font-medium ${
+                    statusBadgeClass[reservation.status]
+                  }`}
+                >
+                  {statusLabel[reservation.status]}
+                </span>
+                {reservation.status === "pending" ? (
+                  <>
+                    <button
+                      type="button"
+                      className="btn-ghost h-8 px-3 text-xs"
+                      onClick={() => openDetail(reservation.id)}
+                      disabled={updating}
+                    >
+                      수정
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-outline btn-outline-danger h-8 px-3 text-xs disabled:opacity-60"
+                      onClick={() => handleDeleteFromList(reservation.id)}
+                      disabled={updating}
+                    >
+                      삭제
+                    </button>
+                  </>
+                ) : reservation.status === "approved" ? (
+                  <>
+                    <button
+                      type="button"
+                      className="btn-outline btn-outline-warning h-8 px-3 text-xs disabled:opacity-60"
+                      onClick={() => openDetail(reservation.id)}
+                      disabled={updating}
+                    >
+                      취소 요청
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-ghost h-8 px-3 text-xs"
+                      onClick={() => openDetail(reservation.id)}
+                    >
+                      상세 보기
+                    </button>
+                  </>
+                ) : (
                   <button
                     type="button"
                     className="btn-ghost h-8 px-3 text-xs"
@@ -410,19 +420,11 @@ export default function ReservationsClient() {
                   >
                     상세 보기
                   </button>
-                </>
-              ) : (
-                <button
-                  type="button"
-                  className="btn-ghost h-8 px-3 text-xs"
-                  onClick={() => openDetail(reservation.id)}
-                >
-                  상세 보기
-                </button>
-              )}
+                )}
+              </div>
             </div>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
 
       <Dialog open={Boolean(selectedReservation)} onOpenChange={(open) => !open && closeDetail()}>

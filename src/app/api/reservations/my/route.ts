@@ -509,10 +509,11 @@ export async function POST(request: Request) {
   };
 
   const notifications = targetUserIds.map((targetId) => ({
+    organization_id: orgId,
     user_id: targetId,
     type: notificationType,
     payload: payloadBase,
-    read: false,
+    read_at: null,
   }));
 
   const { error: notificationError } = await dbClient

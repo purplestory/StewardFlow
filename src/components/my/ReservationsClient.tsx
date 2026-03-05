@@ -429,7 +429,7 @@ export default function ReservationsClient() {
 
       <Dialog open={Boolean(selectedReservation)} onOpenChange={(open) => !open && closeDetail()}>
         {selectedReservation && (
-          <DialogContent className="max-w-xl p-0">
+          <DialogContent className="max-w-xl !p-0 overflow-hidden">
             <DialogHeader className="rounded-t-2xl border-b border-neutral-200 px-6 py-4">
               <DialogTitle>대여 신청 상세</DialogTitle>
             </DialogHeader>

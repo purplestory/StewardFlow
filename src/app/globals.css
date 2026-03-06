@@ -583,6 +583,10 @@ input[type="time"] {
   border-bottom: 0;
 }
 
+.profile-list-rows > .list-row + .list-row {
+  border-top: 1px solid var(--module-divider-color) !important;
+}
+
 /* Registered user list separators */
 .module-list-users > * {
   border-bottom: 0 !important;

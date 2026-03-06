@@ -505,7 +505,7 @@ export default function ProfileEditor() {
           </p>
         </div>
         <div className="module-list">
-          <div className="divide-y divide-neutral-200">
+          <div className="profile-list-rows">
             <div className="list-row gap-3">
               <label className="text-sm font-medium text-neutral-700 min-w-[88px]">이름</label>
               <div className="read-value w-full flex-1 min-w-0">{profile.name || "미등록"}</div>

@@ -346,11 +346,13 @@ export default function ReservationsClient() {
           <span>신청 정보</span>
           <span className="text-right">상태 / 액션</span>
         </div>
-        <div className="divide-y divide-neutral-200">
-          {reservations.map((reservation) => (
+        <div>
+          {reservations.map((reservation, index) => (
             <div
               key={reservation.id}
-              className="list-row flex-col gap-3 md:flex-row md:items-start md:justify-between"
+              className={`list-row flex-col gap-3 md:flex-row md:items-start md:justify-between ${
+                index > 0 ? "!border-t !border-neutral-200" : ""
+              }`}
             >
               <div className="min-w-0 flex-1">
                 <p className="truncate text-lg font-semibold tracking-tight text-slate-900">

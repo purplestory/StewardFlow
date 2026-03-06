@@ -505,145 +505,53 @@ export default function ProfileEditor() {
           </p>
         </div>
         <div className="module-list">
-          <div className="list-row gap-3">
-            <label className="text-sm font-medium text-neutral-700 min-w-[88px]">이름</label>
-            <div className="read-value w-full flex-1 min-w-0">{profile.name || "미등록"}</div>
-          </div>
-
-          <div className="list-row gap-3">
-            <label className="text-sm font-medium text-neutral-700 min-w-[88px]">전화번호</label>
-            <div className="flex w-full flex-1 min-w-0 flex-col gap-2 sm:flex-row sm:items-center">
-              {editingPhone ? (
-                <>
-                  <input
-                    type="tel"
-                    value={phoneValue}
-                    onChange={(e) => setPhoneValue(e.target.value)}
-                    className="form-input flex-1 min-w-0"
-                    placeholder="010-0000-0000"
-                    autoFocus
-                  />
-                  <button
-                    type="button"
-                    onClick={handleSavePhone}
-                    disabled={savingPhone}
-                    className="btn-primary h-[38px] w-full sm:w-auto sm:flex-shrink-0"
-                  >
-                    {savingPhone ? "저장 중..." : "저장"}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleCancelPhone}
-                    disabled={savingPhone}
-                    className="btn-ghost h-[38px] w-full sm:w-auto sm:flex-shrink-0"
-                  >
-                    취소
-                  </button>
-                </>
-              ) : (
-                <>
-                  <div className="read-value flex-1 min-w-0">{profile.phone || "미등록"}</div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setPhoneValue(profile.phone || "");
-                      setEditingPhone(true);
-                    }}
-                    className="icon-button"
-                    title="연락처 수정"
-                  >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      strokeWidth={1.5}
-                      stroke="currentColor"
-                      className="w-5 h-5"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10"
-                      />
-                    </svg>
-                  </button>
-                </>
-              )}
+          <div className="divide-y divide-neutral-200">
+            <div className="list-row gap-3">
+              <label className="text-sm font-medium text-neutral-700 min-w-[88px]">이름</label>
+              <div className="read-value w-full flex-1 min-w-0">{profile.name || "미등록"}</div>
             </div>
-          </div>
 
-          <div className="list-row gap-3">
-            <label className="text-sm font-medium text-neutral-700 min-w-[88px]">이메일</label>
-            <div className="read-value w-full flex-1 min-w-0">{profile.email || "미등록"}</div>
-          </div>
-
-          <div className="list-row gap-3">
-            <label className="text-sm font-medium text-neutral-700 min-w-[88px]">기관</label>
-            <div className="read-value w-full flex-1 min-w-0">{organization?.name || "기관 정보 없음"}</div>
-          </div>
-
-          <div className="list-row gap-3">
-            <label className="text-sm font-medium text-neutral-700 min-w-[88px]">소속 부서</label>
-            <div className="flex w-full flex-1 min-w-0 flex-col gap-2 sm:flex-row sm:items-center">
-              {editingDepartment ? (
-                <>
-                  <select
-                    value={requestedDepartment}
-                    onChange={(e) => setRequestedDepartment(e.target.value)}
-                    className="form-select h-[38px] flex-1 min-w-0"
-                  >
-                    <option value="">부서 선택</option>
-                    {availableDepartments
-                      .filter((dept) => dept !== profile.department)
-                      .map((dept) => (
-                        <option key={dept} value={dept}>
-                          {dept}
-                        </option>
-                      ))}
-                  </select>
-                  <button
-                    type="button"
-                    onClick={async () => {
-                      if (!requestedDepartment || requestedDepartment === profile.department) {
-                        setEditingDepartment(false);
-                        setRequestedDepartment("");
-                        setRequestNote("");
-                        return;
-                      }
-                      await handleRequestDepartmentChange();
-                      setEditingDepartment(false);
-                    }}
-                    disabled={requesting || !requestedDepartment}
-                    className="btn-primary h-[38px] w-full sm:w-auto sm:flex-shrink-0"
-                  >
-                    {requesting ? "요청 중..." : "요청"}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setEditingDepartment(false);
-                      setRequestedDepartment("");
-                      setRequestNote("");
-                    }}
-                    disabled={requesting}
-                    className="btn-ghost h-[38px] w-full sm:w-auto sm:flex-shrink-0"
-                  >
-                    취소
-                  </button>
-                </>
-              ) : (
-                <>
-                  <div className="read-value flex-1 min-w-0">{profile.department || "부서 미등록"}</div>
-                  {!pendingRequest && (
+            <div className="list-row gap-3">
+              <label className="text-sm font-medium text-neutral-700 min-w-[88px]">전화번호</label>
+              <div className="flex w-full flex-1 min-w-0 flex-col gap-2 sm:flex-row sm:items-center">
+                {editingPhone ? (
+                  <>
+                    <input
+                      type="tel"
+                      value={phoneValue}
+                      onChange={(e) => setPhoneValue(e.target.value)}
+                      className="form-input flex-1 min-w-0"
+                      placeholder="010-0000-0000"
+                      autoFocus
+                    />
+                    <button
+                      type="button"
+                      onClick={handleSavePhone}
+                      disabled={savingPhone}
+                      className="btn-primary h-[38px] w-full sm:w-auto sm:flex-shrink-0"
+                    >
+                      {savingPhone ? "저장 중..." : "저장"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleCancelPhone}
+                      disabled={savingPhone}
+                      className="btn-ghost h-[38px] w-full sm:w-auto sm:flex-shrink-0"
+                    >
+                      취소
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <div className="read-value flex-1 min-w-0">{profile.phone || "미등록"}</div>
                     <button
                       type="button"
                       onClick={() => {
-                        setEditingDepartment(true);
-                        setRequestedDepartment("");
-                        setRequestNote("");
+                        setPhoneValue(profile.phone || "");
+                        setEditingPhone(true);
                       }}
                       className="icon-button"
-                      title="부서 변경 요청"
+                      title="연락처 수정"
                     >
                       <svg
                         xmlns="http://www.w3.org/2000/svg"
@@ -660,46 +568,140 @@ export default function ProfileEditor() {
                         />
                       </svg>
                     </button>
-                  )}
-                </>
-              )}
+                  </>
+                )}
+              </div>
             </div>
-          </div>
-          {pendingRequest && (
-            <div className="list-row bg-blue-50">
-              <p className="text-sm text-blue-900 font-medium">부서 변경 요청 대기 중</p>
-              <p className="text-xs text-blue-700 mt-1">
-                {profile.department || "(없음)"} → {pendingRequest.to_department}
-              </p>
-              {pendingRequest.note && (
-                <p className="text-xs text-blue-600 mt-1">사유: {pendingRequest.note}</p>
-              )}
-              <button
-                type="button"
-                onClick={handleCancelRequest}
-                disabled={requesting}
-                className="mt-2 text-xs text-blue-600 hover:text-blue-800 underline"
-              >
-                {requesting ? "취소 중..." : "요청 취소"}
-              </button>
-            </div>
-          )}
-          {editingDepartment && (
-            <div className="list-row flex-col items-start gap-2">
-              <label className="text-xs text-neutral-600 mb-1 block">변경 사유 (선택)</label>
-              <textarea
-                value={requestNote}
-                onChange={(e) => setRequestNote(e.target.value)}
-                className="form-input min-h-[60px] text-sm"
-                placeholder="부서 변경 사유를 입력해주세요"
-              />
-            </div>
-          )}
 
-          <div className="list-row gap-3">
-            <label className="text-sm font-medium text-neutral-700 min-w-[88px]">역할</label>
-            <div className="read-value w-full flex-1 min-w-0">
-              {roleLabel[profile.role || "user"] || profile.role || "일반 사용자"}
+            <div className="list-row gap-3">
+              <label className="text-sm font-medium text-neutral-700 min-w-[88px]">이메일</label>
+              <div className="read-value w-full flex-1 min-w-0">{profile.email || "미등록"}</div>
+            </div>
+
+            <div className="list-row gap-3">
+              <label className="text-sm font-medium text-neutral-700 min-w-[88px]">기관</label>
+              <div className="read-value w-full flex-1 min-w-0">{organization?.name || "기관 정보 없음"}</div>
+            </div>
+
+            <div className="list-row gap-3">
+              <label className="text-sm font-medium text-neutral-700 min-w-[88px]">소속 부서</label>
+              <div className="flex w-full flex-1 min-w-0 flex-col gap-2 sm:flex-row sm:items-center">
+                {editingDepartment ? (
+                  <>
+                    <select
+                      value={requestedDepartment}
+                      onChange={(e) => setRequestedDepartment(e.target.value)}
+                      className="form-select h-[38px] flex-1 min-w-0"
+                    >
+                      <option value="">부서 선택</option>
+                      {availableDepartments
+                        .filter((dept) => dept !== profile.department)
+                        .map((dept) => (
+                          <option key={dept} value={dept}>
+                            {dept}
+                          </option>
+                        ))}
+                    </select>
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        if (!requestedDepartment || requestedDepartment === profile.department) {
+                          setEditingDepartment(false);
+                          setRequestedDepartment("");
+                          setRequestNote("");
+                          return;
+                        }
+                        await handleRequestDepartmentChange();
+                        setEditingDepartment(false);
+                      }}
+                      disabled={requesting || !requestedDepartment}
+                      className="btn-primary h-[38px] w-full sm:w-auto sm:flex-shrink-0"
+                    >
+                      {requesting ? "요청 중..." : "요청"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditingDepartment(false);
+                        setRequestedDepartment("");
+                        setRequestNote("");
+                      }}
+                      disabled={requesting}
+                      className="btn-ghost h-[38px] w-full sm:w-auto sm:flex-shrink-0"
+                    >
+                      취소
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <div className="read-value flex-1 min-w-0">{profile.department || "부서 미등록"}</div>
+                    {!pendingRequest && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEditingDepartment(true);
+                          setRequestedDepartment("");
+                          setRequestNote("");
+                        }}
+                        className="icon-button"
+                        title="부서 변경 요청"
+                      >
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          strokeWidth={1.5}
+                          stroke="currentColor"
+                          className="w-5 h-5"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10"
+                          />
+                        </svg>
+                      </button>
+                    )}
+                  </>
+                )}
+              </div>
+            </div>
+            {pendingRequest && (
+              <div className="list-row bg-blue-50">
+                <p className="text-sm text-blue-900 font-medium">부서 변경 요청 대기 중</p>
+                <p className="text-xs text-blue-700 mt-1">
+                  {profile.department || "(없음)"} → {pendingRequest.to_department}
+                </p>
+                {pendingRequest.note && (
+                  <p className="text-xs text-blue-600 mt-1">사유: {pendingRequest.note}</p>
+                )}
+                <button
+                  type="button"
+                  onClick={handleCancelRequest}
+                  disabled={requesting}
+                  className="mt-2 text-xs text-blue-600 hover:text-blue-800 underline"
+                >
+                  {requesting ? "취소 중..." : "요청 취소"}
+                </button>
+              </div>
+            )}
+            {editingDepartment && (
+              <div className="list-row flex-col items-start gap-2">
+                <label className="text-xs text-neutral-600 mb-1 block">변경 사유 (선택)</label>
+                <textarea
+                  value={requestNote}
+                  onChange={(e) => setRequestNote(e.target.value)}
+                  className="form-input min-h-[60px] text-sm"
+                  placeholder="부서 변경 사유를 입력해주세요"
+                />
+              </div>
+            )}
+
+            <div className="list-row gap-3">
+              <label className="text-sm font-medium text-neutral-700 min-w-[88px]">역할</label>
+              <div className="read-value w-full flex-1 min-w-0">
+                {roleLabel[profile.role || "user"] || profile.role || "일반 사용자"}
+              </div>
             </div>
           </div>
         </div>

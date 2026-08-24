@@ -1,7 +1,7 @@
 # PROJECT STATE
 
 최종 업데이트: 2026-08-24
-기준 커밋: `main`의 `acd2c22` + 커밋되지 않은 로컬 변경
+기준 커밋: `main`/`origin/main`의 `29da08a`
 
 ## 0. 배포 상태 (반드시 먼저 확인)
 - 원격 Supabase 상태: `Healthy`
@@ -9,8 +9,8 @@
 - **코드 배포: 완료** — Vercel `dpl_Ftp6DqqicKEhPBp8DtZuraiCaWMS` `READY`, `https://steward-flow.vercel.app`.
 - **원격 RLS 적용: 완료** — migration SHA-256 `7c63ff760df5e3d0c4464ea9a775efe32efc8c40d1cee91d1fe9058bed53871e`, transaction 종료 상태 `0`, read-only postcheck 19개 통과.
 - **사전 DB 백업: 유효** — `2026-08-24 05:47 KST`, SHA-256 `3c2b77ccff0627483951dc1875cf20454b66ad8f58ddfe105624e0dceb75f143`, archive 판독 검증 완료, 실제 복원 리허설 미실행.
-- **남은 운영 과제:** production 소스 commit/push, OPS-004 migration history reconciliation/복원 리허설, signed-in 회귀 QA.
-- production은 현재 uncommitted/unpushed 로컬 worktree에서 직접 배포된 상태다.
+- **배포 소스 보존: 완료** — 운영 소스는 `29da08a feat: harden StewardFlow production boundaries`로 커밋되어 `origin/main`까지 반영됐다.
+- **남은 운영 과제:** OPS-004 migration history reconciliation/복원 리허설, signed-in 회귀 QA.
 
 ## 1. 현재 제품 범위
 - 코어: 인증, 사용자/권한, 물품/공간/차량 예약/승인/반납
@@ -50,13 +50,14 @@
 - 초대 레코드 만료 시각(`organization_invites.expires_at`) 저장/검증 로직 반영
 
 ## 4. 현재 위험/주의사항
-- 가장 높은 우선순위는 production 소스 commit/push, 로그인 상태 운영 QA와 OPS-004 migration history/복원 리허설이다.
-  - 사용자/기관/초대/카카오 OAuth, 부서 승인, 도서 원자 취소, 계정 삭제 흐름을 실제 권한 계정으로 검증해야 한다.
-  - hardening 사전 백업과 archive 판독 검증은 완료했다. 실제 복원 리허설은 OPS-004에서 별도로 수행한다.
+- 가장 높은 우선순위는 로그인 상태 운영 QA와 OPS-004 migration history/복원 리허설이다.
+  - 운영 계정은 `admin` 3명, `manager` 3명, 일반 `user` 0명이다. 기존 admin/manager로는 읽기 전용 권한 QA를 먼저 수행하고, 변경 흐름은 전용 테스트 `user` 초대 후에만 검증한다.
+  - hardening 사전 백업과 archive 판독 검증은 완료했다. 실제 복원 리허설은 운영과 분리된 새 NAS Supabase/테스트 DB에서만 수행하며, 기존 운영 DB·Vercel 환경변수를 재사용하지 않는다.
 - `cancel_requested_book_loan_atomic`은 원격에 존재하며 production API가 원자 RPC 경로를 사용할 수 있다.
 - 일반 user를 조직 admin이 직접 삭제하는 Auth 외부 호출에는 actor 강등/대상 tenant 이동의 짧은 TOCTOU가 남아 있다. 완전 제거는 별도 DB deletion authorization marker/RPC 과제로 관리한다.
 - hardening은 수동 적용되어 원격 migration history를 수정하지 않았다. history에는 `20260220103000`만 기록되어 로컬 migration 집합과 기준선이 다르다.
-  - 새 환경 replay 전에 baseline reconciliation 필요
+  - 현재 legacy migration 111개는 중복/비표준 version이 있어 전체 replay, `db push`, `db reset --linked`, legacy 전체 applied 처리를 금지한다.
+  - 새 post-hardening schema/dump를 기준선으로 만들고, 격리된 복원·replay 검증 후에만 history metadata를 정리한다.
 - 원격 점검(2026-08-24): `profiles=6`, `organizations=2`, 활성 초대 `0`, privileged orphan `0`, 관리자 없는 기관 `0`, 잘못된 profile 부서 `0`, account deletion null status/중복 pending requester `0`
 - account deletion requester/transfer/resolver FK 3개는 원격에서 모두 `ON DELETE SET NULL` 적용 확인
 - `.npm/`, `.npm-cache/`는 ignore에 추가했지만 Git에는 1,861개 파일(약 475MB)이 이미 추적 중이다.

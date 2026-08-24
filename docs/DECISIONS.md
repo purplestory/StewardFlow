@@ -3,11 +3,12 @@
 프로젝트 의사결정 로그 (변경 시 계속 추가)
 
 ## 2026-08-24
-- 상태: 운영 반영 완료 (후속 재현성 작업 대기)
+- 상태: 운영 반영 및 소스 보존 완료 (후속 QA/복구 검증 대기)
 - 결정: Vercel 프로덕션 `dpl_Ftp6DqqicKEhPBp8DtZuraiCaWMS`와 Supabase hardening migration `20260824090000_harden_tenant_rls_boundaries.sql`을 사전 DB 백업 및 배포 파일 dry-run 검증 후 적용했다. 적용 후 19개 DB assertion, anon 초대 REST 차단(`401`, 0행), 비로그인 프로덕션 스모크 테스트를 통과했다
 - 이유: 운영 반영 상태와 로컬 구현 상태를 분리해 기록하고, 민감한 로컬 백업/환경 파일이 배포 업로드 대상에서 제외됐음을 추적 가능하게 남기기 위함
 - 영향: `https://steward-flow.vercel.app`, `.vercelignore`, `docs/EXECUTION_TRACKER.md`, `docs/DB_MIGRATION_STATUS.md`, `docs/PROJECT_STATE.md`, `docs/NEXT_TASKS.md`
-- 남은 작업: 현재 운영 소스의 Git 커밋/푸시, signed-in 역할별 운영 QA, 수동 적용된 migration과 Supabase migration history의 OPS-004 기준선 정합화, 실제 복원 리허설
+- 후속 결정: 운영 소스는 `29da08a`로 `origin/main`에 보존했다. legacy migration 전체 replay/일괄 applied 처리는 금지하고, 새 post-hardening baseline과 격리된 restore/replay 검증 뒤에만 원격 migration history metadata를 정리한다.
+- 남은 작업: signed-in 역할별 운영 QA, 수동 적용된 migration과 Supabase migration history의 OPS-004 기준선 정합화, 실제 복원 리허설
 
 ## 2026-08-24
 - 상태: 확정 (로컬 구현, 프로덕션 미배포)

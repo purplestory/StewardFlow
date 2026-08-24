@@ -30,12 +30,13 @@
 | DB-001 | P0 | DONE | 테넌트 RLS 강화 마이그레이션 작성 및 위험 정책 감사 | privileged profile/부서 실존/마지막 admin 보호, 전역 admin 정책과 anon invite 조회 제거, 계정 삭제 snapshot·RPC, 검증 assertion 포함 | `supabase/migrations/20260824090000_harden_tenant_rls_boundaries.sql` |
 | DB-002 | P0 | DONE | 도서 신청 취소 원자 처리 및 중복 취소 요청 방지 | `cancel_requested_book_loan_atomic` RPC 우선 사용, 함수 미적용 환경에만 보상 fallback, 동일 unread 취소 알림 중복 생성 방지 | `src/app/api/reservations/my/route.ts`, `supabase/migrations/20260824090000_harden_tenant_rls_boundaries.sql` |
 | QA-001 | P0 | DONE | 의존성/Next.js 16/CI/테스트 기반 정리 | Next.js 16.3.2, `middleware -> proxy`, lint/mobile/typecheck/test/build CI, auth redirect 단위 테스트 구성 | `package.json`, `src/proxy.ts`, `.github/workflows/quality.yml`, `src/lib/auth-redirect.test.ts` |
+| QA-002 | P0 | IN_PROGRESS | 운영 signed-in 역할·테넌트 경계 회귀 QA | 기존 admin/manager의 읽기 전용 경로 검증 후, 전용 test user를 초대해 invite/부서 승인/도서 취소를 검증. 실제 계정 삭제는 별도 실행 승인 필요 | production, `src/actions/invite-actions.ts`, `src/actions/admin-organization-actions.ts`, `src/actions/auth-actions.ts` |
 | OPS-002 | P0 | DONE | 2026-08-24 로컬 변경 프로덕션 배포 | 실행 직전 사용자 확인 후 Vercel production READY, 운영 alias 및 공개 smoke 확인 | Vercel 배포, `.vercelignore` |
 | OPS-003 | P0 | DONE | RLS 강화 마이그레이션 원격 적용 | 수동 백업과 사용자 확인 후 transaction 적용, assertion 및 19개 read-only postcheck 통과 | Supabase 원격, 해당 migration |
 | OPS-004 | P0 | TODO | 원격 migration history 기준선 조정 및 복구 검증 | 원격 단건 history와 로컬 migration 집합 reconciliation, 백업/복원 리허설 기록 | `supabase/migrations`, `docs/DB_MIGRATION_STATUS.md` |
 | OPS-005 | P1 | TODO | 추적 중인 npm 캐시 제거 | Git 추적 1,861개 파일(약 475MB)을 history 영향 검토 후 제거, 재추적 방지 확인 | `.npm/`, `.npm-cache/`, `.gitignore` |
 | OPS-006 | P0 | DONE | RLS 적용 전 원격 DB 수동 백업 | custom-format dump, SHA-256, archive 목록·schema/data 압축 해제 검증 완료 | `.local-backups/steward-flow/20260824-051551-KST/` (Git 제외) |
-| OPS-007 | P0 | TODO | 배포 소스 커밋/푸시 및 재현성 확보 | 현재 production과 동일한 uncommitted worktree를 검토·커밋·푸시하고 deployment ID와 연결 | 현재 로컬 변경 전체 |
+| OPS-007 | P0 | DONE | 배포 소스 커밋/푸시 및 재현성 확보 | `29da08a`를 커밋하고 `origin/main` 반영까지 확인 | 현재 로컬 변경 전체 |
 
 ## 2) 작업 로그 (Execution Log)
 시간 기준: Asia/Seoul
@@ -87,16 +88,21 @@
   - 첫 Vercel dry-run에서 `.local-backups/`와 약 `492 MB`의 `.npm/` 캐시가 업로드 후보에 포함된 것을 발견했다. 실제 배포 전에 `.vercelignore`를 추가했고, 재검증 결과 `204`개 파일/`1,817,707 bytes`이며 민감·캐시 경로 포함은 `0`이었다.
   - Vercel deployment `dpl_Ftp6DqqicKEhPBp8DtZuraiCaWMS`가 `READY`이며 production alias `https://steward-flow.vercel.app` 연결을 확인했다.
   - Next.js `16.3.2`, TypeScript, 50개 route build가 통과했다. `/login`, `/join-request`, invalid `/join`, `/books`, `/my` 공개 smoke와 내부 오류명 미노출을 확인했다.
-  - production 소스는 현재 uncommitted/unpushed worktree이므로 OPS-007에서 release commit과 원격 보존이 필요하다.
+  - production 소스는 이후 `29da08a feat: harden StewardFlow production boundaries`로 커밋했고 `origin/main` 반영까지 확인했다.
 - [DONE/REMOTE] OPS-003
   - 백업과 migration SHA-256 `7c63ff760df5e3d0c4464ea9a775efe32efc8c40d1cee91d1fe9058bed53871e`를 재확인한 뒤 `psql 18.4`, `ON_ERROR_STOP=1`로 transaction 적용했다(종료 상태 `0`).
   - read-only postcheck 19개가 모두 기대 결과를 반환했다: 위험 admin/anon/open-insert 정책 `0`, service RPC `4`, authenticated 실행 권한 `0`, service-role 실행 권한 `4`, FK `SET NULL` `3`, 필수 trigger `8`, RLS 대상 `5`.
   - 실제 anon REST 조회에서도 `organization_invites`가 HTTP `401`, 반환 행 `0`으로 차단됐다.
   - `profiles=6`, `organizations=2`, 활성 초대/privileged orphan/관리자 없는 기관/잘못된 부서 `0`으로 기존 데이터 무결성이 유지됐다.
   - 수동 적용이므로 `supabase_migrations.schema_migrations`는 수정하지 않았고 원격 history는 `20260220103000` 단건 그대로다.
-- [TODO/REMOTE QA] OPS-004, OPS-007 및 signed-in QA
-  - migration history baseline reconciliation과 실제 복원 리허설은 OPS-004로 남아 있다.
-  - invite-only, 부서 승인, 도서 원자 취소, 계정 삭제, 테넌트 경계, 카카오 OAuth의 로그인 상태 운영 QA가 남아 있다.
+- [DONE/GIT] OPS-007
+  - `29da08a feat: harden StewardFlow production boundaries`를 `origin/main`에 반영했고, 로컬/원격 HEAD 일치를 확인했다.
+- [IN_PROGRESS/REMOTE QA] QA-002
+  - 운영 role 집계는 `admin=3`, `manager=3`, 일반 `user=0`, 기관 `2`, 부서 `3`이다. 기존 admin/manager로 카카오 로그인 후 읽기 전용 관리 경로를 먼저 확인한다.
+  - 변경 QA는 같은 기관·같은 부서의 전용 `user`를 초대해 초대 수락, 부서 변경 승인, 도서 대출/취소를 검증한다. Auth user를 실제 삭제하는 manager 탈퇴 승인 테스트는 별도 실행 승인 없이는 수행하지 않는다.
+- [TODO/REMOTE QA] OPS-004 및 signed-in QA
+  - migration history baseline reconciliation과 실제 복원 리허설은 OPS-004로 남아 있다. legacy migration은 중복/비표준 version이므로 전체 replay나 applied 일괄 처리를 하지 않는다.
+  - invite-only, 부서 승인, 도서 원자 취소, 계정 삭제, 테넌트 경계, 카카오 OAuth의 로그인 상태 운영 QA가 남아 있다. 기존 계정에는 일반 `user`가 없으므로 변경 QA 전용 초대 계정이 필요하다.
 
 ### 2026-02-28
 - [IN_PROGRESS] UI-001  

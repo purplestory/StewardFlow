@@ -8,7 +8,7 @@
 ## P0 (즉시)
 
 > Vercel production 배포와 `20260824090000_harden_tenant_rls_boundaries.sql` 원격 적용은 완료되었다.
-> 현재 P0 잔여는 production 소스 commit/push, OPS-004 기준선/복원 리허설과 signed-in 운영 회귀 QA다.
+> 현재 P0 잔여는 OPS-004 기준선/복원 리허설과 signed-in 운영 회귀 QA다. 운영 소스는 `29da08a`로 `origin/main`에 반영됐다.
 
 ### 1) 원격 DB 백업 및 복원 절차 확인
 - 상태: 사전 백업 및 archive 검증 완료; 실제 복원 리허설은 OPS-004에서 진행
@@ -19,7 +19,7 @@
 4. 최소 restore 절차 또는 복원 리허설 결과 기록
 
 ### 2) 로컬 변경 프로덕션 배포
-- 상태: Vercel production 배포 완료 (`dpl_Ftp6DqqicKEhPBp8DtZuraiCaWMS`, `READY`); source commit/push와 signed-in smoke 필요
+- 상태: Vercel production 배포 완료 (`dpl_Ftp6DqqicKEhPBp8DtZuraiCaWMS`, `READY`); source commit/push 완료, signed-in smoke 필요
 - 완료 조건(AC):
 1. 배포 명령 실행 직전 사용자에게 대상 환경/범위를 확인
 2. 현재 uncommitted 변경 검토/커밋
@@ -41,7 +41,7 @@
 7. account deletion UUID snapshot/FK SET NULL/operation index와 service-only RPC 4종의 존재·실행 권한 확인
 
 ### 4) Migration history baseline reconciliation
-- 상태: 진행 필요
+- 상태: 진행 필요 (legacy migration 전체 replay 금지; 새 post-hardening baseline과 격리 restore/replay 검증이 선행 조건)
 - 배경: hardening은 수동 적용되어 history를 수정하지 않았고 원격 migration history에는 `20260220103000`만 기록됨
 - 완료 조건(AC):
 1. 원격 schema dump와 로컬 migration 집합 차이 분석
@@ -51,6 +51,7 @@
 
 ### 5) 카카오 OAuth signed-in 회귀 테스트
 - 상태: 진행 중 (콜백 보강 및 open redirect 차단 완료, 실환경 QA 필요)
+- 전제: 기존 운영 계정은 `admin` 3명, `manager` 3명, 일반 `user` 0명이다. 변경 검증은 이메일이 일치하는 전용 테스트 `user` 초대 후에만 수행한다.
 - 완료 조건(AC):
 1. 카카오 로그인 시 실패 페이지 깜빡임이 재현되지 않음
 2. 로그인 후 쿠키/재접속/새 탭에서 세션 유지 확인

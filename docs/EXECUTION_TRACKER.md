@@ -33,7 +33,7 @@
 | QA-002 | P0 | IN_PROGRESS | 운영 signed-in 역할·테넌트 경계 회귀 QA | 기존 admin/manager의 읽기 전용 경로 검증 후, 전용 test user를 초대해 invite/부서 승인/도서 취소를 검증. 실제 계정 삭제는 별도 실행 승인 필요 | production, `src/actions/invite-actions.ts`, `src/actions/admin-organization-actions.ts`, `src/actions/auth-actions.ts` |
 | OPS-002 | P0 | DONE | 2026-08-24 로컬 변경 프로덕션 배포 | 실행 직전 사용자 확인 후 Vercel production READY, 운영 alias 및 공개 smoke 확인 | Vercel 배포, `.vercelignore` |
 | OPS-003 | P0 | DONE | RLS 강화 마이그레이션 원격 적용 | 수동 백업과 사용자 확인 후 transaction 적용, assertion 및 19개 read-only postcheck 통과 | Supabase 원격, 해당 migration |
-| OPS-004 | P0 | TODO | 원격 migration history 기준선 조정 및 복구 검증 | 원격 단건 history와 로컬 migration 집합 reconciliation, 백업/복원 리허설 기록 | `supabase/migrations`, `docs/DB_MIGRATION_STATUS.md` |
+| OPS-004 | P0 | IN_PROGRESS | 원격 migration history 기준선 조정 및 복구 검증 | 원격 단건 history와 로컬 migration 집합 reconciliation, 백업/복원 리허설 기록 | `supabase/migrations`, `docs/DB_MIGRATION_STATUS.md` |
 | OPS-005 | P1 | TODO | 추적 중인 npm 캐시 제거 | Git 추적 1,861개 파일(약 475MB)을 history 영향 검토 후 제거, 재추적 방지 확인 | `.npm/`, `.npm-cache/`, `.gitignore` |
 | OPS-006 | P0 | DONE | RLS 적용 전 원격 DB 수동 백업 | custom-format dump, SHA-256, archive 목록·schema/data 압축 해제 검증 완료 | `.local-backups/steward-flow/20260824-051551-KST/` (Git 제외) |
 | OPS-007 | P0 | DONE | 배포 소스 커밋/푸시 및 재현성 확보 | `29da08a`를 커밋하고 `origin/main` 반영까지 확인 | 현재 로컬 변경 전체 |
@@ -95,13 +95,18 @@
   - 실제 anon REST 조회에서도 `organization_invites`가 HTTP `401`, 반환 행 `0`으로 차단됐다.
   - `profiles=6`, `organizations=2`, 활성 초대/privileged orphan/관리자 없는 기관/잘못된 부서 `0`으로 기존 데이터 무결성이 유지됐다.
   - 수동 적용이므로 `supabase_migrations.schema_migrations`는 수정하지 않았고 원격 history는 `20260220103000` 단건 그대로다.
+- [IN_PROGRESS/REMOTE] OPS-004
+  - NAS에 기존 스택과 분리된 `steward-flow-restore-20260824` PostgreSQL 17.6 기반 Supabase 복원 컨테이너를 만들었다. 전용 네트워크/볼륨을 사용하고 `127.0.0.1:15432`만 바인딩했으며 Vercel, 카카오 OAuth, 운영 Supabase에는 연결하지 않았다.
+  - hardening 전 custom-format backup의 SHA-256을 재검증한 뒤 암호화된 SSH로 전용 경로에 전송했다. NAS에서의 SHA-256도 `3c2b77ccff0627483951dc1875cf20454b66ad8f58ddfe105624e0dceb75f143`로 일치했다.
+  - 첫 빈 DB `steward_flow_restore`는 일반 `postgres` 역할이 `realtime` 함수의 `log_min_messages` 설정을 복원할 권한이 없어 중단됐다. 해당 DB는 원인 기록용으로 보존했고, `supabase_admin`으로 새 빈 `steward_flow_restore_clean` DB에 재시도해 `pg_restore --exit-on-error --no-owner --no-privileges`를 성공시켰다.
+  - 성공 DB에서 PostgreSQL `17.6`, 핵심 Supabase 테이블 `81`, `profiles=6`, `organizations=2`, `auth.users=8`을 확인했다. 이는 hardening 전 snapshot의 복원 호환성 검증이며 현재 운영 전환이나 외부 노출은 아니다.
+  - 남은 조건: hardening 후 새 backup을 생성해 같은 격리 환경에서 재검증하고, 그 결과를 기준으로 migration history baseline 전략을 확정한다. legacy migration 전체 replay와 원격 history 일괄 수정은 계속 금지한다.
 - [DONE/GIT] OPS-007
   - `29da08a feat: harden StewardFlow production boundaries`를 `origin/main`에 반영했고, 로컬/원격 HEAD 일치를 확인했다.
 - [IN_PROGRESS/REMOTE QA] QA-002
   - 운영 role 집계는 `admin=3`, `manager=3`, 일반 `user=0`, 기관 `2`, 부서 `3`이다. 기존 admin/manager로 카카오 로그인 후 읽기 전용 관리 경로를 먼저 확인한다.
   - 변경 QA는 같은 기관·같은 부서의 전용 `user`를 초대해 초대 수락, 부서 변경 승인, 도서 대출/취소를 검증한다. Auth user를 실제 삭제하는 manager 탈퇴 승인 테스트는 별도 실행 승인 없이는 수행하지 않는다.
-- [TODO/REMOTE QA] OPS-004 및 signed-in QA
-  - migration history baseline reconciliation과 실제 복원 리허설은 OPS-004로 남아 있다. legacy migration은 중복/비표준 version이므로 전체 replay나 applied 일괄 처리를 하지 않는다.
+- [TODO/REMOTE QA] signed-in QA
   - invite-only, 부서 승인, 도서 원자 취소, 계정 삭제, 테넌트 경계, 카카오 OAuth의 로그인 상태 운영 QA가 남아 있다. 기존 계정에는 일반 `user`가 없으므로 변경 QA 전용 초대 계정이 필요하다.
 
 ### 2026-02-28

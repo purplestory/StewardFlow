@@ -30,10 +30,18 @@
   - 크기: `621,219 bytes`
   - SHA-256: `3c2b77ccff0627483951dc1875cf20454b66ad8f58ddfe105624e0dceb75f143`
   - 검증: `pg_restore 18.4 --list` 성공, archive 목록 1,147줄, schema-only 추출 9,599줄, data-only 압축 해제 성공
-  - 실제 별도 DB 복원 리허설은 미실행
-- 실제 별도 DB 복원 리허설과 migration history baseline reconciliation은 OPS-004로 남아 있다. 로그인 상태 운영 회귀 QA도 남아 있다.
+  - NAS 격리 Supabase PostgreSQL 17.6 컨테이너에서 실제 복원 성공. `steward_flow_restore_clean` DB의 핵심 Supabase 테이블 `81`, `profiles=6`, `organizations=2`, `auth.users=8`을 확인했다.
+- 이 archive는 hardening 적용 전 snapshot이다. hardening 후 새 backup을 동일 방식으로 복원·검증하고 migration history baseline을 확정하기 전에는 OPS-004를 완료 처리하지 않는다. 로그인 상태 운영 회귀 QA도 남아 있다.
 
-## 2-1. 과거 핵심 이슈 (기록 보존)
+## 2-1. NAS 격리 복원 리허설 (2026-08-24)
+- 대상: 별도 프로젝트 `steward-flow-restore-20260824`, `supabase/postgres:17.6.1.136`, 전용 네트워크/볼륨, NAS loopback 전용 포트 `127.0.0.1:15432`.
+- 비연결 범위: Vercel production, 카카오 OAuth, 운영 Supabase URL 및 운영 DB에는 연결하지 않았다.
+- 초기화: Supabase DB 초기화 SQL과 새 로컬 전용 secrets를 사용했다. 기존 NAS Supabase 프로젝트/컨테이너는 읽기만 했고 수정하지 않았다.
+- 복원: `pg_restore --exit-on-error --no-owner --no-privileges`를 `supabase_admin`으로 실행했다. 일반 `postgres` 역할의 첫 시도는 `realtime.list_changes`의 `log_min_messages` function setting 권한 오류로 중단됐고, 실패 DB는 보존했다.
+- 검증: archive SHA-256 일치, 컨테이너 health `healthy`, PostgreSQL `17.6`, 핵심 테이블/행 수 확인.
+- 한계: Storage object 바이너리, Edge Function secrets, SMTP/OAuth 설정은 DB archive에 포함되지 않으며, 이 리허설은 서비스 전체 cutover 검증이 아니다.
+
+## 2-2. 과거 핵심 이슈 (기록 보존)
 - 과거 일부 환경에서 아래 오류가 관측됨:
   - `Could not find the table 'public.book_loans' in the schema cache`
   - `Could not find the table 'public.book_items' in the schema cache`

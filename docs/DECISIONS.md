@@ -3,6 +3,13 @@
 프로젝트 의사결정 로그 (변경 시 계속 추가)
 
 ## 2026-08-24
+- 상태: 확정 (격리 복원 리허설, 운영 전환 아님)
+- 결정: NAS에서 `supabase/postgres:17.6.1.136` 기반의 별도 `steward-flow-restore-20260824` DB-only Supabase 복원 환경을 사용한다. 이 환경은 전용 네트워크·볼륨과 NAS loopback 전용 포트만 사용하며, Vercel production, 카카오 OAuth, 운영 Supabase URL과 연결하지 않는다.
+- 이유: 실제 운영 backup의 Postgres 17/Supabase 확장 호환성을 먼저 검증하면서 기존 NAS Supabase 스택 및 공개 서비스에 영향을 주지 않기 위함이다.
+- 영향: hardening 전 custom-format backup은 `supabase_admin`으로 새 빈 DB에 성공적으로 복원됐다. 이 결과는 DB-level rehearsal이며 Storage object 바이너리, Edge Function secrets, SMTP/OAuth 설정, 운영 cutover를 포함하지 않는다.
+- 후속 결정: hardening 후 새 backup을 같은 격리 환경에서 복원·검증하고, 그 산출물을 기준으로 migration history baseline 전략과 전체 self-hosted Supabase 전환 범위를 별도 승인한다.
+
+## 2026-08-24
 - 상태: 운영 반영 및 소스 보존 완료 (후속 QA/복구 검증 대기)
 - 결정: Vercel 프로덕션 `dpl_Ftp6DqqicKEhPBp8DtZuraiCaWMS`와 Supabase hardening migration `20260824090000_harden_tenant_rls_boundaries.sql`을 사전 DB 백업 및 배포 파일 dry-run 검증 후 적용했다. 적용 후 19개 DB assertion, anon 초대 REST 차단(`401`, 0행), 비로그인 프로덕션 스모크 테스트를 통과했다
 - 이유: 운영 반영 상태와 로컬 구현 상태를 분리해 기록하고, 민감한 로컬 백업/환경 파일이 배포 업로드 대상에서 제외됐음을 추적 가능하게 남기기 위함

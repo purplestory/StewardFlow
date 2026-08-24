@@ -38,7 +38,8 @@
 - 비연결 범위: Vercel production, 카카오 OAuth, 운영 Supabase URL 및 운영 DB에는 연결하지 않았다.
 - 초기화: Supabase DB 초기화 SQL과 새 로컬 전용 secrets를 사용했다. 기존 NAS Supabase 프로젝트/컨테이너는 읽기만 했고 수정하지 않았다.
 - 복원: `pg_restore --exit-on-error --no-owner --no-privileges`를 `supabase_admin`으로 실행했다. 일반 `postgres` 역할의 첫 시도는 `realtime.list_changes`의 `log_min_messages` function setting 권한 오류로 중단됐고, 실패 DB는 보존했다.
-- 검증: archive SHA-256 일치, 컨테이너 health `healthy`, PostgreSQL `17.6`, 핵심 테이블/행 수 확인.
+- replay: 성공 복원 DB의 복제본에 `20260824090000_harden_tenant_rls_boundaries.sql`을 `ON_ERROR_STOP=1`로 적용했다. migration transaction/내부 assertion이 통과했고, `RLS 대상 5`, anon invite SELECT `false`, 도서 취소 RPC 존재, service-only RPC `4/4`, authenticated 실행 `0`, service-role 실행 `4`, 계정삭제 FK `SET NULL 3`을 확인했다.
+- 검증: archive SHA-256 일치, 컨테이너 health `healthy`, PostgreSQL `17.6`, 핵심 테이블/행 수와 hardening replay postcheck 확인.
 - 한계: Storage object 바이너리, Edge Function secrets, SMTP/OAuth 설정은 DB archive에 포함되지 않으며, 이 리허설은 서비스 전체 cutover 검증이 아니다.
 
 ## 2-2. 과거 핵심 이슈 (기록 보존)

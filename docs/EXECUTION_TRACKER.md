@@ -100,7 +100,8 @@
   - hardening 전 custom-format backup의 SHA-256을 재검증한 뒤 암호화된 SSH로 전용 경로에 전송했다. NAS에서의 SHA-256도 `3c2b77ccff0627483951dc1875cf20454b66ad8f58ddfe105624e0dceb75f143`로 일치했다.
   - 첫 빈 DB `steward_flow_restore`는 일반 `postgres` 역할이 `realtime` 함수의 `log_min_messages` 설정을 복원할 권한이 없어 중단됐다. 해당 DB는 원인 기록용으로 보존했고, `supabase_admin`으로 새 빈 `steward_flow_restore_clean` DB에 재시도해 `pg_restore --exit-on-error --no-owner --no-privileges`를 성공시켰다.
   - 성공 DB에서 PostgreSQL `17.6`, 핵심 Supabase 테이블 `81`, `profiles=6`, `organizations=2`, `auth.users=8`을 확인했다. 이는 hardening 전 snapshot의 복원 호환성 검증이며 현재 운영 전환이나 외부 노출은 아니다.
-  - 남은 조건: hardening 후 새 backup을 생성해 같은 격리 환경에서 재검증하고, 그 결과를 기준으로 migration history baseline 전략을 확정한다. legacy migration 전체 replay와 원격 history 일괄 수정은 계속 금지한다.
+  - `steward_flow_restore_clean`의 복제 DB에 `20260824090000_harden_tenant_rls_boundaries.sql`을 `ON_ERROR_STOP=1`로 replay해 transaction 및 내부 assertion을 통과했다. postcheck는 `RLS 대상 5`, anon 초대 SELECT `false`, 도서 취소 RPC 존재, service-only RPC `4/4`, authenticated 실행 `0`, service-role 실행 `4`, 계정삭제 FK `SET NULL 3`으로 운영 점검 결과와 일치했다.
+  - 남은 조건: 현재 운영 시점의 새 backup과 schema dump를 생성해 동일 환경에서 재검증하고, 그 산출물을 기준으로 migration history baseline 전략을 확정한다. legacy migration 전체 replay와 원격 history 일괄 수정은 계속 금지한다.
 - [DONE/GIT] OPS-007
   - `29da08a feat: harden StewardFlow production boundaries`를 `origin/main`에 반영했고, 로컬/원격 HEAD 일치를 확인했다.
 - [IN_PROGRESS/REMOTE QA] QA-002

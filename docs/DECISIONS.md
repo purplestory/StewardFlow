@@ -6,7 +6,7 @@
 - 상태: 확정 (격리 복원 리허설, 운영 전환 아님)
 - 결정: NAS에서 `supabase/postgres:17.6.1.136` 기반의 별도 `steward-flow-restore-20260824` DB-only Supabase 복원 환경을 사용한다. 이 환경은 전용 네트워크·볼륨과 NAS loopback 전용 포트만 사용하며, Vercel production, 카카오 OAuth, 운영 Supabase URL과 연결하지 않는다.
 - 이유: 실제 운영 backup의 Postgres 17/Supabase 확장 호환성을 먼저 검증하면서 기존 NAS Supabase 스택 및 공개 서비스에 영향을 주지 않기 위함이다.
-- 영향: hardening 전 custom-format backup은 `supabase_admin`으로 새 빈 DB에 성공적으로 복원됐다. 이 결과는 DB-level rehearsal이며 Storage object 바이너리, Edge Function secrets, SMTP/OAuth 설정, 운영 cutover를 포함하지 않는다.
+- 영향: hardening 전 custom-format backup은 `supabase_admin`으로 새 빈 DB에 성공적으로 복원됐고, 그 복제 DB에서 hardening migration과 RLS/service-only RPC/FK postcheck도 통과했다. 이 결과는 DB-level rehearsal이며 Storage object 바이너리, Edge Function secrets, SMTP/OAuth 설정, 운영 cutover를 포함하지 않는다.
 - 후속 결정: hardening 후 새 backup을 같은 격리 환경에서 복원·검증하고, 그 산출물을 기준으로 migration history baseline 전략과 전체 self-hosted Supabase 전환 범위를 별도 승인한다.
 
 ## 2026-08-24

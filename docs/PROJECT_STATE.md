@@ -52,7 +52,7 @@
 ## 4. 현재 위험/주의사항
 - 가장 높은 우선순위는 로그인 상태 운영 QA와 OPS-004 migration history/복원 리허설이다.
   - 운영 계정은 `admin` 3명, `manager` 3명, 일반 `user` 0명이다. 기존 admin/manager로는 읽기 전용 권한 QA를 먼저 수행하고, 변경 흐름은 전용 테스트 `user` 초대 후에만 검증한다.
-  - hardening 사전 backup은 새 NAS 격리 Supabase PostgreSQL 17.6 DB에 실제 복원해 핵심 테이블 `81`, `profiles=6`, `organizations=2`, `auth.users=8`을 확인했다. 이 snapshot은 hardening 전 것이므로, 현재 운영 상태를 보장하는 새 post-hardening backup/복원 검증과 migration baseline 결정은 계속 남아 있다.
+  - hardening 사전 backup은 새 NAS 격리 Supabase PostgreSQL 17.6 DB에 실제 복원해 핵심 테이블 `81`, `profiles=6`, `organizations=2`, `auth.users=8`을 확인했다. 복제 DB에서 hardening migration replay와 RLS/service-only RPC/FK postcheck도 통과했다. 이 snapshot은 hardening 전 것이므로, 현재 운영 상태를 보장하는 새 post-hardening backup/복원 검증과 migration baseline 결정은 계속 남아 있다.
   - NAS 리허설 컨테이너는 전용 네트워크/볼륨과 loopback 전용 포트만 사용하며, 기존 운영 DB·Vercel 환경변수·카카오 OAuth를 재사용하지 않는다.
 - `cancel_requested_book_loan_atomic`은 원격에 존재하며 production API가 원자 RPC 경로를 사용할 수 있다.
 - 일반 user를 조직 admin이 직접 삭제하는 Auth 외부 호출에는 actor 강등/대상 tenant 이동의 짧은 TOCTOU가 남아 있다. 완전 제거는 별도 DB deletion authorization marker/RPC 과제로 관리한다.

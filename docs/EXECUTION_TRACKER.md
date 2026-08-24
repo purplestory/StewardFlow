@@ -1,6 +1,6 @@
 # 실행 트래커 (Single Source of Truth)
 
-최종 업데이트: 2026-02-28  
+최종 업데이트: 2026-08-24
 담당: Codex + 사용자
 
 ## 0) 운영 원칙 (필수)
@@ -17,14 +17,86 @@
 |---|---|---|---|---|---|
 | UI-001 | P0 | DONE | 관리페이지 리스트 UI 통일(승인정책/부서목록/등록사용자/물품관리/예약승인/불용품양도/피드백) | 카드 행 간격 대신 라인 중심 구분, 액션 버튼 정렬/가독성 통일, 모바일 오버플로우 없음 | `src/components/settings/ApprovalPolicyManager.tsx`, `src/components/settings/DepartmentManager.tsx`, `src/components/settings/UserRoleManager.tsx`, `src/components/manage/ReservationManager.tsx`, `src/components/assets/AssetTransferRequestsPanel.tsx`, `src/components/feedback/FeedbackList.tsx`, `src/components/manage/AssetAdminPanel.tsx` |
 | UI-002 | P0 | DONE | 예약승인 달력 모드 데이터 표시 복구 | 목록 모드와 달력 모드 데이터 건수/기간이 일치하고, 캘린더 클릭 시 최소 정보 + 상세 팝오버 표시 | `src/components/manage/ReservationCalendarView.tsx`, `src/components/manage/reservation-manager-shared.ts`, `src/components/manage/ReservationManager.tsx`, `src/components/manage/SpaceReservationManager.tsx`, `src/components/manage/VehicleReservationManager.tsx` |
-| UI-003 | P1 | TODO | 내 대여 신청에 물품/공간/차량/도서 통합 표시 + 승인 완료 취소 플로우 | 리소스 타입별 신청내역 노출, 승인 상태 취소 시 사유 입력 + 관리자 전달 | `src/app/api/reservations/my/route.ts`, `src/components/my/ReservationsClient.tsx`, `src/hooks/useReservations.ts` |
+| UI-003 | P1 | DONE | 내 대여 신청에 물품/공간/차량/도서 통합 표시 + 승인 완료 취소 플로우 | 리소스 타입별 신청내역 노출, 승인 상태 취소 시 사유 입력 + 관리자 전달 | `src/app/api/reservations/my/route.ts`, `src/components/my/ReservationsClient.tsx`, `src/hooks/useReservations.ts` |
 | UI-004 | P1 | TODO | 예약 워크스페이스 단순화(월 기본 + 주/일 제거 여부 최종 반영) | 월 뷰 기본/단일화 또는 설정 기반 노출, 불필요 컨트롤 제거 후 레이아웃 안정 | `src/components/assets/ReservationCalendar.tsx`, `src/components/manage/SpaceReservationManager.tsx`, `src/components/manage/VehicleReservationManager.tsx` |
 | UX-001 | P1 | TODO | 디테일 페이지 헤더/브레드크럼/편집 버튼 배치 규칙 고정 | 데스크톱은 이미지 좌/정보 우, 모바일은 단일 컬럼, 브레드크럼 가독성 개선, 버튼 위치 일관 | `src/app/globals.css`, 관련 detail client 컴포넌트 |
 | PERF-001 | P1 | TODO | 상단 탭 전환 시 깜빡임/재로딩 체감 완화 | 자원관리 탭 전환 시 헤더 깜빡임 없음, 도서 관리 첫 진입 로딩 최소화 | `src/components/manage/AssetAdminPanel.tsx`, `src/components/layout/Header.tsx` |
 | OPS-001 | P2 | TODO | 문서 운영 고정화 | 기능 커밋마다 본 문서와 `DECISIONS.md` 동시 갱신 | `docs/EXECUTION_TRACKER.md`, `docs/DECISIONS.md` |
+| SEC-001 | P0 | DONE | 계정 삭제 인증/권한 및 OAuth 내부 리다이렉트 강제 | 본인 또는 동일 기관 관리자만 계정 삭제, 기관별 마지막 최고 관리자 삭제 차단, 외부 `next` URL 차단, 대상 lint/test/typecheck 통과 | `src/actions/auth-actions.ts`, `src/app/auth/callback/page.tsx`, `src/lib/auth-redirect.ts` |
+| SEC-002 | P0 | DONE | 관리자 service-role 경로 테넌트 경계 적용 | 일반 조직 관리자는 자기 조직만 조회/관리, 전역 작업은 `PLATFORM_ADMIN_USER_IDS` 서버 allowlist 필수, 비트랜잭션 기관 삭제 비활성화 | `src/actions/admin-organization-actions.ts`, `src/components/settings/UserRoleManager.tsx`, `src/components/settings/OrganizationManager.tsx` |
+| SEC-003 | P0 | DONE | invite-only 가입 및 초대 수락 권한 고정 | `/join-request` 폐기, 초대 이메일 일치/일회성 claim 검증, 가입자의 role/department는 서버 초대 레코드로만 확정. 초대는 actor의 기관으로 고정하고 manager는 자기 non-null 부서에 `manager`/`user`만 초대 | `src/app/join-request/page.tsx`, `src/app/join/page.tsx`, `src/actions/invite-actions.ts` |
+| SEC-004 | P0 | DONE | 부서 변경 승인 서버 경계 강화 | 서버에서 승인자 인증/동일 기관/manager 담당 부서/자기 승인/대상 역할/요청 최신 상태를 검증하고 부분 실패 시 보상 복구 | `src/actions/admin-organization-actions.ts`, `src/components/settings/UserRoleManager.tsx` |
+| SEC-005 | P0 | DONE | 계정 삭제 승인 멱등·보상 워크플로우 | 고유 operation ID로 요청을 claim하고 역할 인계 후 Auth 결과에 따라 finalize/rollback. 불확실·충돌 상태는 수동 검토로 보존하며 마지막 admin 손실은 DB trigger로 차단 | `src/actions/auth-actions.ts`, `src/components/settings/UserRoleManager.tsx`, `supabase/migrations/20260824090000_harden_tenant_rls_boundaries.sql` |
+| DB-001 | P0 | DONE | 테넌트 RLS 강화 마이그레이션 작성 및 위험 정책 감사 | privileged profile/부서 실존/마지막 admin 보호, 전역 admin 정책과 anon invite 조회 제거, 계정 삭제 snapshot·RPC, 검증 assertion 포함 | `supabase/migrations/20260824090000_harden_tenant_rls_boundaries.sql` |
+| DB-002 | P0 | DONE | 도서 신청 취소 원자 처리 및 중복 취소 요청 방지 | `cancel_requested_book_loan_atomic` RPC 우선 사용, 함수 미적용 환경에만 보상 fallback, 동일 unread 취소 알림 중복 생성 방지 | `src/app/api/reservations/my/route.ts`, `supabase/migrations/20260824090000_harden_tenant_rls_boundaries.sql` |
+| QA-001 | P0 | DONE | 의존성/Next.js 16/CI/테스트 기반 정리 | Next.js 16.3.2, `middleware -> proxy`, lint/mobile/typecheck/test/build CI, auth redirect 단위 테스트 구성 | `package.json`, `src/proxy.ts`, `.github/workflows/quality.yml`, `src/lib/auth-redirect.test.ts` |
+| OPS-002 | P0 | DONE | 2026-08-24 로컬 변경 프로덕션 배포 | 실행 직전 사용자 확인 후 Vercel production READY, 운영 alias 및 공개 smoke 확인 | Vercel 배포, `.vercelignore` |
+| OPS-003 | P0 | DONE | RLS 강화 마이그레이션 원격 적용 | 수동 백업과 사용자 확인 후 transaction 적용, assertion 및 19개 read-only postcheck 통과 | Supabase 원격, 해당 migration |
+| OPS-004 | P0 | TODO | 원격 migration history 기준선 조정 및 복구 검증 | 원격 단건 history와 로컬 migration 집합 reconciliation, 백업/복원 리허설 기록 | `supabase/migrations`, `docs/DB_MIGRATION_STATUS.md` |
+| OPS-005 | P1 | TODO | 추적 중인 npm 캐시 제거 | Git 추적 1,861개 파일(약 475MB)을 history 영향 검토 후 제거, 재추적 방지 확인 | `.npm/`, `.npm-cache/`, `.gitignore` |
+| OPS-006 | P0 | DONE | RLS 적용 전 원격 DB 수동 백업 | custom-format dump, SHA-256, archive 목록·schema/data 압축 해제 검증 완료 | `.local-backups/steward-flow/20260824-051551-KST/` (Git 제외) |
+| OPS-007 | P0 | TODO | 배포 소스 커밋/푸시 및 재현성 확보 | 현재 production과 동일한 uncommitted worktree를 검토·커밋·푸시하고 deployment ID와 연결 | 현재 로컬 변경 전체 |
 
 ## 2) 작업 로그 (Execution Log)
 시간 기준: Asia/Seoul
+
+### 2026-08-24
+- [DONE/LOCAL] SEC-001, SEC-002
+  - `deleteUserAccount`에 호출자 인증, 본인/동일 기관 관리자 권한 검증, 기관별 마지막 최고 관리자 보호, FK cascade 기반 삭제 순서를 적용했다.
+  - OAuth 콜백의 `next`는 내부 경로만 허용하고 절대 URL, protocol-relative URL, 백슬래시/제어문자 변형을 차단했다.
+  - service-role 기반 기관/사용자 관리에 테넌트 경계를 적용하고, 전역 기관 생성/이관은 서버 전용 `PLATFORM_ADMIN_USER_IDS` allowlist로 제한했다.
+  - 트랜잭션 없이 멤버 해제 후 기관을 삭제하던 클라이언트 경로는 비활성화하고 운영자 문의 안내로 대체했다. hardening migration은 authenticated 사용자의 직접 기관 삭제 권한도 제거한다.
+- [DONE/LOCAL] SEC-003, SEC-004
+  - 공개 가입 신청 경로를 폐기하고 `/join-request`는 초대 전용 `/join`으로 이동하도록 변경했다.
+  - 초대 수락 시 인증 이메일을 검증하고 초대 레코드를 먼저 일회성 claim하며, role/department는 클라이언트 값이 아닌 초대 레코드 값으로만 적용한다.
+  - 초대 생성은 호출자의 기관으로 고정하고, 부서 manager는 자기 non-null 담당 부서에 `manager` 또는 `user`만 초대할 수 있도록 서버와 RLS 범위를 맞췄다.
+  - 부서 변경 승인은 service-role 서버 액션에서 동일 기관, 승인자 역할/담당 부서, 자기 승인 금지, 대상 사용자/목적 부서/요청 최신 상태를 재검증하고 요청 상태 갱신 실패 시 프로필 부서를 보상 복구한다.
+- [DONE/LOCAL] SEC-005
+  - manager 계정 탈퇴 승인은 고유 operation ID로 `pending -> processing`을 claim하고, 동일 기관·동일 부서의 현재 `user`에게 manager 역할을 인계한 뒤 Auth 삭제 결과에 따라 finalize 또는 rollback한다.
+  - Auth 결과가 불명확하거나 역할 상태가 충돌하면 자동 덮어쓰기를 중단하고 `processing` 또는 `manual_review`로 보존해 관리자 화면과 감사 로그에서 확인할 수 있게 했다.
+  - 삭제 후에도 요청 이력은 nullable requester FK와 immutable UUID snapshot으로 남기며, 마지막 admin 손실은 조직 행 잠금 기반 profile UPDATE/DELETE trigger가 service-role/Auth cascade에도 차단한다.
+- [DONE/LOCAL] DB-001
+  - `20260824090000_harden_tenant_rls_boundaries.sql` 작성: privileged profile 필드와 실제 기관 부서 검증, 마지막 admin trigger, 계정 삭제 snapshot/4개 service-only RPC, 테넌트별 admin/manager 정책, anon invite 조회와 전역 admin 정책 제거.
+  - 이 항목 작성 시점에는 원격 미적용이었으며, 아래 OPS-003에서 적용을 완료했다.
+- [DONE/LOCAL] DB-002
+  - 요청 상태 도서 취소는 `cancel_requested_book_loan_atomic` RPC를 우선 사용하도록 연결했다. RPC가 실제로 없는 pre-migration 환경에서만 사전 활성 대출 조회와 보상 복구가 있는 호환 경로를 사용한다.
+  - 승인 후 취소 요청은 같은 예약/도서 대출에 대한 unread 알림이 있으면 새 알림을 만들지 않고 `alreadyRequested`로 응답한다.
+- [DONE/LOCAL] UI-003
+  - `book_loans`를 내 신청 API/훅/UI에 통합하고 요청 취소, 승인 후 취소 사유 전달, 상태 표시를 연결했다.
+- [DONE/LOCAL] QA-001
+  - Next.js `16.3.2` 및 관련 의존성 갱신, Next.js 16 `proxy.ts` 전환, Vitest 단위 테스트와 GitHub Actions quality gate를 추가했다.
+  - lint/typecheck/test/build 기준을 스크립트와 CI에 고정하고 Supabase/Vercel/npm 캐시 ignore를 보강했다.
+  - 최종 검증: full lint, mobile overflow lint, typecheck, 23 tests, webpack production build(50 routes), `git diff --check` 통과. `npm audit --omit=dev` 취약점 `0`.
+  - 로컬 공개 smoke: `/login`, `/join-request`, invalid `/join`, `/books`, `/my` 렌더링 확인. 공개 초대 오류에서 내부 환경변수 이름 노출을 제거했다.
+- [REMOTE AUDIT] Supabase
+  - 상태 `Healthy`; `profiles=6`, `organizations=2`, 활성 초대 `0`.
+  - privileged orphan `0`, 관리자 없는 기관 `0`, 초대 만료 컬럼 존재를 확인했다.
+  - profile의 잘못된 기관/부서 참조 `0`, account deletion null status `0`, 중복 pending requester `0`을 확인했다.
+  - 감사 시점에는 account deletion requester/transfer/resolver FK 3개가 모두 `NO ACTION`이었고, 이후 OPS-003에서 `ON DELETE SET NULL` 교체를 확인했다.
+  - 원격 migration history는 `20260220103000_bootstrap_books_schema` 단건만 확인되었다.
+  - 위험 정책 감사 당시에는 코드와 migration이 미적용이었으며, 이후 OPS-002/003에서 운영 반영을 완료했다.
+- [DONE/BACKUP] OPS-006
+  - 2026-08-24 05:47 KST에 hardening 적용 전 원격 DB를 custom-format `pg_dump`로 백업했다.
+  - 위치: `.local-backups/steward-flow/20260824-051551-KST/steward-flow-pre-hardening-20260824-051551-KST.dump` (로컬 전용, Git 제외)
+  - 크기: `621,219 bytes`; SHA-256: `3c2b77ccff0627483951dc1875cf20454b66ad8f58ddfe105624e0dceb75f143`.
+  - `pg_restore 18.4 --list`, schema-only 추출, 전체 data-only 압축 해제에 성공했고 auth/public/storage 핵심 객체와 주요 TABLE DATA 항목을 확인했다.
+  - 로컬 백업 디렉터리 권한은 `700`, dump와 검증 산출물은 `600`으로 제한했다.
+  - 백업을 위해 사용자가 Supabase Database Password를 재설정했다. 비밀번호 값은 저장하지 않았으며, 기존 외부 직접 DB 연결이 있다면 새 비밀번호로 갱신해야 한다.
+  - 이는 백업 파일 판독 검증이며 실제 별도 DB 복원 리허설은 아직 실행하지 않았다. 백업 시점에는 코드와 migration이 미실행이었고 이후 OPS-002/003에서 완료했다.
+- [DONE/REMOTE] OPS-002
+  - 첫 Vercel dry-run에서 `.local-backups/`와 약 `492 MB`의 `.npm/` 캐시가 업로드 후보에 포함된 것을 발견했다. 실제 배포 전에 `.vercelignore`를 추가했고, 재검증 결과 `204`개 파일/`1,817,707 bytes`이며 민감·캐시 경로 포함은 `0`이었다.
+  - Vercel deployment `dpl_Ftp6DqqicKEhPBp8DtZuraiCaWMS`가 `READY`이며 production alias `https://steward-flow.vercel.app` 연결을 확인했다.
+  - Next.js `16.3.2`, TypeScript, 50개 route build가 통과했다. `/login`, `/join-request`, invalid `/join`, `/books`, `/my` 공개 smoke와 내부 오류명 미노출을 확인했다.
+  - production 소스는 현재 uncommitted/unpushed worktree이므로 OPS-007에서 release commit과 원격 보존이 필요하다.
+- [DONE/REMOTE] OPS-003
+  - 백업과 migration SHA-256 `7c63ff760df5e3d0c4464ea9a775efe32efc8c40d1cee91d1fe9058bed53871e`를 재확인한 뒤 `psql 18.4`, `ON_ERROR_STOP=1`로 transaction 적용했다(종료 상태 `0`).
+  - read-only postcheck 19개가 모두 기대 결과를 반환했다: 위험 admin/anon/open-insert 정책 `0`, service RPC `4`, authenticated 실행 권한 `0`, service-role 실행 권한 `4`, FK `SET NULL` `3`, 필수 trigger `8`, RLS 대상 `5`.
+  - 실제 anon REST 조회에서도 `organization_invites`가 HTTP `401`, 반환 행 `0`으로 차단됐다.
+  - `profiles=6`, `organizations=2`, 활성 초대/privileged orphan/관리자 없는 기관/잘못된 부서 `0`으로 기존 데이터 무결성이 유지됐다.
+  - 수동 적용이므로 `supabase_migrations.schema_migrations`는 수정하지 않았고 원격 history는 `20260220103000` 단건 그대로다.
+- [TODO/REMOTE QA] OPS-004, OPS-007 및 signed-in QA
+  - migration history baseline reconciliation과 실제 복원 리허설은 OPS-004로 남아 있다.
+  - invite-only, 부서 승인, 도서 원자 취소, 계정 삭제, 테넌트 경계, 카카오 OAuth의 로그인 상태 운영 QA가 남아 있다.
 
 ### 2026-02-28
 - [IN_PROGRESS] UI-001  
@@ -183,6 +255,45 @@
 
 ## 3) 이슈 / RCA 로그
 
+### RCA-2026-08-24-01
+- 증상/감사 결과:
+  1. service-role 계정 삭제 액션에 호출자 인증/권한 검증이 없었다.
+  2. 조직 `role='admin'`만으로 전역 기관/사용자 관리가 가능했고, 일부 RLS 정책도 조직 admin과 플랫폼 admin을 구분하지 않았다.
+  3. anon invite 테이블 직접 조회와 OAuth 외부 `next` 리다이렉트 경로가 남아 있었다.
+- 원인:
+  1. 클라이언트 UI 권한 검사를 서버 신뢰 경계로 간주했다.
+  2. 플랫폼 관리자 모델/서버 allowlist 없이 service-role을 전역 관리 편의에 사용했다.
+  3. 초기 RLS 보정 migration이 누적되며 최종 테넌트 경계가 명시적으로 고정되지 않았다.
+- 조치:
+  1. 인증 사용자/대상 프로필을 서버에서 재검증하고 동일 기관 경계를 강제했다.
+  2. 전역 작업은 `PLATFORM_ADMIN_USER_IDS` allowlist가 있는 서버 액션으로만 허용했다.
+  3. 계정 삭제 승인은 operation claim/finalize/rollback과 identity snapshot으로 보상 가능하게 만들고, 마지막 admin은 조직 행 잠금 DB trigger 불변식으로 보호했다.
+  4. RLS hardening migration과 OAuth redirect sanitizer/test를 추가했다.
+- 재발 방지:
+  1. service-role 액션마다 `인증 -> actor role -> actor tenant -> target tenant` 검증 순서를 적용한다.
+  2. 조직 admin을 플랫폼 admin으로 해석하지 않는다.
+  3. 배포 전 백업과 정책 assertion, 배포 후 signed-in 회귀 QA를 필수화한다.
+- 잔여 위험:
+  - 위 조치는 현재 로컬 변경이다. 프로덕션 코드 배포와 원격 RLS migration 적용 전까지 원격 동작은 기존 상태다.
+  - 일반 user를 admin이 직접 삭제하는 Auth 외부 호출에는 actor 강등/target tenant 이동의 짧은 TOCTOU가 남는다. 완전 제거에는 DB deletion authorization marker/RPC가 필요하다.
+
+### RCA-2026-08-24-02
+- 증상/감사 결과:
+  1. 초대 없이 프로필을 만드는 공개 가입 신청 경로와 가입자가 부서를 선택하는 UI가 남아 있었다.
+  2. 부서 변경 승인이 클라이언트 다단계 갱신에 의존했고, 요청 상태 도서 취소도 대출/도서 상태를 별도 쿼리로 변경했다.
+- 원인:
+  1. 초대 레코드의 role/department보다 브라우저 입력과 UI 권한을 일부 신뢰했다.
+  2. 권한 변경 및 연관 상태 변경이 서버 검증과 원자 트랜잭션 경계에 완전히 포함되지 않았다.
+- 조치:
+  1. 제품을 invite-only로 고정하고 초대 이메일/일회성 사용/서버 확정 role·department를 강제했다. 초대 생성은 호출자 기관으로 고정하고 manager는 자기 담당 부서의 manager/user 초대만 허용했다.
+  2. 부서 변경 승인을 tenant-bound 서버 액션으로 이동하고 실패 시 보상 복구를 추가했다.
+  3. 도서 신청 취소용 원자 RPC를 migration에 추가하고 API는 RPC 미존재 환경에서만 보상 가능한 fallback을 사용한다.
+- 재발 방지:
+  1. 조직/권한 부여 값은 URL 또는 브라우저 form 값이 아니라 서버가 재조회한 승인 레코드에서 결정한다.
+  2. 둘 이상의 연관 행을 바꾸는 상태 전이는 DB 함수/트랜잭션을 우선하며, 호환 경로에는 조건부 갱신과 보상 절차를 둔다.
+- 잔여 위험:
+  - 코드와 migration은 로컬 상태다. 원격 배포/RLS 적용 전 사용자 확인과 Free 플랜 수동 백업이 필요하다.
+
 ### RCA-2026-02-28-01
 - 증상: 대화가 길어지면 컨텍스트 압축 이후 진행 맥락이 약해져 반복 확인/재작업 발생.
 - 원인:
@@ -334,6 +445,11 @@
   2. 기본값이 있는 필드는 다른 필드 선택 범위에 영향을 주는지 QA 체크리스트에 포함.
 
 ## 4) 다음 실행 순서
-1. UI-003 착수: 내 신청 통합 표기 + 승인 취소 사유 플로우
-2. UI-004 범위 확정: 예약 워크스페이스 월간 단일화 여부 결정
-3. OPS-001 운영: 기능 반영 시 EXECUTION_TRACKER/DECISIONS 동시 갱신 루틴 고정
+1. [완료] Supabase Free 플랜용 수동 백업 생성 및 archive 판독 검증
+2. [완료] 원격 작업 범위와 실행 시점 사용자 확인
+3. [완료] Vercel production 배포 및 공개 smoke
+4. [완료] `20260824090000_harden_tenant_rls_boundaries.sql` 원격 적용 및 정책/RPC assertion
+5. 카카오 OAuth signed-in/재접속, invite-only, 부서 변경 승인, 도서 취소 플로우 실환경 QA
+6. 현재 production 소스 release commit/push
+7. 원격 migration history baseline reconciliation 및 복원 리허설
+8. UI-004 범위 확정: 예약 워크스페이스 월간 단일화 여부 결정

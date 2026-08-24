@@ -4,6 +4,7 @@ import { useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { getJoinRedirectCookie, clearJoinRedirectCookie } from "@/lib/utils";
+import { sanitizeInternalRedirectPath } from "@/lib/auth-redirect";
 import { getAndClearPendingJoinTokenCookie } from "@/actions/invite-actions";
 
 function isAbortError(error: unknown): boolean {
@@ -131,7 +132,7 @@ function AuthCallbackPageContent() {
 
           // 리다이렉트 대상 우선순위:
           // 1) next 쿼리(명시값) 2) 서버 httpOnly 쿠키(초대 토큰) 3) 클라이언트 저장 4) /
-          const explicitNext = searchParams.get("next");
+          const explicitNext = sanitizeInternalRedirectPath(searchParams.get("next"));
           let next = explicitNext;
           if (!explicitNext) {
             try {
@@ -144,14 +145,10 @@ function AuthCallbackPageContent() {
             }
           }
           if (!next) {
-            next = getJoinRedirectCookie() || "/";
+            next = sanitizeInternalRedirectPath(getJoinRedirectCookie()) || "/";
           }
           clearJoinRedirectCookie();
-          const currentOrigin = window.location.origin;
-          const nextUrl = next.startsWith("http")
-            ? next
-            : `${currentOrigin}${next.startsWith("/") ? next : `/${next}`}`;
-          window.location.replace(nextUrl);
+          window.location.replace(next);
         };
 
         const handleAuthError = async (message: string) => {
@@ -301,13 +298,9 @@ function AuthCallbackPageContent() {
           callbackError instanceof Error ? callbackError.message : null
         );
         if (await supabase.auth.getUser().then(({ data }) => Boolean(data.user)).catch(() => false)) {
-          const currentOrigin = window.location.origin;
-          const next = getJoinRedirectCookie() || "/";
+          const next = sanitizeInternalRedirectPath(getJoinRedirectCookie()) || "/";
           clearJoinRedirectCookie();
-          const nextUrl = next.startsWith("http")
-            ? next
-            : `${currentOrigin}${next.startsWith("/") ? next : `/${next}`}`;
-          window.location.replace(nextUrl);
+          window.location.replace(next);
           return;
         }
 

@@ -1,0 +1,21 @@
+# Sensitive local-only data
+.local-backups
+.env*
+
+# Local caches and build output
+.npm
+.npm-cache
+.next
+node_modules
+tsconfig.tsbuildinfo
+
+# Repository and local Vercel metadata
+.git
+.github
+.vercel
+
+# Operational sources that are not needed by the Next.js build
+docs
+supabase
+scripts
+*.md

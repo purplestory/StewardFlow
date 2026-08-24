@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import type { DepartmentChangeRequest } from "@/types/database";
 
@@ -20,6 +21,7 @@ type Organization = {
 };
 
 export default function ProfileEditor() {
+  const router = useRouter();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState<string | null>(null);
@@ -290,6 +292,7 @@ export default function ProfileEditor() {
       .select("id, name, email")
       .eq("organization_id", profile.organization_id)
       .eq("department", profile.department)
+      .eq("role", "user")
       .neq("id", profile.id) // 자기 자신 제외
       .order("name", { ascending: true });
 
@@ -409,27 +412,39 @@ export default function ProfileEditor() {
 
     // 로그아웃 및 리다이렉트
     await supabase.auth.signOut();
-    window.location.href = "/";
+    router.replace("/");
+    router.refresh();
   };
 
   const handleCancelDeletionRequest = async () => {
-    if (!pendingDeletionRequest) return;
+    if (!pendingDeletionRequest || !profile) return;
 
     setRequesting(true);
-    const { error } = await supabase
+    const { data: cancelledRequest, error } = await supabase
       .from("account_deletion_requests")
       .update({ status: "cancelled" })
-      .eq("id", pendingDeletionRequest.id);
+      .eq("id", pendingDeletionRequest.id)
+      .eq("requester_id", profile.id)
+      .eq("status", "pending")
+      .select("id")
+      .maybeSingle();
 
     if (error) {
       setMessage(`요청 취소 실패: ${error.message}`);
       setRequesting(false);
-    } else {
-      setPendingDeletionRequest(null);
-      setMessage("탈퇴 요청이 취소되었습니다.");
-      setTimeout(() => setMessage(null), 2000);
-      setRequesting(false);
+      return;
     }
+
+    if (!cancelledRequest) {
+      setMessage("이미 처리된 탈퇴 요청입니다. 새로고침 후 다시 확인해주세요.");
+      setRequesting(false);
+      return;
+    }
+
+    setPendingDeletionRequest(null);
+    setMessage("탈퇴 요청이 취소되었습니다.");
+    setTimeout(() => setMessage(null), 2000);
+    setRequesting(false);
   };
 
   const handleSavePhone = async () => {

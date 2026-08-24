@@ -2,6 +2,8 @@
 
 # dependencies
 /node_modules
+/.npm/
+/.npm-cache/
 /.pnp
 .pnp.*
 .yarn/*
@@ -34,7 +36,13 @@ yarn-error.log*
 .env*
 
 # vercel
-.vercel
+/.vercel/
+
+# supabase cli
+/supabase/.temp/
+
+# local database backups (may contain production data)
+/.local-backups/
 
 # typescript
 *.tsbuildinfo

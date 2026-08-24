@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState, useRef } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { generateShortId } from "@/lib/short-id";
 import Notice from "@/components/common/Notice";
@@ -53,6 +54,7 @@ type VehicleFormProps = {
 };
 
 export default function VehicleForm({ vehicle, onSuccess }: VehicleFormProps = {}) {
+  const router = useRouter();
   const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [previewUrls, setPreviewUrls] = useState<string[]>([]);
   const [existingImageUrls, setExistingImageUrls] = useState<string[]>([]); // 기존에 업로드된 이미지 URL들
@@ -429,7 +431,7 @@ export default function VehicleForm({ vehicle, onSuccess }: VehicleFormProps = {
         } else {
           // 수정 후 상세 페이지로 이동
           setTimeout(() => {
-            window.location.href = `/vehicles/${vehicle.short_id || vehicle.id}`;
+            router.push(`/vehicles/${vehicle.short_id || vehicle.id}`);
           }, 1000);
         }
       } else {

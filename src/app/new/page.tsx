@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 
 type NewPageProps = {
-  searchParams?: Record<string, string | string[] | undefined>;
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
 };
 
 function resolveCategory(
@@ -14,8 +14,8 @@ function resolveCategory(
   return null;
 }
 
-export default function NewPage({ searchParams }: NewPageProps) {
-  const params = searchParams ?? {};
+export default async function NewPage({ searchParams }: NewPageProps) {
+  const params = (await searchParams) ?? {};
   const category = resolveCategory(params.category);
 
   if (category === "spaces") {

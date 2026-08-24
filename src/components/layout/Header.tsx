@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import NotificationBadge from "@/components/notifications/NotificationBadge";
 import { supabase } from "@/lib/supabase";
 import LogoIcon from "@/components/common/LogoIcon";
@@ -10,6 +10,7 @@ import { useHeaderSession } from "@/components/layout/useHeaderSession";
 
 export default function Header() {
   const pathname = usePathname();
+  const router = useRouter();
   const {
     hasLocalStorageSession,
     hasOrganization,
@@ -24,9 +25,8 @@ export default function Header() {
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
-    if (typeof window !== "undefined") {
-      window.location.href = "/";
-    }
+    router.replace("/");
+    router.refresh();
   };
 
   const toggleDropdown = (menu: string) => {

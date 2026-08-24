@@ -30,7 +30,7 @@ export type DepartmentRequestWithProfile = DepartmentChangeRequest & {
 
 export type DeletionRequestRow = {
   id: string;
-  requester_id: string;
+  requester_id: string | null;
   requester_name: string | null;
   requester_email: string | null;
   requester_role: string | null;

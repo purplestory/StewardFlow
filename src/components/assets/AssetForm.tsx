@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { generateShortId } from "@/lib/short-id";
 import { isUUID } from "@/lib/short-id";
@@ -73,6 +74,7 @@ function normalizeIsbn(raw: string): string {
 }
 
 export default function AssetForm({ asset, onSuccess }: AssetFormProps = {}) {
+  const router = useRouter();
   const queryClient = useQueryClient();
   const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [previewUrls, setPreviewUrls] = useState<string[]>([]);
@@ -644,7 +646,7 @@ export default function AssetForm({ asset, onSuccess }: AssetFormProps = {}) {
         } else {
           // 수정 후 상세 페이지로 이동
           setTimeout(() => {
-            window.location.href = `/assets/${asset.short_id || asset.id}`;
+            router.push(`/assets/${asset.short_id || asset.id}`);
           }, 1000);
         }
       } else {

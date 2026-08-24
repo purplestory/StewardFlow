@@ -1,8 +1,15 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 
-export type ReservationStatus = "pending" | "approved" | "returned" | "rejected";
-export type ReservationResourceType = "asset" | "space" | "vehicle";
+export type ReservationStatus =
+  | "pending"
+  | "approved"
+  | "borrowed"
+  | "overdue"
+  | "returned"
+  | "rejected"
+  | "cancelled";
+export type ReservationResourceType = "asset" | "space" | "vehicle" | "book";
 
 export type UserReservationItem = {
   id: string;
@@ -45,6 +52,19 @@ type VehicleReservationQueryRow = {
   vehicles: { name: string } | Array<{ name: string }> | null;
 };
 
+type BookLoanQueryRow = {
+  id: string;
+  status: "requested" | "approved" | "borrowed" | "overdue" | "returned" | "rejected" | "cancelled";
+  requested_at: string;
+  approved_at: string | null;
+  borrowed_at: string | null;
+  due_at: string | null;
+  returned_at: string | null;
+  note: string | null;
+  created_at: string;
+  book_items: { title: string } | Array<{ title: string }> | null;
+};
+
 export function useUserReservations() {
   return useQuery({
     queryKey: ["userReservations"],
@@ -54,7 +74,7 @@ export function useUserReservations() {
 
       if (!user) return [];
 
-      const [assetResult, spaceResult, vehicleResult] = await Promise.all([
+      const [assetResult, spaceResult, vehicleResult, bookResult] = await Promise.all([
         supabase
           .from("reservations")
           .select("id,status,start_date,end_date,note,created_at,assets(name)")
@@ -70,11 +90,19 @@ export function useUserReservations() {
           .select("id,status,start_date,end_date,note,created_at,vehicles(name)")
           .eq("borrower_id", user.id)
           .order("created_at", { ascending: false }),
+        supabase
+          .from("book_loans")
+          .select(
+            "id,status,requested_at,approved_at,borrowed_at,due_at,returned_at,note,created_at,book_items(title)"
+          )
+          .eq("borrower_id", user.id)
+          .order("created_at", { ascending: false }),
       ]);
 
       if (assetResult.error) throw assetResult.error;
       if (spaceResult.error) throw spaceResult.error;
       if (vehicleResult.error) throw vehicleResult.error;
+      if (bookResult.error) throw bookResult.error;
 
       const assets = ((assetResult.data ?? []) as AssetReservationQueryRow[]).map((row) => {
         const asset = Array.isArray(row.assets) ? row.assets[0] : row.assets;
@@ -118,7 +146,25 @@ export function useUserReservations() {
         };
       });
 
-      return [...assets, ...spaces, ...vehicles].sort(
+      const books = ((bookResult.data ?? []) as BookLoanQueryRow[]).map((row) => {
+        const book = Array.isArray(row.book_items) ? row.book_items[0] : row.book_items;
+        const startDate = row.borrowed_at ?? row.approved_at ?? row.requested_at;
+        const endDate = row.returned_at ?? row.due_at ?? startDate;
+        const status: ReservationStatus = row.status === "requested" ? "pending" : row.status;
+
+        return {
+          id: row.id,
+          status,
+          start_date: startDate,
+          end_date: endDate,
+          note: row.note,
+          created_at: row.created_at,
+          resource_type: "book" as const,
+          resource_name: book?.title?.trim() || "도서",
+        };
+      });
+
+      return [...assets, ...spaces, ...vehicles, ...books].sort(
         (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
       ) as UserReservationItem[];
     },

@@ -115,7 +115,11 @@ export default function OrganizationGate({ children }: OrganizationGateProps) {
   if (!hasOrganization) {
     return (
       <Notice variant="warning" className="text-left">
-        관리자 승인이 필요합니다. 초대코드 없이 가입하신 경우, 최고관리자가 승인할 때까지 메인 페이지만 이용하실 수 있습니다.
+        기관 초대가 필요합니다. 관리자가 보낸 초대 링크를 사용하거나{" "}
+        <Link href="/join" className="underline">
+          초대코드 입력
+        </Link>
+        으로 이동해 주세요.
       </Notice>
     );
   }

@@ -24,6 +24,11 @@ const eslintConfig = defineConfig([
     ".next/**",
     "out/**",
     "build/**",
+    "coverage/**",
+    ".vercel/**",
+    ".npm/**",
+    ".npm-cache/**",
+    "supabase/.temp/**",
     "next-env.d.ts",
   ]),
 ]);

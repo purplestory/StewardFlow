@@ -1,8 +1,5 @@
 import { ImageResponse } from "next/og";
 
-// Route segment config
-export const runtime = "edge";
-
 // Image metadata
 export const alt = "StewardFlow - 교회 자원 관리 시스템";
 export const size = {

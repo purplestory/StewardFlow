@@ -14,6 +14,10 @@ const typeLabel: Record<string, string> = {
   space_reservation_status_changed: "공간 예약 상태 변경",
   vehicle_reservation_created: "차량 예약 신청",
   vehicle_reservation_status_changed: "차량 예약 상태 변경",
+  reservation_cancel_requested: "물품 예약 취소 요청",
+  space_reservation_cancel_requested: "공간 예약 취소 요청",
+  vehicle_reservation_cancel_requested: "차량 예약 취소 요청",
+  book_loan_cancel_requested: "도서 대출 취소 요청",
   return_submitted: "반납 등록",
   return_verified: "반납 확인",
   asset_transfer_request_created: "불용품 양도 요청",
@@ -33,6 +37,9 @@ const reservationStatusLabel: Record<string, string> = {
   approved: "승인",
   returned: "반납 확인",
   rejected: "반려",
+  borrowed: "대출 중",
+  overdue: "연체",
+  cancelled: "취소",
 };
 
 const getStatusBadge = (status: NotificationRow["status"]) => {
@@ -139,6 +146,7 @@ export const getSummaryText = (item: NotificationRow) => {
   const fromDepartment = payload.from_department as string | undefined;
   const toDepartment = payload.to_department as string | undefined;
   const note = payload.note as string | undefined;
+  const cancelReason = payload.cancel_reason as string | undefined;
 
   const parts: string[] = [];
 
@@ -164,6 +172,10 @@ export const getSummaryText = (item: NotificationRow) => {
 
   if (note) {
     parts.push(`사유 ${truncateText(note, 40)}`);
+  }
+
+  if (cancelReason) {
+    parts.push(`취소 사유 ${truncateText(cancelReason, 40)}`);
   }
 
   if (parts.length === 0) {
@@ -245,6 +257,7 @@ export const getDetailRows = (item: NotificationRow): DetailRow[] => {
   const fromDepartment = payload.from_department as string | undefined;
   const toDepartment = payload.to_department as string | undefined;
   const note = payload.note as string | undefined;
+  const cancelReason = payload.cancel_reason as string | undefined;
 
   if (resourceName) {
     rows.push({ label: "대상", value: resourceName });
@@ -273,6 +286,10 @@ export const getDetailRows = (item: NotificationRow): DetailRow[] => {
 
   if (note) {
     rows.push({ label: "사유", value: note });
+  }
+
+  if (cancelReason) {
+    rows.push({ label: "취소 사유", value: cancelReason });
   }
 
   return rows;
@@ -312,6 +329,8 @@ export const getTypeColor = (type: string) => {
   if (type === "vehicle_reservation_status_changed") return "bg-sky-500";
   if (type === "return_submitted") return "bg-orange-500";
   if (type === "return_verified") return "bg-teal-500";
+  if (type === "book_loan_cancel_requested") return "bg-violet-500";
+  if (type.endsWith("reservation_cancel_requested")) return "bg-amber-500";
   if (type.startsWith("asset_transfer_request")) return "bg-fuchsia-500";
   return "bg-neutral-400";
 };
@@ -363,6 +382,10 @@ export const getResourcePath = (item: NotificationRow) => {
     return "/assets/transfers";
   }
 
+  if (item.type.startsWith("book_loan")) {
+    return "/books/manage";
+  }
+
   if (!resourceId) {
     return "/notifications";
   }
@@ -390,6 +413,7 @@ export const getTypeIcon = (type: string) => {
   if (type.startsWith("return")) return "R";
   if (type.startsWith("reservation")) return "A";
   if (type.startsWith("asset_transfer_request")) return "T";
+  if (type.startsWith("book_loan")) return "B";
   return "?";
 };
 

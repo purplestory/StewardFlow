@@ -18,6 +18,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://steward-flow.vercel.app"),
   title: "교회 자원 관리 시스템 StewardFlow",
   description: "교회 자원 관리 시스템 StewardFlow",
   icons: {

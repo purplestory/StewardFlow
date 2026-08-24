@@ -29,20 +29,27 @@ export default function AuthCard() {
   const [message, setMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  async function acceptInvitation(userId: string, email: string) {
-    if (!email) return;
+  async function acceptInvitation(userId: string, email: string): Promise<Profile | null> {
+    if (!email) return null;
 
-    const { data: invite } = await supabase
+    const { data: invite, error: inviteError } = await supabase
       .from("organization_invites")
-      .select("id,organization_id,role,accepted_at,created_at,expires_at")
-      .eq("email", email)
+      .select("id,organization_id,role,department,accepted_at,created_at,expires_at")
+      .ilike("email", email)
       .is("accepted_at", null)
       .is("revoked_at", null)
       .order("created_at", { ascending: false })
+      .limit(1)
       .maybeSingle();
 
+    if (inviteError) {
+      console.error("Invitation lookup error:", inviteError);
+      setMessage("초대 정보를 확인하지 못했습니다.");
+      return null;
+    }
+
     if (!invite?.organization_id) {
-      return;
+      return null;
     }
 
     if (isInviteExpired(invite.created_at, invite.expires_at)) {
@@ -51,21 +58,50 @@ export default function AuthCard() {
         .update({ revoked_at: new Date().toISOString() })
         .eq("id", invite.id);
       setMessage("초대가 만료되었습니다.");
-      return;
+      return null;
     }
 
-    await supabase
+    if (invite.role !== "admin" && invite.role !== "manager" && invite.role !== "user") {
+      setMessage("초대 권한 정보가 올바르지 않습니다.");
+      return null;
+    }
+
+    const { data: updatedProfile, error: profileUpdateError } = await supabase
       .from("profiles")
       .update({
         organization_id: invite.organization_id,
-        role: invite.role ?? "user",
+        role: invite.role,
+        department: invite.department ?? null,
       })
-      .eq("id", userId);
+      .eq("id", userId)
+      .is("organization_id", null)
+      .select("id,email,name,department,phone")
+      .maybeSingle();
 
-    await supabase
+    if (profileUpdateError || !updatedProfile) {
+      console.error("Invitation profile update error:", profileUpdateError);
+      setMessage(
+        profileUpdateError
+          ? "초대 정보를 프로필에 반영하지 못했습니다."
+          : "이미 다른 기관에 소속되어 있어 초대를 자동 수락할 수 없습니다."
+      );
+      return null;
+    }
+
+    const { data: acceptedInvite, error: acceptError } = await supabase
       .from("organization_invites")
       .update({ accepted_at: new Date().toISOString() })
-      .eq("id", invite.id);
+      .eq("id", invite.id)
+      .is("accepted_at", null)
+      .is("revoked_at", null)
+      .select("id")
+      .maybeSingle();
+
+    if (acceptError || !acceptedInvite) {
+      console.error("Invitation acceptance update error:", acceptError);
+      setMessage("프로필은 반영되었지만 초대 완료 처리에 실패했습니다. 관리자에게 문의하세요.");
+      return updatedProfile as Profile;
+    }
 
     await supabase.from("audit_logs").insert({
       organization_id: invite.organization_id,
@@ -75,6 +111,8 @@ export default function AuthCard() {
       target_id: invite.id,
       metadata: { email, role: invite.role },
     });
+
+    return updatedProfile as Profile;
   }
 
   useEffect(() => {
@@ -137,7 +175,7 @@ export default function AuthCard() {
 
         if (!profileData) {
         // 폐쇄형 서비스: 초대 링크가 있는 경우에만 가입 가능
-        const userEmail = currentUser.email || currentUser.user_metadata?.email || "";
+        const userEmail = currentUser.email ?? "";
         
         // 초대 링크 확인 (이메일이 일치하거나 이메일이 null인 초대)
         let invite = null;
@@ -145,11 +183,12 @@ export default function AuthCard() {
           // 이메일이 있는 경우: 이메일로 초대 찾기
           const { data: inviteByEmail } = await supabase
             .from("organization_invites")
-            .select("id,organization_id,role,accepted_at,created_at,expires_at,email")
-            .eq("email", userEmail)
+            .select("id,organization_id,role,department,accepted_at,created_at,expires_at,email")
+            .ilike("email", userEmail)
             .is("accepted_at", null)
             .is("revoked_at", null)
             .order("created_at", { ascending: false })
+            .limit(1)
             .maybeSingle();
           invite = inviteByEmail;
         }
@@ -177,18 +216,11 @@ export default function AuthCard() {
 
         if (!isMounted) return;
 
-        // Check if profile already exists
-        const { data: existingProfile } = await supabase
-          .from("profiles")
-          .select("id,role,organization_id,name")
-          .eq("id", currentUser.id)
-          .maybeSingle();
-
-        // If profile exists and already has organization_id, preserve existing role
-        // Only use invite role if user is joining a new organization
-        const finalRole = existingProfile?.organization_id 
-          ? existingProfile.role 
-          : invite.role ?? "user";
+        if (invite.role !== "admin" && invite.role !== "manager" && invite.role !== "user") {
+          setMessage("초대 권한 정보가 올바르지 않습니다.");
+          setProfileLoading(false);
+          return;
+        }
 
         // 초대가 있으면 프로필 생성 또는 업데이트
         const userName = currentUser.user_metadata?.name || currentUser.user_metadata?.full_name || null;
@@ -196,9 +228,10 @@ export default function AuthCard() {
         const { error: insertError } = await supabase.from("profiles").upsert({
           id: currentUser.id,
           email: userEmail,
-          name: userName || existingProfile?.name || null,
+          name: userName,
           organization_id: invite.organization_id,
-          role: finalRole,
+          role: invite.role,
+          department: invite.department ?? null,
         });
 
         if (!isMounted) return;
@@ -211,12 +244,23 @@ export default function AuthCard() {
         }
 
         // 초대 수락 처리
-        await supabase
+        const { data: acceptedInvite, error: acceptError } = await supabase
           .from("organization_invites")
           .update({ accepted_at: new Date().toISOString() })
-          .eq("id", invite.id);
+          .eq("id", invite.id)
+          .is("accepted_at", null)
+          .is("revoked_at", null)
+          .select("id")
+          .maybeSingle();
 
         if (!isMounted) return;
+
+        if (acceptError || !acceptedInvite) {
+          console.error("Invitation acceptance update error:", acceptError);
+          setMessage("프로필은 생성되었지만 초대 완료 처리에 실패했습니다. 관리자에게 문의하세요.");
+          setProfileLoading(false);
+          return;
+        }
 
         await supabase.from("audit_logs").insert({
           organization_id: invite.organization_id,
@@ -231,7 +275,7 @@ export default function AuthCard() {
           id: currentUser.id,
           email: userEmail,
           name: userName,
-          department: null,
+          department: invite.department ?? null,
           phone: null,
         });
         setProfileLoading(false);
@@ -240,13 +284,14 @@ export default function AuthCard() {
 
         setProfile(profileData as Profile);
         
-        // If user has no organization, they are pending approval
-        // They can only see the main page until an admin approves them
         if (!profileData.organization_id) {
-          // 미승인 사용자: 메인 페이지만 보여줌
-          // 프로필은 설정하되 organization_id가 없음을 표시
-        } else if (currentUser) {
-          await acceptInvitation(currentUser.id, currentUser.email ?? "");
+          const acceptedProfile = await acceptInvitation(
+            currentUser.id,
+            currentUser.email ?? ""
+          );
+          if (acceptedProfile && isMounted) {
+            setProfile(acceptedProfile);
+          }
         }
         
         setProfileLoading(false);

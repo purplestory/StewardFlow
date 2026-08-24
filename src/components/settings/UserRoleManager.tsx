@@ -2,12 +2,19 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabase";
-import { generateShortId } from "@/lib/short-id";
-import { deleteUserAccount } from "@/actions/auth-actions";
 import {
+  approveAccountDeletionRequest,
+  deleteUserAccount,
+  rejectAccountDeletionRequest,
+} from "@/actions/auth-actions";
+import { generateInviteToken } from "@/actions/invite-actions";
+import {
+  approveDepartmentChangeForOrganization,
   createOrganizationForAdmin,
   listDepartmentsForAdminOrganization,
   listOrganizationsForAdmin,
+  listUsersForAdminOrganizationManagement,
+  rejectDepartmentChangeForOrganization,
   reassignUserOrganizationForAdmin,
 } from "@/actions/admin-organization-actions";
 import Notice from "@/components/common/Notice";
@@ -59,6 +66,7 @@ export default function UserRoleManager() {
   const [pendingUsers, setPendingUsers] = useState<ProfileRow[]>([]);
   const [allUsers, setAllUsers] = useState<ProfileRow[]>([]);
   const [allOrganizations, setAllOrganizations] = useState<Array<{ id: string; name: string }>>([]);
+  const [canManageAllOrganizations, setCanManageAllOrganizations] = useState(false);
   const [approvingUserId, setApprovingUserId] = useState<string | null>(null);
   const [approvalOrganizationId, setApprovalOrganizationId] = useState<string>("");
   const [approvalDepartment, setApprovalDepartment] = useState<string>("");
@@ -86,6 +94,7 @@ export default function UserRoleManager() {
     setLoading(true);
     setMessage(null);
     setNeedsOrganization(false);
+    setCanManageAllOrganizations(false);
 
     const { data: sessionData } = await supabase.auth.getSession();
     const user = sessionData.session?.user ?? null;
@@ -102,7 +111,7 @@ export default function UserRoleManager() {
     
     const { data: profileData, error: profileError } = await supabase
       .from("profiles")
-      .select("organization_id,role")
+      .select("organization_id,role,department")
       .eq("id", user.id)
       .maybeSingle();
 
@@ -211,59 +220,38 @@ export default function UserRoleManager() {
       return;
     }
 
-    // 최고관리자(admin)만 미승인 사용자 목록 조회 가능
+    // 최고관리자는 서버에서 허용된 기관/사용자 범위만 조회한다.
     if (profileData.role === "admin") {
-      // organization_id가 null인 모든 사용자 조회 (미승인 사용자)
-      // profiles_select_all_by_admin 정책으로 모든 프로필 조회 가능하므로 필터링은 클라이언트에서
-      const { data: allUsersData, error: allUsersError } = await supabase
-        .from("profiles")
-        .select("id,email,name,department,role,organization_id,created_at")
-        .order("created_at", { ascending: false });
+      const [usersResult, organizationsResult] = await Promise.all([
+        listUsersForAdminOrganizationManagement(),
+        listOrganizationsForAdmin(),
+      ]);
+      const canManageAll =
+        usersResult.success &&
+        organizationsResult.success &&
+        usersResult.canManageAllOrganizations &&
+        organizationsResult.canManageAllOrganizations;
+      setCanManageAllOrganizations(canManageAll);
 
-      if (allUsersError) {
-        console.error("전체 사용자 조회 오류:", allUsersError);
-        console.error("에러 상세:", {
-          code: allUsersError.code,
-          message: allUsersError.message,
-          details: allUsersError.details,
-          hint: allUsersError.hint,
-        });
-        setMessage(`사용자 조회 실패: ${allUsersError.message}`);
+      if (!usersResult.success) {
+        console.error("사용자 목록 조회 오류:", usersResult.error);
+        setMessage(usersResult.error ?? "사용자 조회에 실패했습니다.");
         setPendingUsers([]);
         setAllUsers([]);
-      } else if (allUsersData) {
-        setAllUsers(allUsersData as ProfileRow[]);
-        // 클라이언트에서 organization_id가 null인 사용자만 필터링
-        const pendingUsersData = allUsersData.filter(user => 
-          user.organization_id === null || user.organization_id === undefined
-        );
-        debugLog("전체 사용자 조회 성공:", allUsersData.length, "명");
-        debugLog("전체 사용자 데이터:", allUsersData.map(u => ({
-          id: u.id,
-          name: u.name,
-          email: u.email,
-          organization_id: u.organization_id
-        })));
-        debugLog("미승인 사용자:", pendingUsersData.length, "명");
-        debugLog("미승인 사용자 데이터:", pendingUsersData.map(u => ({
-          id: u.id,
-          name: u.name,
-          email: u.email,
-          organization_id: u.organization_id
-        })));
-        setPendingUsers(pendingUsersData as ProfileRow[]);
       } else {
-        debugLog("전체 사용자 데이터가 null입니다");
-        setPendingUsers([]);
-        setAllUsers([]);
+        const scopedUsers = usersResult.users as ProfileRow[];
+        setAllUsers(scopedUsers);
+        setPendingUsers(
+          canManageAll
+            ? scopedUsers.filter((user) => !user.organization_id)
+            : []
+        );
       }
 
-      // 모든 기관 목록 조회 (최고관리자 only, 서버 액션으로 RLS 영향 제거)
-      const organizationsResult = await listOrganizationsForAdmin();
       if (organizationsResult.success) {
         setAllOrganizations(organizationsResult.organizations);
       } else {
-        console.error("전체 기관 조회 오류:", organizationsResult.error);
+        console.error("기관 목록 조회 오류:", organizationsResult.error);
         setAllOrganizations([]);
       }
     } else {
@@ -291,7 +279,14 @@ export default function UserRoleManager() {
         sortedDepartments.sort((a, b) => a.name.localeCompare(b.name));
       }
 
-      setAvailableDepartments(sortedDepartments.map((d) => d.name));
+      const invitationDepartments =
+        profileData.role === "manager"
+          ? sortedDepartments.filter((department) => department.name === profileData.department)
+          : sortedDepartments;
+      setAvailableDepartments(invitationDepartments.map((department) => department.name));
+      if (profileData.role === "manager" && profileData.department) {
+        setInvitationDepartment(profileData.department);
+      }
     }
 
     // 부서 변경 요청 로드 (관리자 또는 부서 관리자만)
@@ -325,7 +320,7 @@ export default function UserRoleManager() {
         .from("account_deletion_requests")
         .select("*")
         .eq("organization_id", profileData.organization_id)
-        .eq("status", "pending")
+        .in("status", ["pending", "processing", "manual_review"])
         .order("created_at", { ascending: false });
 
       if (!deletionRequestsError && deletionRequestsData) {
@@ -871,74 +866,20 @@ export default function UserRoleManager() {
     // 이메일은 선택사항이므로 빈 문자열도 허용
     const email = invitationEmail.trim() || null;
 
-    // 클라이언트에서 직접 초대 토큰 생성
-    const token = generateShortId(10);
-    const expiresAt = new Date(
-      Date.now() + inviteExpiresDays * 24 * 60 * 60 * 1000
-    ).toISOString();
+    const inviteResult = await generateInviteToken(
+      organizationId,
+      email,
+      invitationRole,
+      invitationDepartment,
+      invitationName
+    );
 
-    // 초대 생성
-    let invite: { id: string } | null = null;
-    let inviteError: { message?: string; code?: string } | null = null;
-
-    const withExpiresAt = await supabase
-      .from("organization_invites")
-      .insert({
-        organization_id: organizationId,
-        email: email || null,
-        role: invitationRole,
-        department: invitationDepartment.trim() || null,
-        name: invitationName.trim() || null,
-        token,
-        expires_at: expiresAt,
-      })
-      .select("id")
-      .maybeSingle();
-
-    invite = withExpiresAt.data;
-    inviteError = withExpiresAt.error;
-
-    // 구버전 스키마 호환: expires_at 컬럼 미적용이면 expires_at 없이 재시도
-    if (
-      inviteError &&
-      (inviteError.code === "42703" || inviteError.message?.includes("expires_at"))
-    ) {
-      const withoutExpiresAt = await supabase
-        .from("organization_invites")
-        .insert({
-          organization_id: organizationId,
-          email: email || null,
-          role: invitationRole,
-          department: invitationDepartment.trim() || null,
-          name: invitationName.trim() || null,
-          token,
-        })
-        .select("id")
-        .maybeSingle();
-
-      invite = withoutExpiresAt.data;
-      inviteError = withoutExpiresAt.error;
-    }
-
-    if (inviteError || !invite) {
-      setMessage(inviteError?.message ?? "초대 생성에 실패했습니다.");
+    if (!inviteResult.ok || !inviteResult.token) {
+      setMessage(inviteResult.message ?? "초대 생성에 실패했습니다.");
       return;
     }
 
-    // audit_logs에 초대 생성 기록 (초대한 사람 정보 추적용)
-    await supabase.from("audit_logs").insert({
-      organization_id: organizationId,
-      actor_id: currentUserId,
-      action: "invite_created",
-      target_type: "invite",
-      target_id: invite.id,
-      metadata: { 
-        email: email || null, 
-        role: invitationRole,
-        department: invitationDepartment.trim() || null,
-        name: invitationName.trim() || null,
-      },
-    });
+    const token = inviteResult.token;
 
     const inviteLink = `${window.location.origin}/join?token=${token}`;
 
@@ -991,7 +932,9 @@ export default function UserRoleManager() {
     setInvitationEmail("");
     setInvitationName("");
     setInvitationRole("user");
-    setInvitationDepartment("");
+    if (currentUserRole !== "manager") {
+      setInvitationDepartment("");
+    }
   };
 
   const saveInviteExpirationPolicy = async () => {
@@ -1284,8 +1227,8 @@ export default function UserRoleManager() {
   };
 
   const createOrganizationForTransfer = async () => {
-    if (currentUserRole !== "admin") {
-      setMessage("기관 생성은 최고 관리자만 가능합니다.");
+    if (currentUserRole !== "admin" || !canManageAllOrganizations) {
+      setMessage("기관 생성은 플랫폼 관리자 권한이 필요합니다.");
       return;
     }
 
@@ -1398,83 +1341,18 @@ export default function UserRoleManager() {
       role: approvalRole,
     });
 
-    const { error: updateProfileError, data: updateData } = await supabase
-      .from("profiles")
-      .update({
-        organization_id: approvalOrganizationId,
-        department: approvalDepartment || null,
-        role: approvalRole,
-      })
-      .eq("id", approvingUserId)
-      .select();
-
-    if (updateProfileError) {
-      console.error("프로필 업데이트 오류:", updateProfileError);
-      console.error("에러 상세:", {
-        code: updateProfileError.code,
-        message: updateProfileError.message,
-        details: updateProfileError.details,
-        hint: updateProfileError.hint,
-      });
-      setMessage(`사용자 승인 실패: ${updateProfileError.message}`);
-      setLoading(false);
-      return;
-    }
-
-    debugLog("프로필 업데이트 결과:", updateData);
-
-    // 업데이트 후 검증: 실제로 업데이트되었는지 확인
-    const { data: verifyProfile, error: verifyError } = await supabase
-      .from("profiles")
-      .select("id, organization_id, department, role")
-      .eq("id", approvingUserId)
-      .maybeSingle();
-
-    if (verifyError) {
-      console.error("프로필 검증 오류:", verifyError);
-      setMessage(`사용자 승인은 완료되었지만, 확인 중 오류가 발생했습니다: ${verifyError.message}`);
-      setLoading(false);
-      return;
-    }
-
-    if (!verifyProfile) {
-      console.error("프로필 검증 실패: 프로필을 찾을 수 없습니다.");
-      setMessage("사용자 승인 중 오류가 발생했습니다. 프로필을 찾을 수 없습니다.");
-      setLoading(false);
-      return;
-    }
-
-    debugLog("프로필 검증 결과:", verifyProfile);
-
-    if (verifyProfile.organization_id !== approvalOrganizationId) {
-      console.error("프로필 검증 실패: organization_id가 일치하지 않습니다.", {
-        expected: approvalOrganizationId,
-        actual: verifyProfile.organization_id,
-      });
-      setMessage("사용자 승인 중 오류가 발생했습니다. 기관 정보가 올바르게 저장되지 않았습니다.");
-      setLoading(false);
-      return;
-    }
-
-    debugLog("프로필 업데이트 성공 확인:", {
-      organization_id: verifyProfile.organization_id,
-      department: verifyProfile.department,
-      role: verifyProfile.role,
+    const result = await reassignUserOrganizationForAdmin({
+      targetUserId: approvingUserId,
+      targetOrganizationId: approvalOrganizationId,
+      department: approvalDepartment || null,
+      role: approvalRole,
     });
 
-    await supabase.from("audit_logs").insert({
-      organization_id: approvalOrganizationId,
-      actor_id: currentUserId,
-      action: "user_approved",
-      target_type: "profile",
-      target_id: approvingUserId,
-      metadata: {
-        approved_by_admin: true,
-        organization_id: approvalOrganizationId,
-        department: approvalDepartment,
-        role: approvalRole,
-      },
-    });
+    if (!result.success) {
+      setMessage(result.error ?? "사용자 승인에 실패했습니다.");
+      setLoading(false);
+      return;
+    }
 
     setMessage("사용자가 성공적으로 승인되었습니다.");
     setApprovingUserId(null);
@@ -1494,77 +1372,19 @@ export default function UserRoleManager() {
       return;
     }
 
-    if (!organizationId || !currentUserId) {
+    if (!organizationId) {
       setMessage("기관 정보를 확인할 수 없습니다.");
       return;
     }
 
-    // 부서 관리자는 자신의 부서 사용자 요청만 승인 가능
-    if (currentUserRole === "manager") {
-      const { data: currentProfile } = await supabase
-        .from("profiles")
-        .select("department")
-        .eq("id", currentUserId)
-        .maybeSingle();
-
-      if (
-        currentProfile?.department !== request.from_department &&
-        currentProfile?.department !== request.to_department
-      ) {
-        setMessage("자신의 부서 사용자 요청만 승인할 수 있습니다.");
-        return;
-      }
-    }
-
-    // 요청 승인 및 프로필 업데이트
-    const now = new Date().toISOString();
-    const { error: updateRequestError } = await supabase
-      .from("department_change_requests")
-      .update({
-        status: "approved",
-        resolved_at: now,
-        resolved_by: currentUserId,
-      })
-      .eq("id", request.id);
-
-    if (updateRequestError) {
-      setMessage(`요청 승인 실패: ${updateRequestError.message}`);
+    const result = await approveDepartmentChangeForOrganization(request.id);
+    if (!result.success) {
+      setMessage(result.error ?? "부서 변경 요청 승인에 실패했습니다.");
       return;
     }
 
-    // 프로필의 부서 업데이트
-    const { error: updateProfileError } = await supabase
-      .from("profiles")
-      .update({ department: request.to_department })
-      .eq("id", request.requester_id)
-      .eq("organization_id", organizationId);
-
-    if (updateProfileError) {
-      setMessage(`프로필 업데이트 실패: ${updateProfileError.message}`);
-      // 요청 상태는 되돌리기
-      await supabase
-        .from("department_change_requests")
-        .update({ status: "pending", resolved_at: null, resolved_by: null })
-        .eq("id", request.id);
-      return;
-    }
-
-    // audit log
-    await supabase.from("audit_logs").insert({
-      organization_id: organizationId,
-      actor_id: currentUserId,
-      action: "department_change_approved",
-      target_type: "department_change_request",
-      target_id: request.id,
-      metadata: {
-        requester_id: request.requester_id,
-        from_department: request.from_department,
-        to_department: request.to_department,
-      },
-    });
-
-    setMessage("부서 변경 요청이 승인되었습니다.");
     await load();
+    setMessage(result.warning ?? "부서 변경 요청이 승인되었습니다.");
   };
 
   const rejectDepartmentChange = async (
@@ -1577,59 +1397,19 @@ export default function UserRoleManager() {
       return;
     }
 
-    if (!organizationId || !currentUserId) {
+    if (!organizationId) {
       setMessage("기관 정보를 확인할 수 없습니다.");
       return;
     }
 
-    // 부서 관리자는 자신의 부서 사용자 요청만 거부 가능
-    if (currentUserRole === "manager") {
-      const { data: currentProfile } = await supabase
-        .from("profiles")
-        .select("department")
-        .eq("id", currentUserId)
-        .maybeSingle();
-
-      if (
-        currentProfile?.department !== request.from_department &&
-        currentProfile?.department !== request.to_department
-      ) {
-        setMessage("자신의 부서 사용자 요청만 거부할 수 있습니다.");
-        return;
-      }
-    }
-
-    const now = new Date().toISOString();
-    const { error } = await supabase
-      .from("department_change_requests")
-      .update({
-        status: "rejected",
-        resolved_at: now,
-        resolved_by: currentUserId,
-      })
-      .eq("id", request.id);
-
-    if (error) {
-      setMessage(`요청 거부 실패: ${error.message}`);
+    const result = await rejectDepartmentChangeForOrganization(request.id);
+    if (!result.success) {
+      setMessage(result.error ?? "부서 변경 요청 거부에 실패했습니다.");
       return;
     }
 
-    // audit log
-    await supabase.from("audit_logs").insert({
-      organization_id: organizationId,
-      actor_id: currentUserId,
-      action: "department_change_rejected",
-      target_type: "department_change_request",
-      target_id: request.id,
-      metadata: {
-        requester_id: request.requester_id,
-        from_department: request.from_department,
-        to_department: request.to_department,
-      },
-    });
-
-    setMessage("부서 변경 요청이 거부되었습니다.");
     await load();
+    setMessage(result.warning ?? "부서 변경 요청이 거부되었습니다.");
   };
 
   const approveDeletionRequest = async (requestId: string) => {
@@ -1646,109 +1426,25 @@ export default function UserRoleManager() {
     setProcessingRequestId(requestId);
     setMessage(null);
 
-    // 요청 정보 조회
-    const { data: request, error: requestError } = await supabase
-      .from("account_deletion_requests")
-      .select("*")
-      .eq("id", requestId)
-      .single();
-
-    if (requestError || !request) {
-      setMessage(`요청 조회 실패: ${requestError?.message}`);
-      setProcessingRequestId(null);
-      return;
-    }
-
-    // 부서 관리자인 경우 권한 양도
-    if (request.requester_role === "manager" && request.transfer_to_user_id) {
-      const { error: transferError } = await supabase
-        .from("profiles")
-        .update({ role: "manager" })
-        .eq("id", request.transfer_to_user_id)
-        .eq("organization_id", organizationId);
-
-      if (transferError) {
-        setMessage(`권한 양도 실패: ${transferError.message}`);
-        setProcessingRequestId(null);
-        return;
-      }
-
-      // Audit log 기록 (권한 양도)
-      await supabase.from("audit_logs").insert({
-        organization_id: organizationId,
-        actor_id: currentUserId,
-        action: "role_transferred",
-        target_type: "profile",
-        target_id: request.transfer_to_user_id,
-        metadata: {
-          from_user_id: request.requester_id,
-          from_user_name: request.requester_name,
-          to_user_id: request.transfer_to_user_id,
-          transferred_role: "manager",
-        },
-      });
-    }
-
-    // Server Action을 사용하여 auth.users와 profiles 모두 삭제
     try {
-      // 동적 import를 사용하여 Server Action을 안전하게 로드
-      const authActionsModule = await import("@/actions/auth-actions");
-      if (!authActionsModule || !authActionsModule.deleteUserAccount) {
-        throw new Error("Server Action을 로드할 수 없습니다.");
-      }
-      
-      const deleteResult = await authActionsModule.deleteUserAccount(request.requester_id);
-
-      if (!deleteResult || !deleteResult.success) {
-        setMessage(deleteResult?.error || "계정 삭제 실패");
-        setProcessingRequestId(null);
+      const result = await approveAccountDeletionRequest(requestId, adminNote);
+      if (!result.success) {
+        const failureMessage = result.error ?? "탈퇴 요청 승인에 실패했습니다.";
+        await load();
+        setMessage(failureMessage);
         return;
       }
-    } catch (error: unknown) {
-      console.error("Account deletion error:", error);
-      const errorMessage = error instanceof Error ? error.message : "알 수 없는 오류";
-      setMessage(`계정 삭제 중 오류가 발생했습니다: ${errorMessage}`);
+
+      setAdminNote("");
+      await load();
+      setMessage("탈퇴 요청이 승인되었습니다.");
+    } catch (error) {
+      console.error("Account deletion approval action failed:", error);
+      await load();
+      setMessage("탈퇴 요청 승인 중 오류가 발생했습니다.");
+    } finally {
       setProcessingRequestId(null);
-      return;
     }
-
-    // 요청 상태 업데이트
-    const now = new Date().toISOString();
-    const { error: updateError } = await supabase
-      .from("account_deletion_requests")
-      .update({
-        status: "approved",
-        resolved_at: now,
-        resolved_by: currentUserId,
-        admin_note: adminNote || null,
-      })
-      .eq("id", requestId);
-
-    if (updateError) {
-      setMessage(`요청 상태 업데이트 실패: ${updateError.message}`);
-      setProcessingRequestId(null);
-      return;
-    }
-
-    // Audit log 기록 (계정 삭제)
-    await supabase.from("audit_logs").insert({
-      organization_id: organizationId,
-      actor_id: currentUserId,
-      action: "account_deleted",
-      target_type: "profile",
-      target_id: request.requester_id,
-      metadata: {
-        deleted_user_name: request.requester_name,
-        deleted_user_email: request.requester_email,
-        role_transferred: request.requester_role === "manager" && request.transfer_to_user_id ? true : false,
-        approved_by_admin: true,
-      },
-    });
-
-    setMessage("탈퇴 요청이 승인되었습니다.");
-    setAdminNote("");
-    setProcessingRequestId(null);
-    await load();
   };
 
   const rejectDeletionRequest = async (requestId: string) => {
@@ -1765,39 +1461,22 @@ export default function UserRoleManager() {
     setProcessingRequestId(requestId);
     setMessage(null);
 
-    const now = new Date().toISOString();
-    const { error } = await supabase
-      .from("account_deletion_requests")
-      .update({
-        status: "rejected",
-        resolved_at: now,
-        resolved_by: currentUserId,
-        admin_note: adminNote || null,
-      })
-      .eq("id", requestId);
+    try {
+      const result = await rejectAccountDeletionRequest(requestId, adminNote);
+      if (!result.success) {
+        setMessage(result.error ?? "탈퇴 요청 거부에 실패했습니다.");
+        return;
+      }
 
-    if (error) {
-      setMessage(`요청 거부 실패: ${error.message}`);
+      setAdminNote("");
+      await load();
+      setMessage("탈퇴 요청이 거부되었습니다.");
+    } catch (error) {
+      console.error("Account deletion rejection action failed:", error);
+      setMessage("탈퇴 요청 거부 중 오류가 발생했습니다.");
+    } finally {
       setProcessingRequestId(null);
-      return;
     }
-
-    // audit log
-    await supabase.from("audit_logs").insert({
-      organization_id: organizationId,
-      actor_id: currentUserId,
-      action: "account_deletion_rejected",
-      target_type: "account_deletion_request",
-      target_id: requestId,
-      metadata: {
-        admin_note: adminNote || null,
-      },
-    });
-
-    setMessage("탈퇴 요청이 거부되었습니다.");
-    setAdminNote("");
-    setProcessingRequestId(null);
-    await load();
   };
 
   if (loading) {
@@ -1882,7 +1561,7 @@ export default function UserRoleManager() {
         <div className="mb-3">
           <h3 className="text-base font-semibold text-slate-900">사용자 초대</h3>
           <p className="mt-1 text-xs text-neutral-500">
-            이름, 역할, 부서는 초대 시 지정되며 가입 시 확인됩니다. 이메일은 가입 시 변경 가능합니다.
+            이름, 역할, 부서는 초대 시 지정됩니다. 이메일을 지정한 초대는 같은 로그인 계정에서만 사용할 수 있습니다.
           </p>
         </div>
         <div className="module-toolbar mb-3">
@@ -1927,7 +1606,7 @@ export default function UserRoleManager() {
           />
           <input
             className="form-input w-full min-w-0"
-            placeholder="이메일 (선택사항, 가입 시 변경 가능)"
+            placeholder="이메일 (선택사항, 지정 시 계정 일치 필요)"
             value={invitationEmail}
             onChange={(event) => setInvitationEmail(event.target.value)}
             disabled={currentUserRole === "user"}
@@ -1957,9 +1636,11 @@ export default function UserRoleManager() {
             className="form-select w-full min-w-0"
             value={invitationDepartment}
             onChange={(event) => setInvitationDepartment(event.target.value)}
-            disabled={currentUserRole === "user"}
+            disabled={currentUserRole === "user" || currentUserRole === "manager"}
           >
-            <option value="">부서 선택 (선택사항)</option>
+            {currentUserRole !== "manager" && (
+              <option value="">부서 선택 (선택사항)</option>
+            )}
             {availableDepartments.map((dept) => (
               <option key={dept} value={dept}>
                 {dept}
@@ -1982,7 +1663,7 @@ export default function UserRoleManager() {
         )}
         {currentUserRole === "manager" && (
           <span className="mt-2 block text-xs text-amber-600">
-            부서 관리자는 일반 사용자 또는 부서 관리자만 초대할 수 있습니다.
+            부서 관리자는 자신의 담당 부서에 일반 사용자 또는 부서 관리자만 초대할 수 있습니다.
           </span>
         )}
       </section>
@@ -2109,7 +1790,7 @@ export default function UserRoleManager() {
         <section className="surface-card border-rose-200 p-5 md:p-6">
           <h3 className="text-sm font-semibold text-slate-900">계정 탈퇴 요청</h3>
           <p className="mt-1 text-xs text-neutral-500">
-            부서 관리자의 탈퇴 요청입니다. 승인 시 계정이 영구적으로 삭제됩니다.
+            부서 관리자의 탈퇴 요청과 처리 상태입니다. 승인 시 계정이 영구적으로 삭제됩니다.
           </p>
           <div className="module-list mt-3">
             <div className="list-row-muted hidden items-center text-xs text-neutral-500 lg:grid lg:grid-cols-[minmax(0,1fr)_20rem]">
@@ -2126,6 +1807,16 @@ export default function UserRoleManager() {
                     역할: {roleLabel[request.requester_role as ProfileRow["role"]] || request.requester_role}
                     {request.requester_department && ` · 부서: ${request.requester_department}`}
                   </p>
+                  {request.status === "processing" && (
+                    <p className="mt-1 text-xs font-medium text-amber-700">
+                      계정 삭제 결과 확인 또는 승인 기록 마무리가 필요합니다.
+                    </p>
+                  )}
+                  {request.status === "manual_review" && (
+                    <p className="mt-1 text-xs font-medium text-rose-700">
+                      자동 복구가 중단되었습니다. 운영자 지원이 필요합니다.
+                    </p>
+                  )}
                   {request.transfer_to_user_name && (
                     <p className="mt-1 text-xs text-amber-700">
                       권한 위임 대상: {request.transfer_to_user_name}
@@ -2147,32 +1838,40 @@ export default function UserRoleManager() {
                     onChange={(e) => setAdminNote(e.target.value)}
                     className="form-textarea min-h-[60px] text-sm"
                     placeholder="승인/거부 사유를 입력하세요"
-                    disabled={processingRequestId === request.id}
+                    disabled={
+                      processingRequestId === request.id || request.status !== "pending"
+                    }
                   />
                 </div>
                 <div className="flex justify-end gap-2 lg:col-start-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setAdminNote("");
-                      approveDeletionRequest(request.id);
-                    }}
-                    disabled={processingRequestId !== null}
-                    className="btn-outline btn-outline-success h-9 flex-1 px-3 text-xs"
-                  >
-                    {processingRequestId === request.id ? "처리 중..." : "승인"}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setAdminNote("");
-                      rejectDeletionRequest(request.id);
-                    }}
-                    disabled={processingRequestId !== null}
-                    className="btn-outline btn-outline-danger h-9 flex-1 px-3 text-xs"
-                  >
-                    {processingRequestId === request.id ? "처리 중..." : "거부"}
-                  </button>
+                  {request.status !== "manual_review" && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        void approveDeletionRequest(request.id);
+                      }}
+                      disabled={processingRequestId !== null}
+                      className="btn-outline btn-outline-success h-9 flex-1 px-3 text-xs"
+                    >
+                      {processingRequestId === request.id
+                        ? "처리 중..."
+                        : request.status === "processing"
+                          ? "처리 재시도"
+                          : "승인"}
+                    </button>
+                  )}
+                  {request.status === "pending" && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        void rejectDeletionRequest(request.id);
+                      }}
+                      disabled={processingRequestId !== null}
+                      className="btn-outline btn-outline-danger h-9 flex-1 px-3 text-xs"
+                    >
+                      {processingRequestId === request.id ? "처리 중..." : "거부"}
+                    </button>
+                  )}
                 </div>
               </div>
             ))}
@@ -2182,34 +1881,40 @@ export default function UserRoleManager() {
 
       {currentUserRole === "admin" && allUsers.length > 0 && (
         <section className="surface-card border-indigo-200 p-5 md:p-6">
-          <h3 className="text-sm font-semibold text-slate-900">사용자 기관 지정/이관</h3>
+          <h3 className="text-sm font-semibold text-slate-900">
+            {canManageAllOrganizations ? "사용자 기관 지정/이관" : "사용자 부서/권한 관리"}
+          </h3>
           <p className="mt-1 text-xs text-neutral-500">
-            이미 가입한 사용자를 다른 기관으로 지정하거나, 동시에 부서/권한을 재설정할 수 있습니다.
+            {canManageAllOrganizations
+              ? "이미 가입한 사용자를 다른 기관으로 지정하거나, 동시에 부서/권한을 재설정할 수 있습니다."
+              : "내 기관 사용자의 부서와 권한을 재설정할 수 있습니다."}
           </p>
-          <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50/60 p-3">
-            <p className="text-xs font-medium text-neutral-700">새 기관 추가</p>
-            <p className="mt-1 text-[11px] text-neutral-500">
-              현재 소속은 유지한 채 기관을 추가 생성합니다. 생성 즉시 아래 &quot;대상 기관&quot; 선택 목록에 반영됩니다.
-            </p>
-            <div className="mt-2 grid gap-2 md:grid-cols-[minmax(0,1fr)_auto]">
-              <input
-                type="text"
-                className="form-input h-10"
-                value={newOrganizationName}
-                onChange={(event) => setNewOrganizationName(event.target.value)}
-                placeholder="새 기관 이름 입력 (예: 은혜교회)"
-                disabled={isCreatingOrganization}
-              />
-              <button
-                type="button"
-                onClick={createOrganizationForTransfer}
-                disabled={isCreatingOrganization || !newOrganizationName.trim()}
-                className="btn-outline h-10 w-full whitespace-nowrap px-4 md:w-auto"
-              >
-                {isCreatingOrganization ? "생성 중..." : "기관 추가"}
-              </button>
+          {canManageAllOrganizations && (
+            <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50/60 p-3">
+              <p className="text-xs font-medium text-neutral-700">새 기관 추가</p>
+              <p className="mt-1 text-[11px] text-neutral-500">
+                현재 소속은 유지한 채 기관을 추가 생성합니다. 생성 즉시 아래 &quot;대상 기관&quot; 선택 목록에 반영됩니다.
+              </p>
+              <div className="mt-2 grid gap-2 md:grid-cols-[minmax(0,1fr)_auto]">
+                <input
+                  type="text"
+                  className="form-input h-10"
+                  value={newOrganizationName}
+                  onChange={(event) => setNewOrganizationName(event.target.value)}
+                  placeholder="새 기관 이름 입력 (예: 은혜교회)"
+                  disabled={isCreatingOrganization}
+                />
+                <button
+                  type="button"
+                  onClick={createOrganizationForTransfer}
+                  disabled={isCreatingOrganization || !newOrganizationName.trim()}
+                  className="btn-outline h-10 w-full whitespace-nowrap px-4 md:w-auto"
+                >
+                  {isCreatingOrganization ? "생성 중..." : "기관 추가"}
+                </button>
+              </div>
             </div>
-          </div>
+          )}
           <div className="mt-3 grid gap-3 md:grid-cols-2">
             <div className="space-y-1.5">
               <label className="form-label">대상 사용자</label>
@@ -2302,11 +2007,13 @@ export default function UserRoleManager() {
         </section>
       )}
 
-      {currentUserRole === "admin" && pendingUsers.length > 0 && (
+      {currentUserRole === "admin" &&
+        canManageAllOrganizations &&
+        pendingUsers.length > 0 && (
         <section className="surface-card border-amber-200 p-5 md:p-6">
           <h3 className="text-sm font-semibold text-slate-900">미승인 사용자</h3>
           <p className="mt-1 text-xs text-neutral-500">
-            초대코드 없이 가입한 사용자입니다. 기관, 부서, 권한을 지정해 승인해주세요.
+            기존 미배정 사용자입니다. 플랫폼 관리자만 기관, 부서, 권한을 지정할 수 있습니다.
           </p>
           <div className="module-list mt-3">
             <div className="list-row-muted hidden items-center text-xs text-neutral-500 lg:grid lg:grid-cols-[minmax(0,1fr)_120px]">

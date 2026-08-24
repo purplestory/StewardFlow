@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState, useRef } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import Notice from "@/components/common/Notice";
 import ImageUploadField from "@/components/ui/ImageUploadField";
@@ -33,6 +34,7 @@ type SpaceFormProps = {
 };
 
 export default function SpaceForm({ space, onSuccess }: SpaceFormProps = {}) {
+  const router = useRouter();
   const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [previewUrls, setPreviewUrls] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null); // 파일 입력 ref
@@ -403,7 +405,7 @@ export default function SpaceForm({ space, onSuccess }: SpaceFormProps = {}) {
         } else {
           // 수정 후 상세 페이지로 이동
           setTimeout(() => {
-            window.location.href = `/spaces/${space.short_id || space.id}`;
+            router.push(`/spaces/${space.short_id || space.id}`);
           }, 1000);
         }
       } else {

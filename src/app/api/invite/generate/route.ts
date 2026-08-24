@@ -3,14 +3,33 @@ import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { generateShortId } from "@/lib/short-id";
 
+const INVITE_ROLES = ["admin", "manager", "user"] as const;
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
+    const body = await request.json().catch(() => null);
+    if (!body || typeof body !== "object") {
+      return NextResponse.json(
+        { ok: false, message: "올바르지 않은 요청입니다." },
+        { status: 400 }
+      );
+    }
+
     const { organizationId, email, role, department, name } = body;
 
-    if (!organizationId || !role) {
+    if (
+      typeof organizationId !== "string" ||
+      !UUID_PATTERN.test(organizationId) ||
+      typeof role !== "string" ||
+      !INVITE_ROLES.some((allowedRole) => allowedRole === role) ||
+      (email != null && typeof email !== "string") ||
+      (department != null && typeof department !== "string") ||
+      (name != null && typeof name !== "string")
+    ) {
       return NextResponse.json(
-        { ok: false, message: "필수 정보가 누락되었습니다." },
+        { ok: false, message: "올바르지 않은 초대 정보입니다." },
         { status: 400 }
       );
     }
@@ -38,19 +57,10 @@ export async function POST(request: NextRequest) {
       }
     );
 
-    // Check session - try getUser() first as it's more reliable in API routes
-    let user = null;
-    const { data: { user: userData }, error: userError } = await supabase.auth.getUser();
-    
-    if (!userError && userData) {
-      user = userData;
-    } else {
-      // Fallback to getSession()
-      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-      if (!sessionError && sessionData.session?.user) {
-        user = sessionData.session.user;
-      }
-    }
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
 
     if (!user) {
       console.error("API /invite/generate: No user found", {
@@ -65,7 +75,7 @@ export async function POST(request: NextRequest) {
     // Check user profile
     const { data: profile, error: profileError } = await supabase
       .from("profiles")
-      .select("organization_id, role")
+      .select("organization_id, role, department")
       .eq("id", user.id)
       .maybeSingle();
 
@@ -99,6 +109,50 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    if (profile.role === "manager" && role === "admin") {
+      return NextResponse.json(
+        { ok: false, message: "부서 관리자는 관리자 역할로 초대할 수 없습니다." },
+        { status: 403 }
+      );
+    }
+
+    const normalizedEmail = email?.trim().toLowerCase() || null;
+    const normalizedDepartment = department?.trim() || null;
+    const normalizedName = name?.trim() || null;
+
+    if (normalizedEmail && normalizedEmail.length > 254) {
+      return NextResponse.json(
+        { ok: false, message: "이메일 주소가 너무 깁니다." },
+        { status: 400 }
+      );
+    }
+
+    if (
+      profile.role === "manager" &&
+      (!profile.department || normalizedDepartment !== profile.department)
+    ) {
+      return NextResponse.json(
+        { ok: false, message: "부서 관리자는 자신의 담당 부서로만 초대할 수 있습니다." },
+        { status: 403 }
+      );
+    }
+
+    if (normalizedDepartment) {
+      const { data: targetDepartment, error: targetDepartmentError } = await supabase
+        .from("departments")
+        .select("id")
+        .eq("organization_id", organizationId)
+        .eq("name", normalizedDepartment)
+        .maybeSingle();
+
+      if (targetDepartmentError || !targetDepartment) {
+        return NextResponse.json(
+          { ok: false, message: "초대할 부서를 확인할 수 없습니다." },
+          { status: 400 }
+        );
+      }
+    }
+
     // Generate token
     const token = generateShortId(10);
     let inviteExpiresDays = 7;
@@ -128,10 +182,10 @@ export async function POST(request: NextRequest) {
       .from("organization_invites")
       .insert({
         organization_id: organizationId,
-        email: email || null,
+        email: normalizedEmail,
         role,
-        department: department || null,
-        name: name || null,
+        department: normalizedDepartment,
+        name: normalizedName,
         token,
         expires_at: expiresAt,
       })
@@ -149,10 +203,10 @@ export async function POST(request: NextRequest) {
         .from("organization_invites")
         .insert({
           organization_id: organizationId,
-          email: email || null,
+          email: normalizedEmail,
           role,
-          department: department || null,
-          name: name || null,
+          department: normalizedDepartment,
+          name: normalizedName,
           token,
         })
         .select("id")
@@ -173,6 +227,24 @@ export async function POST(request: NextRequest) {
         { ok: false, message: "초대 생성에 실패했습니다." },
         { status: 500 }
       );
+    }
+
+    const { error: auditError } = await supabase.from("audit_logs").insert({
+      organization_id: organizationId,
+      actor_id: user.id,
+      action: "invite_created",
+      target_type: "invite",
+      target_id: invite.id,
+      metadata: {
+        email: normalizedEmail,
+        role,
+        department: normalizedDepartment,
+        name: normalizedName,
+      },
+    });
+
+    if (auditError) {
+      console.error("Invite generation audit log failed:", auditError);
     }
 
     return NextResponse.json({

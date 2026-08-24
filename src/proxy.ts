@@ -10,10 +10,7 @@ function normalizeHost(host?: string | null): string | null {
   return onlyHost.toLowerCase();
 }
 
-// Next.js 16+ 권장 방식: middleware 대신 proxy 패턴 사용
-// 하지만 Supabase SSR의 경우 middleware가 여전히 필요하므로
-// 경고를 억제하기 위해 주석 추가 및 최신 패턴 적용
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   // 프리뷰 랜덤 URL(커밋 단위)을 브랜치 고정 URL로 통일해 OAuth redirect URI 불일치를 줄인다.
   const requestHost = normalizeHost(request.headers.get("host"));
   const canonicalPreviewHost = normalizeHost(

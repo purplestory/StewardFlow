@@ -59,13 +59,11 @@ function JoinPageContent() {
   const [token, setToken] = useState(tokenFromUrl || "");
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
-  const [department, setDepartment] = useState("");
   const [phone, setPhone] = useState("");
   
   const [loading, setLoading] = useState(!!tokenFromUrl);
   const [signingUp, setSigningUp] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
-  const [availableDepartments, setAvailableDepartments] = useState<string[]>([]);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   
   const [inviteInfo, setInviteInfo] = useState<{
@@ -163,19 +161,6 @@ function JoinPageContent() {
         return;
       }
 
-      // 부서 목록 조회
-      if (result.invite.organization_id) {
-        const { data: deptResult } = await supabase
-          .from("departments")
-          .select("name")
-          .eq("organization_id", result.invite.organization_id)
-          .order("name", { ascending: true });
-
-        if (deptResult) {
-          setAvailableDepartments(deptResult.map((d) => d.name));
-        }
-      }
-
       setInviteInfo({
         email: result.invite.email,
         organization_name: result.invite.organization_name || "",
@@ -189,7 +174,6 @@ function JoinPageContent() {
       // 초대장에 있는 정보로 필드 초기화 (유저 입력값이 없으면)
       setEmail((prev) => prev || result.invite?.email || "");
       setName((prev) => prev || result.invite?.name || "");
-      setDepartment((prev) => prev || result.invite?.department || "");
       
       setLoading(false);
     };
@@ -271,7 +255,7 @@ function JoinPageContent() {
       const result = await acceptInviteByToken(actualToken, {
         email: finalEmail,
         name: name.trim() || null,
-        department: department.trim() || null,
+        department: inviteInfo?.department ?? null,
         phone: phone.trim() || null,
         accessToken,
       });
@@ -284,8 +268,9 @@ function JoinPageContent() {
 
       // 성공 처리: 세션 갱신 및 이동
       await new Promise((resolve) => setTimeout(resolve, 500));
-      await supabase.auth.refreshSession(); 
-      window.location.href = "/";
+      await supabase.auth.refreshSession();
+      router.replace("/");
+      router.refresh();
       
     } catch (err) {
       console.error("Invite processing error:", err);
@@ -347,11 +332,9 @@ function JoinPageContent() {
               {loading ? "확인 중..." : "확인"}
             </button>
           </form>
-          <div className="text-center mt-4">
-             <Link href="/join-request" className="text-xs text-neutral-500 underline">
-              가입 신청하기
-            </Link>
-          </div>
+          <p className="mt-4 text-center text-xs text-neutral-500">
+            초대코드가 없다면 기관 관리자에게 새 초대를 요청해 주세요.
+          </p>
         </div>
       </div>
     );
@@ -442,26 +425,12 @@ function JoinPageContent() {
 
                 <div className="space-y-2 text-sm">
                   <label className="font-medium">소속 부서</label>
-                  {availableDepartments.length > 0 ? (
-                    <select
-                      value={department}
-                      onChange={(e) => setDepartment(e.target.value)}
-                      className="form-select w-full"
-                    >
-                      <option value="">부서 선택</option>
-                      {availableDepartments.map((dept) => (
-                        <option key={dept} value={dept}>{dept}</option>
-                      ))}
-                    </select>
-                  ) : (
-                    <input
-                      type="text"
-                      value={department}
-                      onChange={(e) => setDepartment(e.target.value)}
-                      className="form-input w-full"
-                      placeholder="예: 유년부"
-                    />
-                  )}
+                  <input
+                    type="text"
+                    value={inviteInfo.department ?? "부서 미지정"}
+                    disabled
+                    className="form-input w-full cursor-not-allowed bg-neutral-100 text-neutral-500"
+                  />
                 </div>
 
                 <div className="space-y-2 text-sm">

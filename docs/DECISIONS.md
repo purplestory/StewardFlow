@@ -2,6 +2,81 @@
 
 프로젝트 의사결정 로그 (변경 시 계속 추가)
 
+## 2026-08-24
+- 상태: 운영 반영 완료 (후속 재현성 작업 대기)
+- 결정: Vercel 프로덕션 `dpl_Ftp6DqqicKEhPBp8DtZuraiCaWMS`와 Supabase hardening migration `20260824090000_harden_tenant_rls_boundaries.sql`을 사전 DB 백업 및 배포 파일 dry-run 검증 후 적용했다. 적용 후 19개 DB assertion, anon 초대 REST 차단(`401`, 0행), 비로그인 프로덕션 스모크 테스트를 통과했다
+- 이유: 운영 반영 상태와 로컬 구현 상태를 분리해 기록하고, 민감한 로컬 백업/환경 파일이 배포 업로드 대상에서 제외됐음을 추적 가능하게 남기기 위함
+- 영향: `https://steward-flow.vercel.app`, `.vercelignore`, `docs/EXECUTION_TRACKER.md`, `docs/DB_MIGRATION_STATUS.md`, `docs/PROJECT_STATE.md`, `docs/NEXT_TASKS.md`
+- 남은 작업: 현재 운영 소스의 Git 커밋/푸시, signed-in 역할별 운영 QA, 수동 적용된 migration과 Supabase migration history의 OPS-004 기준선 정합화, 실제 복원 리허설
+
+## 2026-08-24
+- 상태: 확정 (로컬 구현, 프로덕션 미배포)
+- 결정: Steward Flow 가입은 invite-only로 운영하고 공개 가입 신청 `/join-request`는 폐기해 `/join`으로 이동시킨다. 초대 수락 시 인증 이메일/일회성 claim/기존 기관 소속 여부를 서버에서 검증하며 role과 department는 초대 레코드 값으로만 확정한다. 조직 admin은 자기 기관에만 초대하고, 부서 manager는 자기 non-null 부서에 `manager`/`user`만 초대한다
+- 이유: 공개 pending 사용자 승인과 클라이언트가 제출한 권한/부서 값에 의존하면 초대 정책을 우회하거나 권한이 잘못 부여될 수 있기 때문
+- 영향: `src/app/join-request/page.tsx`, `src/app/join/page.tsx`, `src/actions/invite-actions.ts`, 초대/가입 실환경 QA
+
+## 2026-08-24
+- 상태: 확정 (로컬 구현 및 migration 작성, 프로덕션/원격 미적용)
+- 결정: manager 계정 탈퇴 승인은 고유 operation ID로 `pending -> processing -> approved`를 claim/finalize한다. 동일 기관·동일 부서의 현재 user에게 manager 역할을 인계하고, Auth 삭제 확정 실패는 저장한 역할 revision으로 rollback하며 불명확 결과는 processing에 유지한다. 충돌은 `manual_review`로 보존하고 requester FK SET NULL과 immutable UUID snapshot으로 삭제 후 요청 이력을 남긴다. 마지막 admin 제거는 조직 행 잠금 기반 profile UPDATE/DELETE trigger를 최종 DB 불변식으로 둔다
+- 이유: Auth Admin API와 public DB는 단일 트랜잭션이 아니며, 앱의 count 사전검사만으로는 부분 실패나 동시 admin 제거를 막을 수 없기 때문
+- 영향: `src/actions/auth-actions.ts`, `src/components/settings/UserRoleManager.tsx`, `supabase/migrations/20260824090000_harden_tenant_rls_boundaries.sql`, 계정 삭제 운영 QA
+
+## 2026-08-24
+- 상태: 확정 (로컬 구현, 프로덕션 미배포)
+- 결정: 부서 변경 승인은 service-role 서버 액션에서 승인자 인증, 동일 기관, manager 담당 부서/대상 역할/자기 승인 금지, 목적 부서와 요청 최신 상태를 재검증하고 다단계 처리 실패 시 프로필 변경을 보상 복구한다
+- 이유: 클라이언트 직접 승인 흐름은 RLS 변경에 취약하고 요청/프로필 중 하나만 갱신되는 부분 실패 및 테넌트 경계 우회 위험이 있기 때문
+- 영향: `src/actions/admin-organization-actions.ts`, `src/components/settings/UserRoleManager.tsx`, 부서 변경 승인 회귀 테스트
+
+## 2026-08-24
+- 상태: 확정 (로컬 구현 및 migration 작성, 프로덕션/원격 미적용)
+- 결정: 요청 상태 도서 대출 취소는 `cancel_requested_book_loan_atomic(uuid, uuid)` RPC를 우선 사용한다. 함수가 실제로 없는 pre-migration 환경에서만 사전 활성 대출 조회와 보상 복구가 있는 fallback을 허용하며, 승인 후 취소 요청은 동일 unread 알림이 있으면 멱등 응답한다
+- 이유: 대출 상태와 도서 상태를 별도 쿼리로 변경할 때 부분 성공이 남을 수 있고, 반복 클릭으로 같은 취소 알림이 중복 생성될 수 있기 때문
+- 영향: `src/app/api/reservations/my/route.ts`, `supabase/migrations/20260824090000_harden_tenant_rls_boundaries.sql`, 도서 취소 운영 QA
+
+## 2026-08-24
+- 상태: 운영 원칙 확정 (실행 대기)
+- 결정: Supabase Free 플랜에는 자동 백업이 없음을 전제로 RLS migration 전에 수동 백업 산출물과 복원 절차를 확보한다. 프로덕션 코드 배포와 원격 RLS 적용은 각 실행 명령 직전에 사용자에게 대상 환경/범위를 다시 확인한 뒤 수행한다
+- 이유: 현재 원격 migration history가 로컬과 불일치하고 자동 복구 지점이 없는 상태에서 원격 변경을 선행하면 장애 복구가 어려워질 수 있기 때문
+- 영향: `docs/DB_MIGRATION_STATUS.md`, 배포 체크리스트, Supabase/Vercel 운영 절차
+
+## 2026-08-24
+- 상태: 확정 (로컬 구현, 프로덕션 미배포)
+- 결정: 플랫폼 전역 기관 관리는 서버 전용 `PLATFORM_ADMIN_USER_IDS` allowlist와 인증된 `role='admin'`을 모두 만족할 때만 허용한다. 일반 조직 admin의 service-role 액션은 자기 `organization_id` 범위로 제한한다
+- 이유: 기존 `role='admin'`은 조직 역할인데도 플랫폼 역할처럼 해석되어 다른 조직 조회/생성/사용자 이관에 service-role을 사용할 수 있었기 때문
+- 영향: `src/actions/admin-organization-actions.ts`, `UserRoleManager`, `OrganizationManager`, 운영 환경변수 관리
+- 이전 결정과의 관계: 2026-02-28의 "기관 간 관리에 service-role 우선" 결정을 대체하며, service-role 사용 전 actor/tenant/platform allowlist 검증을 필수화한다
+
+## 2026-08-24
+- 상태: 확정 (migration 작성, 원격 미적용)
+- 결정: RLS는 조직 admin/manager를 동일 테넌트에만 묶고, profile의 `role`/`organization_id` 등 privileged field는 RLS뿐 아니라 trigger로 보호한다
+- 이유: 행 단위 UPDATE 정책만으로는 사용자가 자기 profile의 권한 컬럼을 바꾸는 것을 안전하게 막을 수 없고, 전역 admin 정책이 테넌트 경계를 약화했기 때문
+- 영향: `supabase/migrations/20260824090000_harden_tenant_rls_boundaries.sql`, profile/organization/account deletion/feedback 정책
+- 배포 조건: 원격 백업 후 migration 적용, 정책 assertion 및 signed-in 테넌트 회귀 QA 필수
+
+## 2026-08-24
+- 상태: 확정 (migration 작성, 원격 미적용)
+- 결정: anon은 `organization_invites` 테이블을 직접 SELECT하지 못하며, 공개 초대 token 조회/검증은 service-role 서버 액션에서 token을 명시적으로 검증하는 경로만 사용한다
+- 이유: RLS SELECT 정책은 클라이언트 쿼리에 특정 token filter가 포함됐는지 증명할 수 없어 활성 초대 전체 노출 가능성을 제거할 수 없기 때문
+- 영향: `organization_invites` grant/RLS, `getInviteByToken` 계열 서버 경로, 초대 수락 QA
+
+## 2026-08-24
+- 상태: 확정 (로컬 구현, 프로덕션 미배포)
+- 결정: 내 신청 데이터 모델에 `book_loans`를 `resource_type='book'`으로 통합하고, 도서 상태를 공통 신청 상태로 정규화한다
+- 이유: 물품/공간/차량과 도서 신청이 서로 다른 화면과 취소 규칙을 사용해 사용자가 자신의 전체 신청 상태를 한곳에서 확인할 수 없었기 때문
+- 영향: `src/app/api/reservations/my/route.ts`, `src/hooks/useReservations.ts`, `src/components/my/ReservationsClient.tsx`, 도서 취소 알림
+
+## 2026-08-24
+- 상태: 확정 (로컬 구현, 프로덕션 미배포)
+- 결정: 기관 삭제는 트랜잭션 RPC가 준비될 때까지 UI에서 실행하지 않고 운영자 문의 안내로 대체하며, authenticated 사용자의 DB 직접 DELETE 권한도 제거한다
+- 이유: 멤버의 `organization_id` 해제와 기관 삭제를 클라이언트에서 순차 수행하면 중간 실패 시 부분 상태가 남고, 강화된 tenant trigger와도 충돌하기 때문
+- 영향: `src/components/settings/OrganizationManager.tsx`, `supabase/migrations/20260824090000_harden_tenant_rls_boundaries.sql`, 향후 운영자 전용 트랜잭션/RPC 과제
+
+## 2026-08-24
+- 상태: 확정 (로컬 구현, 프로덕션 미배포)
+- 결정: Next.js 16의 요청 경계는 `proxy.ts`를 사용하고, `lint + mobile lint + typecheck + unit test + build`를 GitHub Actions 필수 quality gate로 운영한다
+- 이유: deprecated middleware 경고, 테스트 부재, 의존성/빌드 회귀를 배포 전에 일관되게 차단하기 위함
+- 영향: `src/proxy.ts`, `package.json`, `.github/workflows/quality.yml`, `src/lib/auth-redirect.test.ts`
+
 ## 2026-02-28
 - 상태: 확정
 - 결정: 자원관리(물품/공간/차량) 화면은 `ManageFilterToolbar` / `ManageBulkStatusBar` / `ManageResourceList` 공통 컴포넌트를 사용한다

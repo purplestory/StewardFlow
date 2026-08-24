@@ -4,7 +4,11 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import Notice from "@/components/common/Notice";
 import { supabase } from "@/lib/supabase";
-import { createOrganizationForAdmin } from "@/actions/admin-organization-actions";
+import {
+  createOrganizationForAdmin,
+  createOrganizationForCurrentPlatformAdmin,
+  listOrganizationsForAdmin,
+} from "@/actions/admin-organization-actions";
 import DepartmentManager from "./DepartmentManager";
 
 type Organization = {
@@ -22,10 +26,9 @@ export default function OrganizationManager() {
   const [message, setMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(true); // Start with loading=true to prevent flash
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [additionalOrganizationName, setAdditionalOrganizationName] = useState("");
   const [isCreatingAdditionalOrganization, setIsCreatingAdditionalOrganization] = useState(false);
+  const [canManageAllOrganizations, setCanManageAllOrganizations] = useState(false);
 
   const load = async (preserveExistingState = false) => {
     setMessage(null);
@@ -38,12 +41,11 @@ export default function OrganizationManager() {
       if (!preserveExistingState) {
         setOrganization(null);
         setOrganizationId(null);
-        setCurrentUserId(null);
+        setCanManageAllOrganizations(false);
       }
       return;
     }
     setIsAuthenticated(true);
-    setCurrentUserId(user.id);
 
     const { data: profileData, error: profileError } = await supabase
       .from("profiles")
@@ -64,6 +66,14 @@ export default function OrganizationManager() {
     const orgId = profileData?.organization_id ?? null;
     const role = (profileData?.role as "admin" | "manager" | "user") ?? "user";
     setUserRole(role);
+    if (role === "admin") {
+      const capabilityResult = await listOrganizationsForAdmin();
+      setCanManageAllOrganizations(
+        capabilityResult.success && capabilityResult.canManageAllOrganizations
+      );
+    } else {
+      setCanManageAllOrganizations(false);
+    }
     
     if (orgId) {
       setOrganizationId(orgId);
@@ -139,59 +149,23 @@ export default function OrganizationManager() {
       return;
     }
 
-    // Use client-side Supabase directly (server actions have session issues)
-    const { data: sessionData } = await supabase.auth.getSession();
-    const user = sessionData.session?.user ?? null;
-    
-    if (!user) {
-      setMessage("로그인 후 기관 설정을 이용할 수 있습니다.");
+    if (!canManageAllOrganizations) {
+      setMessage("기관 생성은 플랫폼 관리자 권한이 필요합니다.");
       setLoading(false);
       return;
     }
 
-    const { data: orgData, error } = await supabase
-      .from("organizations")
-      .insert({ name })
-      .select("id,name")
-      .maybeSingle();
-
-    if (error) {
-      console.error("Organization create error:", error);
-      if (error.code === "42501" || error.message?.includes("row-level security")) {
-        setMessage(
-          `기관 생성 오류: RLS 정책 오류입니다. Supabase SQL Editor에서 RLS를 일시적으로 비활성화하거나 정책을 확인해주세요. (${error.message})`
-        );
-      } else {
-        setMessage(`기관 생성 오류: ${error.message}`);
-      }
+    const result = await createOrganizationForCurrentPlatformAdmin(name);
+    if (!result.success || !result.organization) {
+      setMessage(result.error ?? "기관 생성에 실패했습니다.");
       setLoading(false);
       return;
-    }
-
-    if (!orgData?.id) {
-      setMessage("기관 생성에 실패했습니다.");
-      setLoading(false);
-      return;
-    }
-
-    const { error: updateError } = await supabase
-      .from("profiles")
-      .update({ 
-        organization_id: orgData.id,
-        role: "admin"
-      })
-      .eq("id", user.id);
-
-    if (updateError) {
-      console.error("Profile update error:", updateError);
-      setMessage(`기관은 생성되었지만 프로필 업데이트에 실패했습니다: ${updateError.message}`);
-    } else {
-      setMessage("기관이 생성되었습니다.");
     }
 
     setOrganizationName("");
-    setOrganizationId(orgData.id);
-    setOrganization({ id: orgData.id, name: name });
+    setOrganizationId(result.organization.id);
+    setOrganization(result.organization);
+    setMessage("기관이 생성되었습니다.");
     setLoading(false);
     
     setTimeout(async () => {
@@ -207,8 +181,8 @@ export default function OrganizationManager() {
     event: React.FormEvent<HTMLFormElement>
   ) => {
     event.preventDefault();
-    if (userRole !== "admin") {
-      setMessage("기관 추가 생성은 최고 관리자만 가능합니다.");
+    if (userRole !== "admin" || !canManageAllOrganizations) {
+      setMessage("기관 추가 생성은 플랫폼 관리자 권한이 필요합니다.");
       return;
     }
 
@@ -266,69 +240,17 @@ export default function OrganizationManager() {
     setLoading(false);
   };
 
-  const handleDelete = async () => {
-    if (!organizationId || !currentUserId) {
-      setMessage("기관 정보가 없습니다.");
-      return;
-    }
-
-    if (userRole !== "admin") {
-      setMessage("기관 삭제는 관리자만 가능합니다.");
-      setShowDeleteConfirm(false);
-      return;
-    }
-
-    setLoading(true);
-    setMessage(null);
-
-    // 먼저 모든 멤버의 organization_id를 null로 업데이트
-    // (기관 삭제 전에 해야 RLS 정책이 작동함)
-    const { error: updateError } = await supabase
-      .from("profiles")
-      .update({ organization_id: null })
-      .eq("organization_id", organizationId);
-
-    if (updateError) {
-      setMessage(`멤버 정보 업데이트 오류: ${updateError.message}`);
-      setLoading(false);
-      setShowDeleteConfirm(false);
-      return;
-    }
-
-    // 잠시 대기 (RLS 정책 반영)
-    await new Promise((resolve) => setTimeout(resolve, 500));
-
-    // 기관 삭제 (CASCADE로 관련 데이터도 함께 삭제됨)
-    const { error } = await supabase
-      .from("organizations")
-      .delete()
-      .eq("id", organizationId);
-
-    if (error) {
-      setMessage(`기관 삭제 오류: ${error.message}`);
-      setLoading(false);
-      setShowDeleteConfirm(false);
-      return;
-    }
-
-    setShowDeleteConfirm(false);
-    setOrganization(null);
-    setOrganizationId(null);
-    setMessage("기관이 삭제되었습니다.");
-    setLoading(false);
-    
-    // 페이지 새로고침
-    setTimeout(() => {
-      window.location.reload();
-    }, 1500);
-  };
-
-
   return (
     <div className="space-y-6">
       {message && (
         <Notice 
-          variant={message.includes("오류") || message.includes("실패") ? "error" : "success"} 
+          variant={
+            message.includes("오류") || message.includes("실패")
+              ? "error"
+              : message.includes("권한")
+                ? "warning"
+                : "success"
+          }
           className="text-left"
         >
           {message}
@@ -368,50 +290,41 @@ export default function OrganizationManager() {
                 </button>
               </div>
             ) : (
-              <div className="module-head">
-                <p className="text-sm text-neutral-900 font-medium">
-                  {organization.name}
-                </p>
+              <>
+                <div className="module-head">
+                  <p className="text-sm text-neutral-900 font-medium">
+                    {organization.name}
+                  </p>
+                  {userRole === "admin" && (
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setIsEditingName(true)}
+                        className="icon-button"
+                        title="기관명 수정"
+                      >
+                        <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                          />
+                        </svg>
+                      </button>
+                    </div>
+                  )}
+                </div>
                 {userRole === "admin" && (
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setIsEditingName(true)}
-                      className="icon-button"
-                      title="기관명 수정"
-                    >
-                      <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                        />
-                      </svg>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setShowDeleteConfirm(true)}
-                      disabled={loading}
-                      className="icon-button icon-button-danger disabled:opacity-50"
-                      title="기관 삭제"
-                    >
-                      <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                        />
-                      </svg>
-                    </button>
-                  </div>
+                  <p className="mt-2 text-xs text-neutral-500">
+                    기관 삭제는 데이터 보호를 위해 운영자에게 문의해주세요.
+                  </p>
                 )}
-              </div>
+              </>
             )}
           </div>
         </section>
-      ) : (
+      ) : canManageAllOrganizations ? (
         <form
           onSubmit={handleCreate}
           className="surface-card space-y-3 p-5 md:p-6"
@@ -434,9 +347,13 @@ export default function OrganizationManager() {
             기관 생성
           </button>
         </form>
+      ) : (
+        <Notice variant="warning" className="text-left">
+          기관 생성 권한이 없습니다. 기관 관리자가 발급한 초대 링크로 참여해주세요.
+        </Notice>
       )}
 
-      {organizationId && userRole === "admin" && (
+      {organizationId && userRole === "admin" && canManageAllOrganizations && (
         <form
           onSubmit={handleCreateAdditionalOrganization}
           className="surface-card space-y-3 p-5 md:p-6"
@@ -465,43 +382,6 @@ export default function OrganizationManager() {
 
       {organizationId && (
         <DepartmentManager organizationId={organizationId} />
-      )}
-
-      {/* 삭제 확인 모달 */}
-      {showDeleteConfirm && userRole === "admin" && (
-        <div className="modal-backdrop">
-          <div className="modal-surface max-w-md">
-            <h3 className="text-lg font-semibold text-slate-900">기관 삭제</h3>
-            <div className="mt-4 space-y-4">
-              <div className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3">
-                <p className="text-sm text-rose-900 mb-2">
-                  정말 &quot;{organization?.name}&quot; 기관을 삭제하시겠습니까?
-                </p>
-                <p className="text-xs text-rose-700">
-                  기관을 삭제하면 모든 데이터(부서, 물품, 공간, 예약 등)가 영구적으로 삭제됩니다. 이 작업은 되돌릴 수 없습니다.
-                </p>
-              </div>
-            </div>
-            <div className="mt-5 flex gap-2">
-              <button
-                type="button"
-                onClick={handleDelete}
-                disabled={loading}
-                className="btn-danger flex-1 disabled:opacity-50"
-              >
-                삭제
-              </button>
-              <button
-                type="button"
-                onClick={() => setShowDeleteConfirm(false)}
-                disabled={loading}
-                className="btn-outline flex-1"
-              >
-                취소
-              </button>
-            </div>
-          </div>
-        </div>
       )}
     </div>
   );

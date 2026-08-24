@@ -303,10 +303,10 @@ function PlatformIntroContent() {
       {(!isAuthenticated || (isAuthenticated && !features)) && (
         <div className="pb-2 text-center">
           <Link
-            href={isAuthenticated ? "/join-request" : "/login"}
+            href={isAuthenticated ? "/join" : "/login"}
             className="inline-flex h-12 items-center justify-center rounded-xl bg-brand-primary px-8 text-base font-semibold text-white transition-colors hover:bg-[#173d7f]"
           >
-            시작하기
+            {isAuthenticated ? "초대코드 입력" : "시작하기"}
           </Link>
         </div>
       )}

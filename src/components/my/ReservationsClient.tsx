@@ -4,7 +4,12 @@ import { useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import Notice from "@/components/common/Notice";
 import { supabase } from "@/lib/supabase";
-import { useUserReservations, type UserReservationItem } from "@/hooks/useReservations";
+import {
+  useUserReservations,
+  type ReservationResourceType,
+  type ReservationStatus,
+  type UserReservationItem,
+} from "@/hooks/useReservations";
 import { useUserProfile } from "@/hooks/useAssets";
 import {
   Dialog,
@@ -13,30 +18,38 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
-const statusLabel: Record<"pending" | "approved" | "returned" | "rejected", string> = {
+const statusLabel: Record<ReservationStatus, string> = {
   pending: "승인 대기",
   approved: "승인됨",
+  borrowed: "대출 중",
+  overdue: "연체",
   returned: "반납 완료",
   rejected: "반려",
+  cancelled: "취소됨",
 };
 
-const statusBadgeClass: Record<"pending" | "approved" | "returned" | "rejected", string> = {
+const statusBadgeClass: Record<ReservationStatus, string> = {
   pending: "bg-amber-100 text-amber-700",
   approved: "bg-emerald-100 text-emerald-700",
+  borrowed: "bg-sky-100 text-sky-700",
+  overdue: "bg-rose-100 text-rose-700",
   returned: "bg-neutral-100 text-neutral-700",
   rejected: "bg-rose-100 text-rose-700",
+  cancelled: "bg-neutral-100 text-neutral-600",
 };
 
-const resourceTypeLabel: Record<"asset" | "space" | "vehicle", string> = {
+const resourceTypeLabel: Record<ReservationResourceType, string> = {
   asset: "물품",
   space: "공간",
   vehicle: "차량",
+  book: "도서",
 };
 
-const reservationVerbByType: Record<"asset" | "space" | "vehicle", string> = {
+const reservationVerbByType: Record<ReservationResourceType, string> = {
   asset: "대여",
   space: "예약",
   vehicle: "예약",
+  book: "대출",
 };
 
 const toDateTimeLocal = (value: string) => {
@@ -67,6 +80,27 @@ const shortReservationId = (value: string) => {
   if (!value) return "-";
   if (value.length <= 8) return value;
   return value.slice(0, 8);
+};
+
+const formatReservationPeriod = (reservation: UserReservationItem) => {
+  if (reservation.resource_type !== "book") {
+    return `${formatDateTime(reservation.start_date)} ~ ${formatDateTime(reservation.end_date)}`;
+  }
+
+  const startLabel =
+    reservation.status === "pending" ||
+    reservation.status === "rejected" ||
+    reservation.status === "cancelled"
+      ? "신청일"
+      : reservation.status === "approved"
+        ? "승인일"
+        : "대출일";
+  const hasDistinctEnd = reservation.end_date !== reservation.start_date;
+  const endLabel = reservation.status === "returned" ? "반납일" : "반납 예정";
+
+  return `${startLabel}: ${formatDateTime(reservation.start_date)}${
+    hasDistinctEnd ? ` · ${endLabel}: ${formatDateTime(reservation.end_date)}` : ""
+  }`;
 };
 
 export default function ReservationsClient() {
@@ -112,6 +146,10 @@ export default function ReservationsClient() {
 
   const handleSave = async () => {
     if (!selectedReservation) return;
+    if (selectedReservation.resource_type === "book") {
+      setActionMessage("도서 대출 신청은 날짜를 직접 수정할 수 없습니다.");
+      return;
+    }
     if (!draftStartDate || !draftEndDate) {
       setActionMessage("시작/종료 일시를 모두 입력해주세요.");
       return;
@@ -200,24 +238,35 @@ export default function ReservationsClient() {
       }
 
       queryClient.setQueryData<UserReservationItem[]>(["userReservations"], (previous) =>
-        (previous ?? []).filter((item) => item.id !== reservationId)
+        target.resource_type === "book"
+          ? (previous ?? []).map((item) =>
+              item.id === reservationId ? { ...item, status: "cancelled" } : item
+            )
+          : (previous ?? []).filter((item) => item.id !== reservationId)
       );
 
       await queryClient.invalidateQueries({ queryKey: ["userReservations"] });
       await queryClient.refetchQueries({ queryKey: ["userReservations"], type: "active" });
-      const remainingReservation =
-        queryClient
-          .getQueryData<UserReservationItem[]>(["userReservations"])
-          ?.some((item) => item.id === reservationId) ?? false;
-      if (remainingReservation) {
-        setActionMessage("삭제 요청이 완료되지 않았습니다. 다시 시도해 주세요.");
-        return;
+      if (target.resource_type !== "book") {
+        const remainingReservation =
+          queryClient
+            .getQueryData<UserReservationItem[]>(["userReservations"])
+            ?.some((item) => item.id === reservationId) ?? false;
+        if (remainingReservation) {
+          setActionMessage("삭제 요청이 완료되지 않았습니다. 다시 시도해 주세요.");
+          return;
+        }
       }
 
       if (selectedId === reservationId || closeModalAfterCancel) {
         setSelectedId(null);
       }
-      setActionMessage("예약 신청이 삭제되었습니다.");
+      setActionMessage(
+        result?.message ??
+          (target.resource_type === "book"
+            ? "도서 대출 신청이 취소되었습니다."
+            : "예약 신청이 삭제되었습니다.")
+      );
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : "예약 취소 중 오류가 발생했습니다.";
@@ -233,7 +282,12 @@ export default function ReservationsClient() {
   };
 
   const handleDeleteFromList = async (reservationId: string) => {
-    const confirmed = window.confirm("해당 대여 신청을 삭제하시겠습니까?");
+    const target = reservations.find((item) => item.id === reservationId);
+    const confirmed = window.confirm(
+      target?.resource_type === "book"
+        ? "해당 도서 대출 신청을 취소하시겠습니까?"
+        : "해당 대여 신청을 삭제하시겠습니까?"
+    );
     if (!confirmed) return;
     await cancelReservation(reservationId, false);
   };
@@ -363,7 +417,7 @@ export default function ReservationsClient() {
                   신청번호: {shortReservationId(reservation.id)}
                 </p>
                 <p className="mt-2 text-sm text-neutral-700">
-                  {formatDateTime(reservation.start_date)} ~ {formatDateTime(reservation.end_date)}
+                  {formatReservationPeriod(reservation)}
                 </p>
                 {reservation.note && (
                   <p className="mt-1 text-sm text-neutral-600">메모: {reservation.note}</p>
@@ -379,14 +433,26 @@ export default function ReservationsClient() {
                 </span>
                 {reservation.status === "pending" ? (
                   <>
-                    <button
-                      type="button"
-                      className="btn-ghost h-8 px-3 text-xs"
-                      onClick={() => openDetail(reservation.id)}
-                      disabled={updating}
-                    >
-                      수정
-                    </button>
+                    {reservation.resource_type !== "book" && (
+                      <button
+                        type="button"
+                        className="btn-ghost h-8 px-3 text-xs"
+                        onClick={() => openDetail(reservation.id)}
+                        disabled={updating}
+                      >
+                        수정
+                      </button>
+                    )}
+                    {reservation.resource_type === "book" && (
+                      <button
+                        type="button"
+                        className="btn-ghost h-8 px-3 text-xs"
+                        onClick={() => openDetail(reservation.id)}
+                        disabled={updating}
+                      >
+                        상세 보기
+                      </button>
+                    )}
                     <button
                       type="button"
                       className="btn-outline btn-outline-danger h-8 px-3 text-xs disabled:opacity-60"
@@ -456,43 +522,54 @@ export default function ReservationsClient() {
                 </div>
               </div>
 
-              <div className="space-y-3">
-                <label className="flex flex-col gap-2">
-                  <span className="text-sm font-medium text-neutral-700">시작일시</span>
-                  <input
-                    type="datetime-local"
-                    className="form-input"
-                    value={draftStartDate}
-                    onChange={(event) => setDraftStartDate(event.target.value)}
-                    disabled={selectedReservation.status !== "pending" || updating}
-                  />
-                </label>
-                <label className="flex flex-col gap-2">
-                  <span className="text-sm font-medium text-neutral-700">종료일시</span>
-                  <input
-                    type="datetime-local"
-                    className="form-input"
-                    value={draftEndDate}
-                    onChange={(event) => setDraftEndDate(event.target.value)}
-                    disabled={selectedReservation.status !== "pending" || updating}
-                  />
-                </label>
-                <label className="flex flex-col gap-2">
-                  <span className="text-sm font-medium text-neutral-700">사용 목적 / 메모</span>
-                  <textarea
-                    className="form-textarea"
-                    value={draftNote}
-                    onChange={(event) => setDraftNote(event.target.value)}
-                    disabled={selectedReservation.status !== "pending" || updating}
-                  />
-                </label>
-              </div>
+              {selectedReservation.resource_type === "book" ? (
+                <div className="space-y-2 rounded-lg bg-neutral-50 p-4 text-sm text-neutral-700">
+                  <p>{formatReservationPeriod(selectedReservation)}</p>
+                  <p>메모: {selectedReservation.note?.trim() || "없음"}</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <label className="flex flex-col gap-2">
+                    <span className="text-sm font-medium text-neutral-700">시작일시</span>
+                    <input
+                      type="datetime-local"
+                      className="form-input"
+                      value={draftStartDate}
+                      onChange={(event) => setDraftStartDate(event.target.value)}
+                      disabled={selectedReservation.status !== "pending" || updating}
+                    />
+                  </label>
+                  <label className="flex flex-col gap-2">
+                    <span className="text-sm font-medium text-neutral-700">종료일시</span>
+                    <input
+                      type="datetime-local"
+                      className="form-input"
+                      value={draftEndDate}
+                      onChange={(event) => setDraftEndDate(event.target.value)}
+                      disabled={selectedReservation.status !== "pending" || updating}
+                    />
+                  </label>
+                  <label className="flex flex-col gap-2">
+                    <span className="text-sm font-medium text-neutral-700">사용 목적 / 메모</span>
+                    <textarea
+                      className="form-textarea"
+                      value={draftNote}
+                      onChange={(event) => setDraftNote(event.target.value)}
+                      disabled={selectedReservation.status !== "pending" || updating}
+                    />
+                  </label>
+                </div>
+              )}
 
               {selectedReservation.status !== "pending" && (
                 <p className="text-xs text-neutral-500">
                   {selectedReservation.status === "approved"
                     ? "승인된 신청은 취소 요청을 통해 관리자 확인 후 처리됩니다."
-                    : "승인 대기 상태에서만 신청 내용을 수정/취소할 수 있습니다."}
+                    : selectedReservation.resource_type === "book" &&
+                        (selectedReservation.status === "borrowed" ||
+                          selectedReservation.status === "overdue")
+                      ? "대출 중인 도서는 도서 화면에서 반납 절차를 진행해 주세요."
+                      : "승인 대기 상태에서만 신청 내용을 수정/취소할 수 있습니다."}
                 </p>
               )}
 
@@ -534,14 +611,16 @@ export default function ReservationsClient() {
                   >
                     신청 취소
                   </button>
-                  <button
-                    type="button"
-                    className="btn-primary"
-                    onClick={handleSave}
-                    disabled={updating}
-                  >
-                    {updating ? "저장 중..." : "내용 저장"}
-                  </button>
+                  {selectedReservation.resource_type !== "book" && (
+                    <button
+                      type="button"
+                      className="btn-primary"
+                      onClick={handleSave}
+                      disabled={updating}
+                    >
+                      {updating ? "저장 중..." : "내용 저장"}
+                    </button>
+                  )}
                 </>
               )}
               {selectedReservation.status === "approved" && (
@@ -554,6 +633,13 @@ export default function ReservationsClient() {
                   {updating ? "요청 중..." : "취소 요청"}
                 </button>
               )}
+              {selectedReservation.resource_type === "book" &&
+                (selectedReservation.status === "borrowed" ||
+                  selectedReservation.status === "overdue") && (
+                  <a className="btn-primary" href="/books">
+                    도서 화면으로 이동
+                  </a>
+                )}
               <button
                 type="button"
                 className="btn-ghost"

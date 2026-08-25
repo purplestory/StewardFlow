@@ -1,6 +1,6 @@
 # NEXT TASKS
 
-최종 업데이트: 2026-08-24
+최종 업데이트: 2026-08-25
 
 > 운영 기준 문서가 `docs/EXECUTION_TRACKER.md`로 통합되었습니다.  
 > 본 문서는 중장기 TODO 요약만 유지하며, 실제 진행/결과/RCA는 실행 트래커에 기록합니다.
@@ -8,10 +8,10 @@
 ## P0 (즉시)
 
 > Vercel production 배포와 `20260824090000_harden_tenant_rls_boundaries.sql` 원격 적용은 완료되었다.
-> 현재 P0 잔여는 OPS-004 기준선/복원 리허설과 signed-in 운영 회귀 QA다. 운영 소스는 `29da08a`로 `origin/main`에 반영됐다.
+> ACL-inclusive DB 복원과 정규화 카탈로그 비교는 완료됐다. 현재 P0 잔여는 OPS-004 canonical baseline 결정과 signed-in 운영 회귀 QA다. 운영 소스는 `29da08a`로 `origin/main`에 반영됐다.
 
 ### 1) 원격 DB 백업 및 복원 절차 확인
-- 상태: 사전 백업 및 archive 검증 완료; 실제 복원 리허설은 OPS-004에서 진행
+- 상태: hardening 전/후 archive 검증과 NAS ACL-inclusive 복원 리허설 완료; authoritative procedure는 `docs/recovery_baseline.md`
 - 완료 조건(AC):
 1. 사용자에게 백업/원격 작업 범위와 실행 시점을 직전 확인
 2. hardening 적용 전 수동 논리 백업 또는 동등한 복구 산출물 생성
@@ -41,14 +41,15 @@
 7. account deletion UUID snapshot/FK SET NULL/operation index와 service-only RPC 4종의 존재·실행 권한 확인
 
 ### 4) Migration history baseline reconciliation
-- 상태: 진행 중 (fresh post-hardening archive와 격리 restore/hardening replay 검증 완료; canonical baseline/ACL-inclusive full stack 검증 필요)
+- 상태: 진행 중 (fresh post-hardening archive의 ACL-inclusive r3 restore와 233-entry normalized catalog comparison 완료; canonical baseline/squash 결정 필요)
 - 배경: hardening은 수동 적용되어 history를 수정하지 않았고 원격 migration history에는 `20260220103000`만 기록됨
 - 완료 조건(AC):
-1. fresh source schema dump와 restored catalog 차이 분석
-2. full Supabase runtime role이 있는 환경에서 ACL-inclusive restore 검증
+1. 완료: fresh source schema dump와 restored catalog의 table/function/policy/RLS/trigger 233개 차이 `0` 확인
+2. 완료: Realtime runtime role이 있는 격리 환경에서 ACL-inclusive restore와 security postcheck 통과
 3. baseline/squash 전략 확정
-4. 신규 환경 replay 및 장애 복구 절차 문서화
-5. 운영 DB에 로컬 migration 전체를 일괄 replay하지 않는 보호 절차 명시
+4. 완료: 신규 빈 DB의 staged recovery procedure 문서화
+5. 완료: 운영 DB에 로컬 migration 전체를 일괄 replay하지 않는 보호 절차 명시
+6. 선택: Auth/Storage 등 전체 self-hosted application service의 기능 검증은 NAS 방화벽/네트워크 설계에 대한 별도 승인 후 진행
 
 ### 5) 카카오 OAuth signed-in 회귀 테스트
 - 상태: 진행 중 (콜백 보강 및 open redirect 차단 완료, 실환경 QA 필요)

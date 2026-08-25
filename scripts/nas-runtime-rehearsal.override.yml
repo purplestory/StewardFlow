@@ -1,0 +1,74 @@
+name: steward-flow-runtime-rehearsal-20260825
+
+services:
+  firewall-guard:
+    # This service changes NAS host firewall rules; it is not part of the app-runtime rehearsal.
+    profiles: ["excluded"]
+    restart: "no"
+
+  studio:
+    container_name: steward-flow-runtime-rehearsal-20260825-studio
+    profiles: ["full-stack"]
+    restart: "no"
+
+  kong:
+    container_name: steward-flow-runtime-rehearsal-20260825-kong
+    profiles: ["full-stack"]
+    restart: "no"
+
+  auth:
+    container_name: steward-flow-runtime-rehearsal-20260825-auth
+    profiles: ["full-stack"]
+    restart: "no"
+
+  rest:
+    container_name: steward-flow-runtime-rehearsal-20260825-rest
+    profiles: ["full-stack"]
+    restart: "no"
+
+  realtime:
+    container_name: steward-flow-runtime-rehearsal-20260825-realtime
+    restart: "no"
+    network_mode: "service:db"
+    environment:
+      DB_HOST: 127.0.0.1
+
+  storage:
+    container_name: steward-flow-runtime-rehearsal-20260825-storage
+    profiles: ["full-stack"]
+    restart: "no"
+
+  imgproxy:
+    container_name: steward-flow-runtime-rehearsal-20260825-imgproxy
+    profiles: ["full-stack"]
+    restart: "no"
+
+  meta:
+    container_name: steward-flow-runtime-rehearsal-20260825-meta
+    profiles: ["full-stack"]
+    restart: "no"
+
+  functions:
+    container_name: steward-flow-runtime-rehearsal-20260825-functions
+    profiles: ["full-stack"]
+    restart: "no"
+
+  db:
+    container_name: steward-flow-runtime-rehearsal-20260825-db
+    restart: "no"
+    ports:
+      - "127.0.0.1:16432:5432"
+    volumes:
+      - "./volumes/db/data-runtime:/var/lib/postgresql/data:Z"
+
+  supavisor:
+    container_name: steward-flow-runtime-rehearsal-20260825-supavisor
+    profiles: ["full-stack"]
+    restart: "no"
+
+networks:
+  default:
+    name: steward-flow-runtime-rehearsal-20260825-net
+    driver: bridge
+    internal: true
+    external: false

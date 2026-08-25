@@ -1,16 +1,17 @@
 # PROJECT STATE
 
-최종 업데이트: 2026-08-24
-기준 커밋: `main`/`origin/main`의 `29da08a`
+최종 업데이트: 2026-08-25
+기준 커밋: `main`/`origin/main`의 `1db3ad0`
 
 ## 0. 배포 상태 (반드시 먼저 확인)
 - 원격 Supabase 상태: `Healthy`
 - 로컬: P0 인증/테넌트 보안, invite-only 가입, 부서 변경 승인 서버 하드닝, RLS hardening/도서 취소 atomic RPC migration, 도서 내 신청 통합, 의존성/CI/test/Next.js 16 정리가 구현되어 있음
 - **코드 배포: 완료** — Vercel `dpl_Ftp6DqqicKEhPBp8DtZuraiCaWMS` `READY`, `https://steward-flow.vercel.app`.
 - **원격 RLS 적용: 완료** — migration SHA-256 `7c63ff760df5e3d0c4464ea9a775efe32efc8c40d1cee91d1fe9058bed53871e`, transaction 종료 상태 `0`, read-only postcheck 19개 통과.
-- **사전 DB 백업: 유효** — `2026-08-24 05:47 KST`, SHA-256 `3c2b77ccff0627483951dc1875cf20454b66ad8f58ddfe105624e0dceb75f143`, archive 판독 검증 완료, 실제 복원 리허설 미실행.
+- **사전 DB 백업: 유효** — `2026-08-24 05:47 KST`, SHA-256 `3c2b77ccff0627483951dc1875cf20454b66ad8f58ddfe105624e0dceb75f143`, archive 판독과 NAS DB-only 복원 리허설 완료.
+- **Post-hardening recovery: 검증 완료** — `2026-08-25` archive SHA-256 `2a059ae35067385e868ed17e66c6581996f4364f3d61dba0a5d34db920d18d6c`를 NAS Realtime runtime role 환경에 ACL 포함 복원했다. security postcheck와 233-entry normalized catalog SHA가 일치했다.
 - **배포 소스 보존: 완료** — 운영 소스는 `29da08a feat: harden StewardFlow production boundaries`로 커밋되어 `origin/main`까지 반영됐다.
-- **남은 운영 과제:** OPS-004 migration history reconciliation/복원 리허설, signed-in 회귀 QA.
+- **남은 운영 과제:** OPS-004 canonical migration baseline 결정, signed-in 회귀 QA.
 
 ## 1. 현재 제품 범위
 - 코어: 인증, 사용자/권한, 물품/공간/차량 예약/승인/반납
@@ -52,9 +53,8 @@
 ## 4. 현재 위험/주의사항
 - 가장 높은 우선순위는 로그인 상태 운영 QA와 OPS-004 migration history/복원 리허설이다.
   - 운영 계정은 `admin` 3명, `manager` 3명, 일반 `user` 0명이다. 기존 admin/manager로는 읽기 전용 권한 QA를 먼저 수행하고, 변경 흐름은 전용 테스트 `user` 초대 후에만 검증한다.
-  - hardening 사전 backup은 새 NAS 격리 Supabase PostgreSQL 17.6 DB에 실제 복원해 핵심 테이블 `81`, `profiles=6`, `organizations=2`, `auth.users=8`을 확인했다. 복제 DB에서 hardening migration replay와 RLS/service-only RPC/FK postcheck도 통과했다. 이 snapshot은 hardening 전 것이므로, 현재 운영 상태를 보장하는 새 post-hardening backup/복원 검증과 migration baseline 결정은 계속 남아 있다.
-  - NAS 리허설 컨테이너는 전용 네트워크/볼륨과 loopback 전용 포트만 사용하며, 기존 운영 DB·Vercel 환경변수·카카오 OAuth를 재사용하지 않는다.
-  - 2026-08-25 post-hardening archive도 새 NAS 격리 DB에 복원해 데이터·hardening postcheck를 통과했다. 다만 DB-only target은 Realtime runtime role이 없어 ACL-inclusive restore가 실패하므로, 이는 full self-hosted cutover가 아니라 DB recovery rehearsal이다. 기준선과 금지된 legacy bootstrap 경로는 `docs/recovery_baseline.md`를 따른다.
+  - hardening 전 archive의 DB-only replay와 2026-08-25 post-hardening archive의 ACL-inclusive r3 recovery를 모두 검증했다. r3은 `profiles=6`, `organizations=2`, `auth.users=8`, RLS 대상 `5`, anon invite SELECT `false`, authenticated service-only RPC execute `0`, service-role `4`, FK `SET NULL 3`을 반환했고 원본과 233-entry normalized catalog SHA가 일치했다.
+  - NAS 리허설은 새 runtime role DB와 Realtime만 사용하고 loopback DB 포트만 노출한다. NAS 호스트 방화벽/기존 프로젝트/Vercel 환경변수/카카오 OAuth는 변경하지 않았다. 따라서 이것은 DB/RLS/ACL recovery 검증이며 외부 Auth·Storage·OAuth 기능 cutover 검증은 아니다. 기준선과 금지된 legacy bootstrap 경로는 `docs/recovery_baseline.md`를 따른다.
 - `cancel_requested_book_loan_atomic`은 원격에 존재하며 production API가 원자 RPC 경로를 사용할 수 있다.
 - 일반 user를 조직 admin이 직접 삭제하는 Auth 외부 호출에는 actor 강등/대상 tenant 이동의 짧은 TOCTOU가 남아 있다. 완전 제거는 별도 DB deletion authorization marker/RPC 과제로 관리한다.
 - hardening은 수동 적용되어 원격 migration history를 수정하지 않았다. history에는 `20260220103000`만 기록되어 로컬 migration 집합과 기준선이 다르다.

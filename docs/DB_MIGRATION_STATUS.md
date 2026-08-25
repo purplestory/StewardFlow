@@ -50,7 +50,16 @@
 - 제한: `--no-privileges` restore만 DB-only target에서 성공했다. ACL-inclusive restore는 `supabase_realtime_admin` runtime role 부재로 중단되므로, full self-hosted cutover 절차로 사용하지 않는다.
 - recovery/baseline 규칙: `docs/recovery_baseline.md`.
 
-## 2-3. 과거 핵심 이슈 (기록 보존)
+## 2-3. ACL-inclusive runtime role 복원 (2026-08-25)
+- 별도 NAS 프로젝트 `steward-flow-runtime-rehearsal-20260825`에서 PostgreSQL 17.6과 Realtime 2.102.3을 기동해 `supabase_realtime_admin` runtime role을 생성했다. Vercel, Kakao OAuth, 운영 Supabase, 기존 NAS 프로젝트에는 연결하지 않았다.
+- NAS 호스트 방화벽이 새 bridge의 컨테이너 간 forwarding을 차단하므로 Realtime은 DB network namespace를 공유했다. 호스트 방화벽 규칙을 추가하거나 변경하지 않았고, DB 포트만 NAS loopback `127.0.0.1:16432`로 노출했다.
+- direct one-pass ACL restore r2는 `graphql_public.graphql` ACL에서 중단됐다. 원인은 blank DB에 GraphQL wrapper를 자동 생성할 event trigger가 archive의 해당 ACL보다 뒤에 복원되는 순서 의존성이다. r2는 진단용으로 보존한다.
+- 새 r3 DB에서는 archive TOC `5260`의 GraphQL ACL만 제외한 pre-data를 복원하고, production-equivalent wrapper/동일 ACL prelude를 적용한 후 data와 post-data를 복원했다. `--no-privileges`와 hardening reapply 없이 원본 ACL을 포함해 복원했다.
+- 최종 결과: `profiles=6`, `organizations=2`, `auth.users=8`, active invites `0`, RLS 대상 `5`, anon invite SELECT `false`, service-only RPC `4/4`, authenticated execute `0`, service-role execute `4`, account-deletion FK `SET NULL 3`.
+- 원본 archive와 r3 public table/function/policy/RLS/trigger 정규화 카탈로그 233개가 일치했으며 SHA-256은 `ad48c3ceaf1d3c01b1140a89bbab6ca1578ac4d87a71af20d910752e01b133e5`다.
+- 범위 제한: 이는 DB/RLS/ACL recovery 검증이다. Storage object 바이너리, Edge Function secrets, SMTP/OAuth, 외부 Auth/Storage 서비스 흐름은 포함하지 않는다.
+
+## 2-4. 과거 핵심 이슈 (기록 보존)
 - 과거 일부 환경에서 아래 오류가 관측됨:
   - `Could not find the table 'public.book_loans' in the schema cache`
   - `Could not find the table 'public.book_items' in the schema cache`

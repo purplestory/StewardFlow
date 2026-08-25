@@ -3,11 +3,11 @@
 프로젝트 의사결정 로그 (변경 시 계속 추가)
 
 ## 2026-08-25
-- 상태: 확정 (post-hardening DB recovery rehearsal, full cutover 보류)
-- 결정: 현재 production snapshot은 custom archive로 보존하고, NAS DB-only rehearsal에는 `--no-owner --no-privileges` restore 뒤 idempotent hardening migration reapply를 사용한다. ACL-inclusive restore는 full Supabase runtime role 준비 전에는 허용하지 않는다.
-- 이유: 현재 DB-only target에는 `supabase_realtime_admin` runtime role이 없어 원본 ACL restore가 중단된다. `--no-privileges`만으로는 service-only function revoke/grant가 생략되므로 hardening reapply와 postcheck가 필수다.
-- 영향: fresh snapshot 복원과 critical RLS/RPC/FK checks는 통과했지만, Storage object 바이너리, Edge Function secrets, SMTP/OAuth, Realtime runtime roles와 일반 ACL까지 포함한 production cutover는 검증되지 않았다.
-- 후속 결정: `docs/recovery_baseline.md`를 기준으로 normalized catalog comparison과 full stack ACL restore를 검증한 뒤에만 canonical baseline 및 production migration history metadata 변경 여부를 별도 승인한다.
+- 상태: 확정 (post-hardening ACL-inclusive DB recovery rehearsal, full application cutover 보류)
+- 결정: current production snapshot은 custom archive로 보존하고, NAS에서는 Realtime runtime role을 먼저 초기화한 뒤 archive pre-data/data/post-data를 staged restore한다. blank DB의 GraphQL wrapper 순서 의존성은 archive TOC `5260`을 제외하고 production-equivalent prelude와 동일 ACL을 적용해 해결한다. `--no-privileges` restore 뒤 hardening reapply는 DB-only 진단 경로일 뿐 authoritative ACL recovery proof로 사용하지 않는다.
+- 이유: DB-only target은 `supabase_realtime_admin` 역할이 없어 ACL restore가 중단되고, blank DB는 GraphQL event trigger가 해당 ACL보다 뒤에 복원된다. staged r3 restore는 이 두 runtime/ordering 조건을 명시적으로 충족하면서 원본 archive와 production history를 변경하지 않는다.
+- 영향: fresh post-hardening snapshot의 데이터, schema, RLS, ACL, Realtime runtime role이 검증됐다. security postcheck와 233-entry normalized catalog hash가 원본과 일치한다. Storage object 바이너리, Edge Function secrets, SMTP/OAuth 및 외부 Auth/Storage 기능 cutover는 포함하지 않는다.
+- 후속 결정: `docs/recovery_baseline.md`를 기준으로 canonical baseline/squash 전략과 production migration history metadata 변경 여부만 별도 승인한다. NAS 전체 서비스 networking/firewall 변경은 필요 시 별도 승인한다.
 
 ## 2026-08-24
 - 상태: 확정 (격리 복원 리허설, 운영 전환 아님)

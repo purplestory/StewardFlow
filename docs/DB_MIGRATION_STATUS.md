@@ -1,6 +1,6 @@
 # DB MIGRATION STATUS
 
-최종 업데이트: 2026-08-24
+최종 업데이트: 2026-08-25
 
 ## 1. 목적
 - 환경별 DB 스키마 적용 상태를 빠르게 확인
@@ -42,7 +42,15 @@
 - 검증: archive SHA-256 일치, 컨테이너 health `healthy`, PostgreSQL `17.6`, 핵심 테이블/행 수와 hardening replay postcheck 확인.
 - 한계: Storage object 바이너리, Edge Function secrets, SMTP/OAuth 설정은 DB archive에 포함되지 않으며, 이 리허설은 서비스 전체 cutover 검증이 아니다.
 
-## 2-2. 과거 핵심 이슈 (기록 보존)
+## 2-2. Post-hardening snapshot 복원 (2026-08-25)
+- 새 archive: `.local-backups/steward-flow/20260825-100124-KST/steward-flow-post-hardening-20260825-100124-KST.dump`
+- 크기/SHA-256: `664,803 bytes`, `2a059ae35067385e868ed17e66c6581996f4364f3d61dba0a5d34db920d18d6c`; archive TOC `1,128`줄, schema-only/data stream 검증 성공.
+- restored source history: `20260220103000_bootstrap_books_schema` 단건. hardening revision은 수동 적용 evidence로 유지하며 history를 수정하지 않는다.
+- NAS 새 격리 DB: `steward_flow_restore_post_hardening_20260825`. 복원 후 hardening migration reapply와 postcheck를 통과했다: `profiles=6`, `organizations=2`, `auth.users=8`, 활성 초대 `0`, RLS 대상 `5`, anon invite SELECT `false`, service-only RPC `4/4`, authenticated 실행 `0`, service-role 실행 `4`, FK `SET NULL 3`.
+- 제한: `--no-privileges` restore만 DB-only target에서 성공했다. ACL-inclusive restore는 `supabase_realtime_admin` runtime role 부재로 중단되므로, full self-hosted cutover 절차로 사용하지 않는다.
+- recovery/baseline 규칙: `docs/recovery_baseline.md`.
+
+## 2-3. 과거 핵심 이슈 (기록 보존)
 - 과거 일부 환경에서 아래 오류가 관측됨:
   - `Could not find the table 'public.book_loans' in the schema cache`
   - `Could not find the table 'public.book_items' in the schema cache`

@@ -52,25 +52,17 @@ WHERE email = '본인의-이메일@example.com';
 2. 사용자 관리 페이지(`/settings/users`) 접속
 3. 본인의 역할을 "관리자"로 변경
 
-## 방법 3: 임시 RLS 비활성화 (고급)
+## 방법 3: 운영자 복구 절차
 
-만약 위 방법이 모두 작동하지 않는다면:
+RLS를 끄거나 legacy policy SQL을 재실행하지 마세요. 현재 hardening은 마지막 admin 보호와 privileged profile field guard를 DB trigger로 적용합니다.
 
-```sql
--- 1. RLS 임시 비활성화
-ALTER TABLE public.profiles DISABLE ROW LEVEL SECURITY;
-
--- 2. 역할 변경
-UPDATE public.profiles
-SET role = 'admin'
-WHERE email = '본인의-이메일@example.com';
-
--- 3. RLS 다시 활성화
-ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
-```
+1. 먼저 격리 restore DB에서 대상 UUID, 현재 관리자 수, trigger/postcheck 결과를 확인합니다.
+2. production 변경이 불가피하면 backup과 별도 action-time 승인을 확보합니다.
+3. 현재 baseline에 맞춘 one-off service-admin 절차를 적용한 뒤, hardening postcheck와 signed-in 검증을 다시 실행합니다.
 
 ## 주의사항
 
 - ⚠️ SQL을 실행하기 전에 반드시 본인의 이메일/UUID를 확인하세요
 - 🔄 변경 후 페이지를 새로고침하세요
 - 📝 변경 사항이 즉시 반영됩니다
+- 🔒 production RLS 비활성화와 `supabase/rls.sql` 재실행은 금지합니다

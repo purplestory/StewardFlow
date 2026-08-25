@@ -4,9 +4,9 @@
 
 ## 1. 필수 환경 설정
 - `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` 설정
-- `supabase/schema.sql` 실행으로 테이블 생성
-- `supabase/rls.sql` 실행으로 RLS 정책 적용
-- `supabase/migrations/`의 SQL은 기존 환경에 순차 반영
+- 현재 production/recovery 환경에서는 `supabase/schema.sql`, `supabase/rls.sql`, legacy migration 전체 실행 금지
+- database recovery와 새 baseline은 `docs/recovery_baseline.md`의 fresh archive와 isolated rehearsal 절차 사용
+- production migration history metadata 변경은 별도 승인 전까지 금지
 
 ## 2. 조직/권한 운영
 - 조직 생성/가입은 `조직 설정` 페이지에서 수행

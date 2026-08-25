@@ -1,6 +1,6 @@
 # 실행 트래커 (Single Source of Truth)
 
-최종 업데이트: 2026-08-24
+최종 업데이트: 2026-08-25
 담당: Codex + 사용자
 
 ## 0) 운영 원칙 (필수)
@@ -40,6 +40,15 @@
 
 ## 2) 작업 로그 (Execution Log)
 시간 기준: Asia/Seoul
+
+### 2026-08-25
+- [IN_PROGRESS/REMOTE] OPS-004 post-hardening snapshot and replay
+  - `scripts/backup-post-hardening.sh`로 현재 운영 DB의 custom-format archive를 새로 생성했다. PostgreSQL native hidden password prompt를 사용했으며 password는 파일, Git, 명령 인수, 대화에 저장하지 않았다.
+  - 로컬 archive는 `664,803 bytes`, SHA-256 `2a059ae35067385e868ed17e66c6581996f4364f3d61dba0a5d34db920d18d6c`, TOC `1,128`줄이며 TOC/schema-only/data stream 판독을 통과했다. 산출물은 restricted local backup directory의 `700/600` 권한이다.
+  - NAS restricted backup directory에 암호화된 SSH로 복사했고 SHA-256이 일치했다. 새 `steward_flow_restore_post_hardening_20260825` DB에 `supabase_admin`, `--exit-on-error --no-owner --no-privileges`로 복원했다.
+  - 복원 뒤 idempotent hardening migration을 재적용해 RLS `5`, anon invite SELECT `false`, 도서 취소 RPC 존재, service-only RPC `4/4`, authenticated 실행 `0`, service-role 실행 `4`, account-deletion FK `SET NULL 3`을 확인했다. 데이터 핵심값은 `profiles=6`, `organizations=2`, `auth.users=8`, 활성 초대 `0`이다.
+  - RCA: DB-only target에서 ACL까지 포함한 restore는 `supabase_realtime_admin` runtime role 부재로 중단됐다. 따라서 이 환경은 DB archive/hardening rehearsal 전용이며 full self-hosted cutover 기준이 아니다. 완전한 Supabase stack/runtime role을 준비한 뒤 ACL-inclusive restore를 별도 검증한다.
+  - 기준선 근거와 legacy bootstrap 금지 규칙은 `docs/recovery_baseline.md`에 고정했다. production migration history는 계속 수정하지 않는다.
 
 ### 2026-08-24
 - [DONE/LOCAL] SEC-001, SEC-002

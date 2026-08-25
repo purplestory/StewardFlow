@@ -144,23 +144,12 @@ StewardFlow/
 
 ### 2. 마이그레이션 실행
 
-Supabase SQL Editor에서 다음 순서로 마이그레이션을 실행합니다:
+현재 production schema는 legacy bootstrap files나 `supabase/migrations/` 전체 replay로 재구성하지 않습니다.
 
-```bash
-# 1. 기본 스키마 생성
-# supabase/schema.sql 실행
-
-# 2. RLS 정책 설정
-# supabase/rls.sql 실행
-
-# 3. 마이그레이션 파일 순차 실행
-# supabase/migrations/ 폴더의 파일들을 날짜 순서대로 실행
-```
-
-**주의사항:**
-- 마이그레이션은 순서대로 실행해야 합니다
-- 이미 실행된 마이그레이션은 다시 실행하지 마세요
-- 프로덕션 환경에서는 백업 후 실행하세요
+- `supabase/schema.sql`와 `supabase/rls.sql`은 historical reference이며 새 환경에 실행 금지입니다.
+- legacy migration directory에는 duplicate/nonstandard version과 diagnostic/reset SQL이 있어 `db push`, `db reset --linked`, 날짜순 bulk execution을 금지합니다.
+- recovery 또는 새 baseline 작업은 [Recovery Baseline](./recovery_baseline.md)의 fresh custom archive, isolated restore, hardening postcheck 절차만 사용합니다.
+- production migration history metadata 변경은 별도 승인 전까지 금지입니다.
 
 ### 3. Storage 버킷 생성
 
@@ -339,9 +328,10 @@ vercel
 **문제**: 데이터 조회/수정 권한 오류
 
 **해결**:
-- `supabase/rls.sql` 재실행
+- `docs/recovery_baseline.md`의 current hardening/postcheck 기준 확인
 - 사용자 역할 확인 (`profiles.role`)
 - 정책 조건 확인
+- production에서는 RLS 비활성화나 legacy SQL 재실행 금지
 
 ### 3. 이미지 업로드 실패
 

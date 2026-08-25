@@ -41,13 +41,14 @@
 7. account deletion UUID snapshot/FK SET NULL/operation index와 service-only RPC 4종의 존재·실행 권한 확인
 
 ### 4) Migration history baseline reconciliation
-- 상태: 진행 필요 (legacy migration 전체 replay 금지; 새 post-hardening baseline과 격리 restore/replay 검증이 선행 조건)
+- 상태: 진행 중 (fresh post-hardening archive와 격리 restore/hardening replay 검증 완료; canonical baseline/ACL-inclusive full stack 검증 필요)
 - 배경: hardening은 수동 적용되어 history를 수정하지 않았고 원격 migration history에는 `20260220103000`만 기록됨
 - 완료 조건(AC):
-1. 원격 schema dump와 로컬 migration 집합 차이 분석
-2. baseline/squash 전략 확정
-3. 신규 환경 replay 및 장애 복구 절차 문서화
-4. 운영 DB에 로컬 migration 전체를 일괄 replay하지 않는 보호 절차 명시
+1. fresh source schema dump와 restored catalog 차이 분석
+2. full Supabase runtime role이 있는 환경에서 ACL-inclusive restore 검증
+3. baseline/squash 전략 확정
+4. 신규 환경 replay 및 장애 복구 절차 문서화
+5. 운영 DB에 로컬 migration 전체를 일괄 replay하지 않는 보호 절차 명시
 
 ### 5) 카카오 OAuth signed-in 회귀 테스트
 - 상태: 진행 중 (콜백 보강 및 open redirect 차단 완료, 실환경 QA 필요)

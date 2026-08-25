@@ -1,3 +1,7 @@
+-- LEGACY REFERENCE ONLY.
+-- Do not run this file for production, recovery, or a new baseline.
+-- See docs/recovery_baseline.md for the approved procedure.
+
 create table public.organizations (
   id uuid default gen_random_uuid() primary key,
   name text not null,

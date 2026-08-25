@@ -2,6 +2,13 @@
 
 프로젝트 의사결정 로그 (변경 시 계속 추가)
 
+## 2026-08-25
+- 상태: 확정 (post-hardening DB recovery rehearsal, full cutover 보류)
+- 결정: 현재 production snapshot은 custom archive로 보존하고, NAS DB-only rehearsal에는 `--no-owner --no-privileges` restore 뒤 idempotent hardening migration reapply를 사용한다. ACL-inclusive restore는 full Supabase runtime role 준비 전에는 허용하지 않는다.
+- 이유: 현재 DB-only target에는 `supabase_realtime_admin` runtime role이 없어 원본 ACL restore가 중단된다. `--no-privileges`만으로는 service-only function revoke/grant가 생략되므로 hardening reapply와 postcheck가 필수다.
+- 영향: fresh snapshot 복원과 critical RLS/RPC/FK checks는 통과했지만, Storage object 바이너리, Edge Function secrets, SMTP/OAuth, Realtime runtime roles와 일반 ACL까지 포함한 production cutover는 검증되지 않았다.
+- 후속 결정: `docs/recovery_baseline.md`를 기준으로 normalized catalog comparison과 full stack ACL restore를 검증한 뒤에만 canonical baseline 및 production migration history metadata 변경 여부를 별도 승인한다.
+
 ## 2026-08-24
 - 상태: 확정 (격리 복원 리허설, 운영 전환 아님)
 - 결정: NAS에서 `supabase/postgres:17.6.1.136` 기반의 별도 `steward-flow-restore-20260824` DB-only Supabase 복원 환경을 사용한다. 이 환경은 전용 네트워크·볼륨과 NAS loopback 전용 포트만 사용하며, Vercel production, 카카오 OAuth, 운영 Supabase URL과 연결하지 않는다.

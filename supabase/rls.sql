@@ -1,3 +1,7 @@
+-- LEGACY REFERENCE ONLY.
+-- Do not run this file for production, recovery, or a new baseline.
+-- See docs/recovery_baseline.md for the approved procedure.
+--
 -- RLS 정책은 organization_id가 채워진 이후에 적용하세요.
 -- 적용 전 필수:
 -- 1) profiles.organization_id 설정

@@ -115,8 +115,10 @@
 ## 3-3. Migration history 기준선 불일치
 - 로컬에는 누적 migration 파일이 다수 존재하지만 원격 history는 도서 bootstrap 단건만 기록되어 있다.
 - 신규 환경에 로컬 migration 전체를 그대로 replay하지 않는다.
-- 현재 원격 스키마 dump와 로컬 migration을 대조해 baseline/squash 전략을 확정한 뒤 새 환경 복구 절차를 문서화한다.
-- 2026-08-24 백업 archive 대조에서 과거 로컬 migration이 선언한 `can_approve_vehicle`, `get_org_profiles`, `required_role_for_vehicle` 함수가 원격에는 없음을 확인했다. 현재 hardening migration은 이 함수들을 참조하지 않으며, OPS-004 baseline reconciliation에서 유지/폐기 여부를 결정한다.
+- 2026-08-25에 post-hardening custom archive를 archive-backed canonical baseline으로 확정했다. evidence, recovery rules, and future forward-only change procedure는 `docs/migration_lineage.md`에 고정했다.
+- production의 observed history `20260220103000_bootstrap_books_schema`와 manually applied hardening evidence는 보존한다. `schema_migrations` 변경, `supabase db push`, migration repair, legacy bulk replay는 금지한다.
+- 미래 DB 변경은 `supabase/forward-migrations/`에 하나씩 추가하고, isolated restored baseline rehearsal, fresh production backup, action-time approval, exact-file `psql` transaction, postcheck 기록 순서로만 진행한다.
+- 2026-08-24 백업 archive 대조에서 과거 로컬 migration이 선언한 `can_approve_vehicle`, `get_org_profiles`, `required_role_for_vehicle` 함수가 원격에는 없음을 확인했다. 이들은 current baseline의 요구사항이 아니며, 필요한 기능이 새로 요구될 때만 forward migration으로 설계한다.
 
 ## 4. 검증 SQL
 아래 쿼리를 Supabase SQL Editor에서 실행:

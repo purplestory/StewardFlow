@@ -42,5 +42,11 @@ This validates the database archive, data, schema, RLS, ACLs, and required Realt
 
 ## Remaining Baseline Work
 
-1. Decide and document the future baseline/migration-lineage strategy. Preserve the observed `20260220103000` history and manual hardening evidence; do not edit production history until the decision is separately approved.
-2. If a full self-hosted application-service rehearsal is required, obtain separate approval for the NAS networking/firewall design first. The current result is intentionally limited to database recovery and ACL validation.
+The archive-backed canonical lineage is defined in
+`docs/migration_lineage.md`. Preserve the observed `20260220103000` history
+and manual hardening evidence; production history remains unchanged unless a
+separately approved action calls for a migration metadata change.
+
+If a full self-hosted application-service rehearsal is required, obtain
+separate approval for the NAS networking/firewall design first. The current
+result is intentionally limited to database recovery and ACL validation.

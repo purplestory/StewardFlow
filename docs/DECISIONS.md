@@ -3,6 +3,13 @@
 프로젝트 의사결정 로그 (변경 시 계속 추가)
 
 ## 2026-08-25
+- 상태: 확정 (archive-backed canonical baseline, production history metadata 보존)
+- 결정: `production-archive-20260825-100124-kst` custom archive와 verified ACL-inclusive r3 restore를 StewardFlow의 canonical recovery baseline으로 사용한다. executable SQL squash는 현재 만들지 않으며, history의 관측값 `20260220103000_bootstrap_books_schema`와 manual hardening evidence를 보존한다.
+- 이유: `supabase/migrations/`에는 duplicate/diagnostic/RLS-disable SQL이 섞여 있어 선형 CLI migration chain이나 squash의 근거가 될 수 없다. 반대로 current archive는 data, schema, RLS, ACL, Supabase extension/runtime role을 정확히 복원하고 233-entry catalog match로 검증됐다.
+- 영향: production `schema_migrations` 변경, `supabase db push`, migration repair, legacy bulk replay는 금지한다. 미래 DB 변경은 `supabase/forward-migrations/`에 하나씩 작성하고 isolated rehearsal, fresh backup, action-time approval, exact-file `psql` transaction 후 postcheck로 진행한다.
+- 근거: `docs/migration_lineage.md`, `docs/recovery_baseline.md`, `scripts/verify-production-baseline.sh`.
+
+## 2026-08-25
 - 상태: 확정 (post-hardening ACL-inclusive DB recovery rehearsal, full application cutover 보류)
 - 결정: current production snapshot은 custom archive로 보존하고, NAS에서는 Realtime runtime role을 먼저 초기화한 뒤 archive pre-data/data/post-data를 staged restore한다. blank DB의 GraphQL wrapper 순서 의존성은 archive TOC `5260`을 제외하고 production-equivalent prelude와 동일 ACL을 적용해 해결한다. `--no-privileges` restore 뒤 hardening reapply는 DB-only 진단 경로일 뿐 authoritative ACL recovery proof로 사용하지 않는다.
 - 이유: DB-only target은 `supabase_realtime_admin` 역할이 없어 ACL restore가 중단되고, blank DB는 GraphQL event trigger가 해당 ACL보다 뒤에 복원된다. staged r3 restore는 이 두 runtime/ordering 조건을 명시적으로 충족하면서 원본 archive와 production history를 변경하지 않는다.

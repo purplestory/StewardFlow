@@ -33,7 +33,7 @@
 | QA-002 | P0 | IN_PROGRESS | 운영 signed-in 역할·테넌트 경계 회귀 QA | 기존 admin/manager의 읽기 전용 경로 검증 후, 전용 test user를 초대해 invite/부서 승인/도서 취소를 검증. 실제 계정 삭제는 별도 실행 승인 필요 | production, `src/actions/invite-actions.ts`, `src/actions/admin-organization-actions.ts`, `src/actions/auth-actions.ts` |
 | OPS-002 | P0 | DONE | 2026-08-24 로컬 변경 프로덕션 배포 | 실행 직전 사용자 확인 후 Vercel production READY, 운영 alias 및 공개 smoke 확인 | Vercel 배포, `.vercelignore` |
 | OPS-003 | P0 | DONE | RLS 강화 마이그레이션 원격 적용 | 수동 백업과 사용자 확인 후 transaction 적용, assertion 및 19개 read-only postcheck 통과 | Supabase 원격, 해당 migration |
-| OPS-004 | P0 | IN_PROGRESS | 원격 migration history 기준선 조정 및 복구 검증 | ACL-inclusive DB recovery와 normalized catalog 비교는 완료; 원격 단건 history와 canonical baseline 전략 결정이 남음 | `supabase/migrations`, `docs/DB_MIGRATION_STATUS.md` |
+| OPS-004 | P0 | DONE | 원격 migration history 기준선 조정 및 복구 검증 | archive-backed canonical baseline, ACL-inclusive recovery, normalized catalog 비교, forward-only 변경 절차를 확정; production history는 변경하지 않음 | `docs/migration_lineage.md`, `docs/DB_MIGRATION_STATUS.md` |
 | OPS-005 | P1 | TODO | 추적 중인 npm 캐시 제거 | Git 추적 1,861개 파일(약 475MB)을 history 영향 검토 후 제거, 재추적 방지 확인 | `.npm/`, `.npm-cache/`, `.gitignore` |
 | OPS-006 | P0 | DONE | RLS 적용 전 원격 DB 수동 백업 | custom-format dump, SHA-256, archive 목록·schema/data 압축 해제 검증 완료 | `.local-backups/steward-flow/20260824-051551-KST/` (Git 제외) |
 | OPS-007 | P0 | DONE | 배포 소스 커밋/푸시 및 재현성 확보 | `29da08a`를 커밋하고 `origin/main` 반영까지 확인 | 현재 로컬 변경 전체 |
@@ -53,7 +53,11 @@
   - 별도 `steward-flow-runtime-rehearsal-20260825` NAS 런타임에서 PostgreSQL 17.6과 Realtime 2.102.3을 기동해 `supabase_realtime_admin` 역할을 초기화했다. NAS의 신규 Docker bridge forwarding은 호스트 방화벽이 차단하므로 Realtime은 DB 네트워크 namespace를 공유했다. 방화벽, 기존 NAS 스택, Vercel, OAuth에는 변경이 없다.
   - 일반 one-pass ACL restore의 GraphQL wrapper 순서 의존성(`graphql_public.graphql` ACL)을 r2 진단 DB에서 확인했다. r3 새 빈 DB에는 archive TOC `5260`만 제외한 pre-data, production-equivalent GraphQL prelude, data, post-data를 순서대로 적용했다. 원본 archive와 운영 DB는 수정하지 않았다.
   - r3 최종 postcheck는 `profiles=6`, `organizations=2`, `auth.users=8`, active invites `0`, RLS 대상 `5`, anon invite SELECT `false`, service-only RPC `4/4`, authenticated execute `0`, service-role execute `4`, account-deletion FK `SET NULL 3`을 반환했다.
-  - public table/function/policy/RLS/trigger 233개 정규화 카탈로그는 원본 archive와 r3에서 완전히 일치했고 SHA-256은 양쪽 모두 `ad48c3ceaf1d3c01b1140a89bbab6ca1578ac4d87a71af20d910752e01b133e5`다. canonical migration history/baseline 결정과 signed-in QA는 계속 남는다.
+  - public table/function/policy/RLS/trigger 233개 정규화 카탈로그는 원본 archive와 r3에서 완전히 일치했고 SHA-256은 양쪽 모두 `ad48c3ceaf1d3c01b1140a89bbab6ca1578ac4d87a71af20d910752e01b133e5`다.
+- [DONE/LOCAL] OPS-004 archive-backed canonical migration baseline
+  - historical `supabase/migrations/`는 duplicate/diagnostic/RLS-disable SQL이 섞인 비선형 evidence로 분류하고, verified post-hardening custom archive를 canonical baseline으로 확정했다.
+  - production의 observed history `20260220103000_bootstrap_books_schema`와 manually applied hardening evidence는 보존한다. `schema_migrations`, `supabase db push`, migration repair, legacy bulk replay는 계속 금지한다.
+  - future DB change는 `supabase/forward-migrations/`의 하나의 reviewed SQL 파일을 isolated restored baseline에서 rehearsal한 뒤, fresh backup과 action-time approval 후 `psql` transaction으로만 적용한다. evidence와 verification helper는 `docs/migration_lineage.md`, `scripts/verify-production-baseline.sh`에 고정했다.
 
 ### 2026-08-24
 - [DONE/LOCAL] SEC-001, SEC-002

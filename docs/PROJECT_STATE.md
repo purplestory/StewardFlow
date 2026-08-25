@@ -1,7 +1,7 @@
 # PROJECT STATE
 
 최종 업데이트: 2026-08-25
-기준 커밋: `main`/`origin/main`의 `1db3ad0`
+기준 커밋: `main`/`origin/main`의 `b11ae26`
 
 ## 0. 배포 상태 (반드시 먼저 확인)
 - 원격 Supabase 상태: `Healthy`
@@ -11,7 +11,7 @@
 - **사전 DB 백업: 유효** — `2026-08-24 05:47 KST`, SHA-256 `3c2b77ccff0627483951dc1875cf20454b66ad8f58ddfe105624e0dceb75f143`, archive 판독과 NAS DB-only 복원 리허설 완료.
 - **Post-hardening recovery: 검증 완료** — `2026-08-25` archive SHA-256 `2a059ae35067385e868ed17e66c6581996f4364f3d61dba0a5d34db920d18d6c`를 NAS Realtime runtime role 환경에 ACL 포함 복원했다. security postcheck와 233-entry normalized catalog SHA가 일치했다.
 - **배포 소스 보존: 완료** — 운영 소스는 `29da08a feat: harden StewardFlow production boundaries`로 커밋되어 `origin/main`까지 반영됐다.
-- **남은 운영 과제:** OPS-004 canonical migration baseline 결정, signed-in 회귀 QA.
+- **남은 운영 과제:** signed-in 회귀 QA. Auth/Storage를 포함한 전체 NAS application-service rehearsal은 별도 네트워크/방화벽 승인 후 선택적으로 진행한다.
 
 ## 1. 현재 제품 범위
 - 코어: 인증, 사용자/권한, 물품/공간/차량 예약/승인/반납
@@ -51,15 +51,15 @@
 - 초대 레코드 만료 시각(`organization_invites.expires_at`) 저장/검증 로직 반영
 
 ## 4. 현재 위험/주의사항
-- 가장 높은 우선순위는 로그인 상태 운영 QA와 OPS-004 migration history/복원 리허설이다.
+- 가장 높은 우선순위는 로그인 상태 운영 QA다.
   - 운영 계정은 `admin` 3명, `manager` 3명, 일반 `user` 0명이다. 기존 admin/manager로는 읽기 전용 권한 QA를 먼저 수행하고, 변경 흐름은 전용 테스트 `user` 초대 후에만 검증한다.
   - hardening 전 archive의 DB-only replay와 2026-08-25 post-hardening archive의 ACL-inclusive r3 recovery를 모두 검증했다. r3은 `profiles=6`, `organizations=2`, `auth.users=8`, RLS 대상 `5`, anon invite SELECT `false`, authenticated service-only RPC execute `0`, service-role `4`, FK `SET NULL 3`을 반환했고 원본과 233-entry normalized catalog SHA가 일치했다.
-  - NAS 리허설은 새 runtime role DB와 Realtime만 사용하고 loopback DB 포트만 노출한다. NAS 호스트 방화벽/기존 프로젝트/Vercel 환경변수/카카오 OAuth는 변경하지 않았다. 따라서 이것은 DB/RLS/ACL recovery 검증이며 외부 Auth·Storage·OAuth 기능 cutover 검증은 아니다. 기준선과 금지된 legacy bootstrap 경로는 `docs/recovery_baseline.md`를 따른다.
+  - NAS 리허설은 새 runtime role DB와 Realtime만 사용하고 loopback DB 포트만 노출한다. NAS 호스트 방화벽/기존 프로젝트/Vercel 환경변수/카카오 OAuth는 변경하지 않았다. 따라서 이것은 DB/RLS/ACL recovery 검증이며 외부 Auth·Storage·OAuth 기능 cutover 검증은 아니다. 기준선과 forward-only 변경 규칙은 `docs/migration_lineage.md`를 따른다.
 - `cancel_requested_book_loan_atomic`은 원격에 존재하며 production API가 원자 RPC 경로를 사용할 수 있다.
 - 일반 user를 조직 admin이 직접 삭제하는 Auth 외부 호출에는 actor 강등/대상 tenant 이동의 짧은 TOCTOU가 남아 있다. 완전 제거는 별도 DB deletion authorization marker/RPC 과제로 관리한다.
 - hardening은 수동 적용되어 원격 migration history를 수정하지 않았다. history에는 `20260220103000`만 기록되어 로컬 migration 집합과 기준선이 다르다.
   - 현재 legacy migration 111개는 중복/비표준 version이 있어 전체 replay, `db push`, `db reset --linked`, legacy 전체 applied 처리를 금지한다.
-  - 새 post-hardening schema/dump를 기준선으로 만들고, 격리된 복원·replay 검증 후에만 history metadata를 정리한다.
+  - verified post-hardening custom archive를 archive-backed canonical baseline으로 확정했다. production history metadata는 변경하지 않으며, 미래 DB change는 isolated rehearsal과 action-time approval을 거친 forward-only SQL로만 적용한다.
 - 원격 점검(2026-08-24): `profiles=6`, `organizations=2`, 활성 초대 `0`, privileged orphan `0`, 관리자 없는 기관 `0`, 잘못된 profile 부서 `0`, account deletion null status/중복 pending requester `0`
 - account deletion requester/transfer/resolver FK 3개는 원격에서 모두 `ON DELETE SET NULL` 적용 확인
 - `.npm/`, `.npm-cache/`는 ignore에 추가했지만 Git에는 1,861개 파일(약 475MB)이 이미 추적 중이다.

@@ -451,7 +451,7 @@ export default function DepartmentManager({ organizationId }: DepartmentManagerP
                   }`}
                 >
                   {editingId === dept.id ? (
-                      <div className="flex-1 space-y-2 md:pr-3">
+                      <div className="min-w-0 flex-1 space-y-2 md:pr-3">
                         <input
                           type="text"
                           value={editName}
@@ -501,17 +501,17 @@ export default function DepartmentManager({ organizationId }: DepartmentManagerP
                           />
                         </svg>
                         <div className="min-w-0">
-                          <div className="flex items-center gap-2 font-medium">
-                            <span>{dept.name}</span>
+                          <div className="flex flex-wrap items-center gap-2 font-medium">
+                            <span className="break-words">{dept.name}</span>
                             {dept.description && (
-                              <span className="text-sm text-neutral-500">
+                              <span className="break-words text-sm text-neutral-500">
                                 ({dept.description})
                               </span>
                             )}
                           </div>
                         </div>
                       </div>
-                      <div className="flex items-center justify-end gap-1 md:justify-self-end">
+                      <div className="flex shrink-0 items-center justify-end gap-1 md:justify-self-end">
                         <button
                           type="button"
                           onClick={() => startEdit(dept)}

@@ -292,11 +292,11 @@ export default function OrganizationManager() {
             ) : (
               <>
                 <div className="module-head">
-                  <p className="text-sm text-neutral-900 font-medium">
+                  <p className="min-w-0 break-words text-sm font-medium text-neutral-900">
                     {organization.name}
                   </p>
                   {userRole === "admin" && (
-                    <div className="flex items-center gap-2">
+                    <div className="flex shrink-0 items-center gap-2">
                       <button
                         type="button"
                         onClick={() => setIsEditingName(true)}

@@ -570,7 +570,7 @@ export default function AssetCategoryManager({
                 </svg>
 
                 {editingCategoryValue === category.value ? (
-                  <div className="flex flex-1 flex-col gap-2 sm:flex-row sm:items-center">
+                  <div className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:items-center">
                     <input
                       type="text"
                       className="form-input flex-1 text-sm"
@@ -604,12 +604,12 @@ export default function AssetCategoryManager({
                   </div>
                 ) : (
                   <>
-                    <div className="flex-1">
-                      <span className="text-sm font-medium text-neutral-900">
+                    <div className="min-w-0 flex-1">
+                      <span className="break-words text-sm font-medium text-neutral-900">
                         {category.label}
                       </span>
                     </div>
-                    <div className="flex items-center gap-1">
+                    <div className="flex shrink-0 items-center gap-1">
                       <button
                         type="button"
                         onClick={() => handleEditCategory(category.value)}

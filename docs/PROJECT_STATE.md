@@ -11,7 +11,7 @@
 - **사전 DB 백업: 유효** — `2026-08-24 05:47 KST`, SHA-256 `3c2b77ccff0627483951dc1875cf20454b66ad8f58ddfe105624e0dceb75f143`, archive 판독과 NAS DB-only 복원 리허설 완료.
 - **Post-hardening recovery: 검증 완료** — `2026-08-25` archive SHA-256 `2a059ae35067385e868ed17e66c6581996f4364f3d61dba0a5d34db920d18d6c`를 NAS Realtime runtime role 환경에 ACL 포함 복원했다. security postcheck와 233-entry normalized catalog SHA가 일치했다.
 - **배포 소스 보존: 완료** — 운영 소스는 `29da08a feat: harden StewardFlow production boundaries`로 커밋되어 `origin/main`까지 반영됐다.
-- **남은 운영 과제:** signed-in 회귀 QA. Auth/Storage를 포함한 전체 NAS application-service rehearsal은 별도 네트워크/방화벽 승인 후 선택적으로 진행한다.
+- **남은 운영 과제:** signed-in 회귀 QA와 실제 데이터가 있는 설정 화면 시각 QA. Auth/Storage를 포함한 전체 NAS application-service rehearsal은 별도 네트워크/방화벽 승인 후 선택적으로 진행한다.
 
 ## 1. 현재 제품 범위
 - 코어: 인증, 사용자/권한, 물품/공간/차량 예약/승인/반납

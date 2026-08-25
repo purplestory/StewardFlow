@@ -365,7 +365,7 @@ export default function FeatureSettings({ organizationId }: FeatureSettingsProps
                 )}
                 
                 {editingMenuKey === labelKey ? (
-                  <div className="flex items-center gap-2 flex-1">
+                  <div className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:items-center">
                     <input
                       type="text"
                       value={editingMenuLabel}
@@ -383,7 +383,7 @@ export default function FeatureSettings({ organizationId }: FeatureSettingsProps
                           setEditingMenuLabel("");
                         }
                       }}
-                      className="form-input flex-1 h-10 text-sm"
+                      className="form-input min-w-0 flex-1 h-10 text-sm"
                       placeholder={
                         labelKey === "equipment" ? "물품" :
                         labelKey === "spaces" ? "공간" :
@@ -391,35 +391,37 @@ export default function FeatureSettings({ organizationId }: FeatureSettingsProps
                       }
                       autoFocus
                     />
-                    <button
-                      type="button"
-                      onClick={async () => {
-                        const newMenuLabels = { ...menuLabels, [labelKey]: editingMenuLabel };
-                        setMenuLabels(newMenuLabels);
-                        setEditingMenuKey(null);
-                        setEditingMenuLabel("");
-                        // 즉시 저장
-                        await handleSave(undefined, newMenuLabels, undefined);
-                      }}
-                      className="btn-primary h-10 text-xs px-3 whitespace-nowrap"
-                    >
-                      저장
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setEditingMenuKey(null);
-                        setEditingMenuLabel("");
-                      }}
-                      className="btn-outline h-10 text-xs px-3 whitespace-nowrap"
-                    >
-                      취소
-                    </button>
+                    <div className="flex shrink-0 gap-2">
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          const newMenuLabels = { ...menuLabels, [labelKey]: editingMenuLabel };
+                          setMenuLabels(newMenuLabels);
+                          setEditingMenuKey(null);
+                          setEditingMenuLabel("");
+                          // 즉시 저장
+                          await handleSave(undefined, newMenuLabels, undefined);
+                        }}
+                        className="btn-primary h-10 flex-1 text-xs px-3 whitespace-nowrap sm:flex-none"
+                      >
+                        저장
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEditingMenuKey(null);
+                          setEditingMenuLabel("");
+                        }}
+                        className="btn-outline h-10 flex-1 text-xs px-3 whitespace-nowrap sm:flex-none"
+                      >
+                        취소
+                      </button>
+                    </div>
                   </div>
                 ) : (
-                  <span className="font-medium text-sm flex-1">{labelValue}</span>
+                  <span className="min-w-0 flex-1 break-words text-sm font-medium">{labelValue}</span>
                 )}
-                <div className="flex items-center gap-3">
+                <div className="flex shrink-0 items-center gap-3">
                   {editingMenuKey !== labelKey && (
                     <button
                       type="button"

@@ -71,11 +71,12 @@
 4. 완료: repository/history rewrite는 force push를 요구하므로 이번 작업 범위에서 수행하지 않음
 
 ### 7) 메뉴/정책 화면 시각 QA
-- 상태: 진행 필요
+- 상태: 진행 중
+- 현재 결과: 355px mobile 및 1309px desktop 접근 화면은 horizontal overflow 없이 렌더됐고, 긴 메뉴/카테고리/기관명/이메일이 액션을 밀지 않도록 반응형 규칙을 보강했다. actual signed-in data 화면은 카카오 로그인 세션 대기 상태다.
 - 완료 조건(AC):
-1. `/settings/menu`, `/settings/org`, `/settings/users`에서 컴포넌트 간 간격/버튼 규격 일관
-2. 모바일 폭에서 액션 버튼 줄바꿈/오버플로우 없음
-3. 수정 액션이 아이콘 스타일로 일관되며, 기관 삭제 비활성화 안내가 명확함
+1. 진행 중: `/settings/menu`, `/settings/org`, `/settings/users`에서 컴포넌트 간 간격/버튼 규격 일관
+2. 완료(접근 화면/정적 검사): 모바일 폭에서 액션 버튼 줄바꿈/오버플로우 없음
+3. 진행 중: 수정 액션이 아이콘 스타일로 일관되며, 기관 삭제 비활성화 안내가 명확함
 
 ### 8) 초대 만료 정책 기능 QA
 - 상태: DB 컬럼 확인 완료, invite-only 서버 하드닝 실환경 QA 필요

@@ -31,6 +31,7 @@
 | DB-002 | P0 | DONE | 도서 신청 취소 원자 처리 및 중복 취소 요청 방지 | `cancel_requested_book_loan_atomic` RPC 우선 사용, 함수 미적용 환경에만 보상 fallback, 동일 unread 취소 알림 중복 생성 방지 | `src/app/api/reservations/my/route.ts`, `supabase/migrations/20260824090000_harden_tenant_rls_boundaries.sql` |
 | QA-001 | P0 | DONE | 의존성/Next.js 16/CI/테스트 기반 정리 | Next.js 16.3.2, `middleware -> proxy`, lint/mobile/typecheck/test/build CI, auth redirect 단위 테스트 구성 | `package.json`, `src/proxy.ts`, `.github/workflows/quality.yml`, `src/lib/auth-redirect.test.ts` |
 | QA-002 | P0 | IN_PROGRESS | 운영 signed-in 역할·테넌트 경계 회귀 QA | 기존 admin/manager의 읽기 전용 경로 검증 후, 전용 test user를 초대해 invite/부서 승인/도서 취소를 검증. 실제 계정 삭제는 별도 실행 승인 필요 | production, `src/actions/invite-actions.ts`, `src/actions/admin-organization-actions.ts`, `src/actions/auth-actions.ts` |
+| QA-003 | P1 | IN_PROGRESS | 설정 화면 시각 QA | 355px mobile 및 1309px desktop 접근 화면 overflow 없음, 긴 설정 텍스트 반응형 보강 완료; signed-in 데이터 화면 확인 대기 | `/settings/menu`, `/settings/org`, `/settings/users` |
 | OPS-002 | P0 | DONE | 2026-08-24 로컬 변경 프로덕션 배포 | 실행 직전 사용자 확인 후 Vercel production READY, 운영 alias 및 공개 smoke 확인 | Vercel 배포, `.vercelignore` |
 | OPS-003 | P0 | DONE | RLS 강화 마이그레이션 원격 적용 | 수동 백업과 사용자 확인 후 transaction 적용, assertion 및 19개 read-only postcheck 통과 | Supabase 원격, 해당 migration |
 | OPS-004 | P0 | DONE | 원격 migration history 기준선 조정 및 복구 검증 | archive-backed canonical baseline, ACL-inclusive recovery, normalized catalog 비교, forward-only 변경 절차를 확정; production history는 변경하지 않음 | `docs/migration_lineage.md`, `docs/DB_MIGRATION_STATUS.md` |
@@ -62,6 +63,10 @@
   - `.npm/` and `.npm-cache/`의 cache/log 1,861개 파일(working tree 약 475MB)을 `git rm --cached`로 Git index에서만 제거했다. 로컬 cache files는 삭제하지 않았다.
   - `.gitignore`의 root-level ignore 규칙을 `git check-ignore --no-index`로 확인했고, cleanup 후 Git 추적 파일 수는 0이다.
   - `npm run lint`, `npm run typecheck`, `npm test`는 모두 통과했다. 과거 Git object/history rewrite와 force push는 수행하지 않으며, 필요성은 별도 승인 과제로 남긴다.
+- [IN_PROGRESS/LOCAL] QA-003 settings visual QA
+  - local app과 production 접근 화면을 355px mobile 및 1309px desktop에서 점검해 document/body horizontal overflow가 없음을 확인했다. 인앱·Chrome 모두 StewardFlow 관리자 세션이 없어 실제 데이터가 있는 settings content는 확인하지 못했다.
+  - long menu/category/organization text와 profile email이 action controls를 밀지 않도록 `FeatureSettings`, `AssetCategoryManager`, `OrganizationManager`, `DepartmentManager`, `UserRoleManager`의 min-width, wrapping, action shrink 규칙을 보강했다.
+  - `npm run lint`, `npm run lint:mobile`, `npm run typecheck`, `npm test`를 통과했다. signed-in 세션 확보 후 `/settings/menu`, `/settings/org`, `/settings/users`의 실제 목록/폼/탭을 다시 확인한다.
 
 ### 2026-08-24
 - [DONE/LOCAL] SEC-001, SEC-002

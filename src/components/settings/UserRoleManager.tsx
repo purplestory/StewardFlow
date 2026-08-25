@@ -2166,7 +2166,7 @@ export default function UserRoleManager() {
                     <p className="text-sm font-medium text-neutral-900">
                       {profile.name ?? "이름 없음"}
                     </p>
-                    <p className="text-xs text-neutral-500">{profile.email}</p>
+                    <p className="break-all text-xs text-neutral-500">{profile.email}</p>
                   </div>
                   <div className="mt-3 md:mt-0">
                     {currentUserRole === "admin" ? (

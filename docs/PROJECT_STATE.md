@@ -1,7 +1,7 @@
 # PROJECT STATE
 
 최종 업데이트: 2026-08-25
-기준 커밋: `main`/`origin/main`의 `b11ae26`
+기준 브랜치: `main`/`origin/main` (현재 commit은 Git log로 확인)
 
 ## 0. 배포 상태 (반드시 먼저 확인)
 - 원격 Supabase 상태: `Healthy`
@@ -62,8 +62,8 @@
   - verified post-hardening custom archive를 archive-backed canonical baseline으로 확정했다. production history metadata는 변경하지 않으며, 미래 DB change는 isolated rehearsal과 action-time approval을 거친 forward-only SQL로만 적용한다.
 - 원격 점검(2026-08-24): `profiles=6`, `organizations=2`, 활성 초대 `0`, privileged orphan `0`, 관리자 없는 기관 `0`, 잘못된 profile 부서 `0`, account deletion null status/중복 pending requester `0`
 - account deletion requester/transfer/resolver FK 3개는 원격에서 모두 `ON DELETE SET NULL` 적용 확인
-- `.npm/`, `.npm-cache/`는 ignore에 추가했지만 Git에는 1,861개 파일(약 475MB)이 이미 추적 중이다.
-  - 별도 커밋으로 추적 제거 및 repository/history 영향 확인 필요
+- `.npm/`, `.npm-cache/`의 1,861개 cache/log 파일은 Git index에서 제거됐다. local cache(약 475MB)는 유지되고 root-level ignore가 재추적을 막는다.
+  - 과거 Git history rewrite와 force push는 이번 범위에서 수행하지 않았다. 필요성은 별도 운영 승인 과제다.
 - `.vercelignore`로 `.local-backups`, `.env*`, npm 캐시, Supabase 운영 SQL을 Vercel source upload에서 제외했으며 dry-run으로 확인했다.
 - 기본 운영 환경에서는 도서 테이블 미적용 이슈 해소됨
   - 확인: `book_items`, `book_loans` 포함 핵심 도서 테이블 API 응답 확인

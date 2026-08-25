@@ -34,7 +34,7 @@
 | OPS-002 | P0 | DONE | 2026-08-24 로컬 변경 프로덕션 배포 | 실행 직전 사용자 확인 후 Vercel production READY, 운영 alias 및 공개 smoke 확인 | Vercel 배포, `.vercelignore` |
 | OPS-003 | P0 | DONE | RLS 강화 마이그레이션 원격 적용 | 수동 백업과 사용자 확인 후 transaction 적용, assertion 및 19개 read-only postcheck 통과 | Supabase 원격, 해당 migration |
 | OPS-004 | P0 | DONE | 원격 migration history 기준선 조정 및 복구 검증 | archive-backed canonical baseline, ACL-inclusive recovery, normalized catalog 비교, forward-only 변경 절차를 확정; production history는 변경하지 않음 | `docs/migration_lineage.md`, `docs/DB_MIGRATION_STATUS.md` |
-| OPS-005 | P1 | TODO | 추적 중인 npm 캐시 제거 | Git 추적 1,861개 파일(약 475MB)을 history 영향 검토 후 제거, 재추적 방지 확인 | `.npm/`, `.npm-cache/`, `.gitignore` |
+| OPS-005 | P1 | DONE | 추적 중인 npm 캐시 제거 | 1,861개 cache/log 파일을 Git index에서만 제거하고 ignore 재추적 방지, lint/typecheck/test 통과; history rewrite는 수행하지 않음 | `.npm/`, `.npm-cache/`, `.gitignore` |
 | OPS-006 | P0 | DONE | RLS 적용 전 원격 DB 수동 백업 | custom-format dump, SHA-256, archive 목록·schema/data 압축 해제 검증 완료 | `.local-backups/steward-flow/20260824-051551-KST/` (Git 제외) |
 | OPS-007 | P0 | DONE | 배포 소스 커밋/푸시 및 재현성 확보 | `29da08a`를 커밋하고 `origin/main` 반영까지 확인 | 현재 로컬 변경 전체 |
 
@@ -58,6 +58,10 @@
   - historical `supabase/migrations/`는 duplicate/diagnostic/RLS-disable SQL이 섞인 비선형 evidence로 분류하고, verified post-hardening custom archive를 canonical baseline으로 확정했다.
   - production의 observed history `20260220103000_bootstrap_books_schema`와 manually applied hardening evidence는 보존한다. `schema_migrations`, `supabase db push`, migration repair, legacy bulk replay는 계속 금지한다.
   - future DB change는 `supabase/forward-migrations/`의 하나의 reviewed SQL 파일을 isolated restored baseline에서 rehearsal한 뒤, fresh backup과 action-time approval 후 `psql` transaction으로만 적용한다. evidence와 verification helper는 `docs/migration_lineage.md`, `scripts/verify-production-baseline.sh`에 고정했다.
+- [DONE/LOCAL] OPS-005 tracked npm cache cleanup
+  - `.npm/` and `.npm-cache/`의 cache/log 1,861개 파일(working tree 약 475MB)을 `git rm --cached`로 Git index에서만 제거했다. 로컬 cache files는 삭제하지 않았다.
+  - `.gitignore`의 root-level ignore 규칙을 `git check-ignore --no-index`로 확인했고, cleanup 후 Git 추적 파일 수는 0이다.
+  - `npm run lint`, `npm run typecheck`, `npm test`는 모두 통과했다. 과거 Git object/history rewrite와 force push는 수행하지 않으며, 필요성은 별도 승인 과제로 남긴다.
 
 ### 2026-08-24
 - [DONE/LOCAL] SEC-001, SEC-002

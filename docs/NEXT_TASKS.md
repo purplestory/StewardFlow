@@ -62,13 +62,13 @@
 5. production, branch preview, 모바일 앱 전환 시나리오 확인
 
 ### 6) Git 추적 npm 캐시 정리
-- 상태: 진행 필요
-- 현황: `.npm/`, `.npm-cache/` 1,861개 추적 파일, 약 475MB (`.gitignore` 반영은 완료)
+- 상태: 완료
+- 결과: `.npm/`, `.npm-cache/` 1,861개 cache/log 파일을 Git index에서만 제거했다. working tree의 약 475MB cache는 유지되며 `.gitignore`가 재추적을 막는다.
 - 완료 조건(AC):
-1. 캐시 파일 추적 제거 전 영향 검토
-2. 별도 커밋으로 index에서 제거
-3. 이후 install/test에서 재추적되지 않음 확인
-4. repository/history 용량 정리 필요 여부 결정
+1. 완료: 캐시 파일 추적 제거 전 영향 검토
+2. 완료: 별도 커밋으로 index에서 제거
+3. 완료: ignore 규칙과 lint/typecheck/test로 재추적·작동 영향 없음 확인
+4. 완료: repository/history rewrite는 force push를 요구하므로 이번 작업 범위에서 수행하지 않음
 
 ### 7) 메뉴/정책 화면 시각 QA
 - 상태: 진행 필요

@@ -6,6 +6,9 @@ import PlatformIntro from "./PlatformIntro";
 const mocks = vi.hoisted(() => ({ useHeaderSession: vi.fn() }));
 
 vi.mock("@/components/layout/useHeaderSession", () => mocks);
+vi.mock("@/components/common/LogoIcon", () => ({
+  default: () => createElement("svg", { "data-testid": "body-brand-logo" }),
+}));
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ replace: vi.fn() }),
   useSearchParams: () => new URLSearchParams(),
@@ -26,6 +29,12 @@ const render = () => renderToStaticMarkup(createElement(PlatformIntro));
 
 describe("PlatformIntro navigation states", () => {
   beforeEach(() => mocks.useHeaderSession.mockReturnValue(guestSession));
+
+  it("keeps the brand heading without repeating the header logo", () => {
+    const html = render();
+    expect(html).toContain("StewardFlow</h1>");
+    expect(html).not.toContain('data-testid="body-brand-logo"');
+  });
 
   it("routes guests to login without linking protected resources", () => {
     const html = render();

@@ -7,6 +7,8 @@
 - 결정: `design_doc.md`와 `UI_SYSTEM.md`를 기준으로 모바일 우선 공통 UI를 적용한다. 홈과 헤더의 기관 메뉴 설정은 같은 훅으로 조회하며, 오류/비로그인/기관 미참여/비활성 상태를 구분한다. Lucide 도구 아이콘, 40px 입력 높이, 키보드 포커스와 Escape 초점 복귀, 브라우저 확대 및 reduced-motion을 유지한다.
 - 영향: 홈/로그인/헤더/물품 목록과 공통 UI. Next.js는 같은 16.3 계열의 보안 패치 버전으로 갱신한다. DB/RLS/NAS/OAuth 설정과 운영 데이터는 변경하지 않는다.
 - 추가 결정: 로그아웃/계정 변경 시 React Query 캐시를 초기화해 이전 계정 데이터의 잔존 표시를 막는다. 동일 사용자 token refresh는 캐시를 유지한다.
+- 추가 결정: S 로고는 헤더에만 유지하고 홈 본문의 중복 아이콘을 제거한다. 본문 제목/설명/버튼은 헤더 콘텐츠의 왼쪽 기준선에 맞춘다.
+- 배포 승인: 2026-10-01 사용자가 UI 변경 커밋/GitHub main push/Vercel 운영 배포를 실행 직전에 승인했다. DB/RLS/NAS/OAuth 설정 및 운영 데이터 변경은 이번 승인 범위에 포함하지 않는다.
 
 ## 2026-08-25
 - 상태: 확정 (archive-backed canonical baseline, production history metadata 보존)

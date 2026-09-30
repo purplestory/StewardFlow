@@ -4,7 +4,6 @@ import { Suspense, useEffect } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowUpRight, BookOpen, Building2, Car, Package, type LucideIcon } from "lucide-react";
-import LogoIcon from "@/components/common/LogoIcon";
 import Notice from "@/components/common/Notice";
 import { useHeaderSession } from "@/components/layout/useHeaderSession";
 
@@ -96,38 +95,33 @@ function PlatformIntroContent() {
         className="border-b border-slate-200 pb-8 pt-1 md:pb-10 md:pt-4"
         aria-busy={loading}
       >
-        <div className="flex items-start gap-4 md:gap-6">
-          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white shadow-sm md:h-14 md:w-14">
-            <LogoIcon className="h-9 w-9 md:h-10 md:w-10" />
-          </div>
-          <div className="min-w-0 flex-1">
-            <p className="text-xs font-semibold uppercase text-brand-primary">교회 자원관리 시스템</p>
-            <h1 className="mt-1 text-3xl font-bold text-slate-950 md:text-5xl">StewardFlow</h1>
-            <p className="mt-3 max-w-2xl break-keep text-base leading-7 text-slate-600 md:text-lg">
-              물품, 공간, 차량과 도서를 한 흐름으로 연결해 현장의 신청, 승인, 반납을 더 분명하게 관리합니다.
-            </p>
-            <div className="mt-6 flex flex-col gap-2 sm:flex-row">
-              {loading ? (
-                <span className="inline-flex h-10 items-center gap-2 text-sm font-medium text-slate-600" aria-live="polite">
-                  <span className="h-2 w-2 animate-pulse rounded-full bg-brand-primary" aria-hidden />
-                  로그인 상태 확인 중
-                </span>
-              ) : error ? (
-                <Notice variant="error" className="w-full">
-                  <p>{error}</p>
-                  <button type="button" onClick={retry} className="btn-outline mt-3">다시 시도</button>
-                </Notice>
-              ) : !isAuthed ? (
-                <Link href="/login" className="btn-primary w-full sm:w-auto">카카오로 시작하기</Link>
-              ) : !hasOrganization ? (
-                <Link href="/join" className="btn-primary w-full sm:w-auto">기관 참여하기</Link>
-              ) : (
-                <>
-                  <Link href="/my" className="btn-primary w-full sm:w-auto">내 신청 보기</Link>
-                  <Link href="/notifications" className="btn-outline w-full sm:w-auto">알림 확인</Link>
-                </>
-              )}
-            </div>
+        <div className="min-w-0">
+          <p className="text-xs font-semibold uppercase text-brand-primary">교회 자원관리 시스템</p>
+          <h1 className="mt-1 text-3xl font-bold text-slate-950 md:text-5xl">StewardFlow</h1>
+          <p className="mt-3 max-w-2xl break-keep text-base leading-7 text-slate-600 md:text-lg">
+            물품, 공간, 차량과 도서를 한 흐름으로 연결해 현장의 신청, 승인, 반납을 더 분명하게 관리합니다.
+          </p>
+          <div className="mt-6 flex flex-col gap-2 sm:flex-row">
+            {loading ? (
+              <span className="inline-flex h-10 items-center gap-2 text-sm font-medium text-slate-600" aria-live="polite">
+                <span className="h-2 w-2 animate-pulse rounded-full bg-brand-primary" aria-hidden />
+                로그인 상태 확인 중
+              </span>
+            ) : error ? (
+              <Notice variant="error" className="w-full">
+                <p>{error}</p>
+                <button type="button" onClick={retry} className="btn-outline mt-3">다시 시도</button>
+              </Notice>
+            ) : !isAuthed ? (
+              <Link href="/login" className="btn-primary w-full sm:w-auto">카카오로 시작하기</Link>
+            ) : !hasOrganization ? (
+              <Link href="/join" className="btn-primary w-full sm:w-auto">기관 참여하기</Link>
+            ) : (
+              <>
+                <Link href="/my" className="btn-primary w-full sm:w-auto">내 신청 보기</Link>
+                <Link href="/notifications" className="btn-outline w-full sm:w-auto">알림 확인</Link>
+              </>
+            )}
           </div>
         </div>
       </section>

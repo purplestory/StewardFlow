@@ -4,14 +4,14 @@
 기준 브랜치: `main`/`origin/main` (현재 commit은 Git log로 확인)
 
 ## 0. 배포 상태 (반드시 먼저 확인)
-- **현재 UI/UX 작업:** `design_doc.md` 기반 로컬 구현과 공개 화면 검증 완료. 홈 본문 중복 로고 제거/헤더 왼쪽 정렬도 완료했다. 2026-10-01 실행 직전 승인을 받아 GitHub push/Vercel 운영 배포를 진행 중이며 아래 이전 배포 기록과 구분한다. DB/RLS/NAS/OAuth 설정 변경은 없다.
+- **현재 UI/UX 작업: 운영 반영 완료.** `design_doc.md` 기반 UI와 홈 본문 중복 로고 제거/헤더 왼쪽 정렬을 사용자 실행 직전 승인 후 배포했다. UI 소스 `3a01477`, GitHub Quality Gates `36775070325` 전체 성공, Vercel Production 배포 성공(2026-10-01 05:48:11 KST). 운영 홈/로그인 390px/1280px 검증 완료. 실제 카카오 로그인과 signed-in QA는 남아 있으며 DB/RLS/NAS/OAuth 설정 변경은 없다.
 - 원격 Supabase 상태: `Healthy` (2026-08-25 확인; 이번 UI 작업에서는 원격 DB 상태를 재검증하거나 변경하지 않음)
 - 로컬: P0 인증/테넌트 보안, invite-only 가입, 부서 변경 승인 서버 하드닝, RLS hardening/도서 취소 atomic RPC migration, 도서 내 신청 통합, 의존성/CI/test/Next.js 16 정리가 구현되어 있음
-- **코드 배포: 완료** — Vercel `dpl_Ftp6DqqicKEhPBp8DtZuraiCaWMS` `READY`, `https://steward-flow.vercel.app`.
+- **현재 UI 배포: 완료** — [Vercel 5sELCptNdFBrV7RjrN84FUZSNXAQ](https://vercel.com/purplestorys-projects/steward-flow/5sELCptNdFBrV7RjrN84FUZSNXAQ), GitHub deployment `6769807938` `Production/success`, `https://steward-flow.vercel.app`. 이전 2026-08-24 보안 배포는 `dpl_Ftp6DqqicKEhPBp8DtZuraiCaWMS`다.
 - **원격 RLS 적용: 완료** — migration SHA-256 `7c63ff760df5e3d0c4464ea9a775efe32efc8c40d1cee91d1fe9058bed53871e`, transaction 종료 상태 `0`, read-only postcheck 19개 통과.
 - **사전 DB 백업: 유효** — `2026-08-24 05:47 KST`, SHA-256 `3c2b77ccff0627483951dc1875cf20454b66ad8f58ddfe105624e0dceb75f143`, archive 판독과 NAS DB-only 복원 리허설 완료.
 - **Post-hardening recovery: 검증 완료** — `2026-08-25` archive SHA-256 `2a059ae35067385e868ed17e66c6581996f4364f3d61dba0a5d34db920d18d6c`를 NAS Realtime runtime role 환경에 ACL 포함 복원했다. security postcheck와 233-entry normalized catalog SHA가 일치했다.
-- **배포 소스 보존: 완료** — 운영 소스는 `29da08a feat: harden StewardFlow production boundaries`로 커밋되어 `origin/main`까지 반영됐다.
+- **배포 소스 보존: 완료** — 현재 UI 소스 `3a01477`은 `origin/main`에 반영됐다. 이전 보안 배포 소스는 `29da08a feat: harden StewardFlow production boundaries`로 보존돼 있다. 배포 결과 문서 커밋에는 애플리케이션 변경이 없다.
 - **남은 운영 과제:** signed-in 회귀 QA와 실제 데이터가 있는 설정 화면 시각 QA. Auth/Storage를 포함한 전체 NAS application-service rehearsal은 별도 네트워크/방화벽 승인 후 선택적으로 진행한다.
 
 ## 1. 현재 제품 범위

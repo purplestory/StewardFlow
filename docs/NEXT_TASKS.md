@@ -1,6 +1,6 @@
 # NEXT TASKS
 
-최종 업데이트: 2026-08-25
+최종 업데이트: 2026-10-01
 
 > 운영 기준 문서가 `docs/EXECUTION_TRACKER.md`로 통합되었습니다.  
 > 본 문서는 중장기 TODO 요약만 유지하며, 실제 진행/결과/RCA는 실행 트래커에 기록합니다.
@@ -8,7 +8,7 @@
 ## P0 (즉시)
 
 > Vercel production 배포와 `20260824090000_harden_tenant_rls_boundaries.sql` 원격 적용은 완료되었다.
-> ACL-inclusive DB 복원, 정규화 카탈로그 비교, archive-backed canonical baseline 정리는 완료됐다. 현재 P0 잔여는 signed-in 운영 회귀 QA다. 운영 소스는 `29da08a`로 `origin/main`에 반영됐다.
+> ACL-inclusive DB 복원, 정규화 카탈로그 비교, archive-backed canonical baseline 정리는 완료됐다. 현재 P0 잔여는 signed-in 운영 회귀 QA다. 2026-10-01 UI 소스 `3a01477`의 GitHub 품질 검사/Vercel 운영 배포와 공개 화면 검증도 완료했다. DB/NAS/OAuth 설정은 변경하지 않았다.
 
 ### 1) 원격 DB 백업 및 복원 절차 확인
 - 상태: hardening 전/후 archive 검증과 NAS ACL-inclusive 복원 리허설 완료; authoritative procedure는 `docs/recovery_baseline.md`
@@ -19,7 +19,7 @@
 4. 최소 restore 절차 또는 복원 리허설 결과 기록
 
 ### 2) 로컬 변경 프로덕션 배포
-- 상태: Vercel production 배포 완료 (`dpl_Ftp6DqqicKEhPBp8DtZuraiCaWMS`, `READY`); source commit/push 완료, signed-in smoke 필요
+- 상태: 2026-10-01 UI 소스 `3a01477`의 Vercel Production 배포 완료 (`5sELCptNdFBrV7RjrN84FUZSNXAQ`, GitHub deployment `6769807938`, `success`); source commit/push와 공개 홈/로그인 모바일/데스크톱 검증 완료, signed-in smoke 필요
 - 완료 조건(AC):
 1. 배포 명령 실행 직전 사용자에게 대상 환경/범위를 확인
 2. 현재 uncommitted 변경 검토/커밋

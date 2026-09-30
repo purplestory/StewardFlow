@@ -40,17 +40,21 @@
 | OPS-007 | P0 | DONE | 배포 소스 커밋/푸시 및 재현성 확보 | `29da08a`를 커밋하고 `origin/main` 반영까지 확인 | 현재 로컬 변경 전체 |
 | UI-005 | P1 | DONE | design_doc 기반 모바일 UI/UX 적용 | 공통 스타일, 홈 기관 메뉴 설정 일치, 로그인 오류/빈 상태, 모바일 검색창, 키보드 내비게이션 검증 | `docs/UI_SYSTEM.md`, 홈/로그인/헤더/물품 및 공통 UI |
 | QA-004 | P0 | DONE | UI 변경 품질 및 패키지 보안 검증 | lint/mobile/typecheck/test/build 통과, 패치 의존성 audit 확인 | `package.json`, `package-lock.json`, UI 회귀 검증 |
-| OPS-008 | P1 | IN_PROGRESS | UI 변경 운영 배포 | 실행 직전 사용자 승인 후 main push, Vercel READY, 공개 smoke; DB/OAuth/NAS 변경 없음 | GitHub, Vercel |
+| OPS-008 | P1 | DONE | UI 변경 운영 배포 | 실행 직전 사용자 승인 후 main push, Vercel READY, 공개 smoke; DB/OAuth/NAS 변경 없음 | GitHub, Vercel |
 | UI-006 | P2 | DONE | 홈 본문 로고 제거와 왼쪽 정렬 | 헤더 로고는 유지하고 본문 S 아이콘 제거; 제목/설명/버튼을 헤더 콘텐츠 왼쪽 기준선에 정렬 | `src/components/home/PlatformIntro.tsx` |
 
 ## 2) 작업 로그 (Execution Log)
 시간 기준: Asia/Seoul
 
 ### 2026-10-01
-- [IN_PROGRESS/REMOTE APPROVED] OPS-008
+- [DONE/PRODUCTION] OPS-008
   - 사용자에게 UI 변경 커밋, GitHub `main` push, Vercel 운영 배포와 공개 화면 검증 범위를 안내한 뒤 실행 직전 승인을 받았다. 본문 로고 제거와 왼쪽 정렬을 포함하며 DB/RLS/NAS/OAuth 설정 변경은 없다.
-  - 최종 품질 검사와 원격 브랜치 확인 후 배포한다. 실제 카카오 로그인 및 signed-in 관리자/업무 흐름은 QA-002/QA-003의 별도 미완료 범위로 유지한다.
+  - 실제 카카오 로그인 및 signed-in 관리자/업무 흐름은 QA-002/QA-003의 별도 미완료 범위로 유지한다. 운영 데이터 변경이나 인증 우회는 하지 않았다.
   - 배포 직전 full lint, mobile overflow lint, typecheck, 38 tests, Webpack production build(50 routes), `git diff --check`를 다시 통과했다. 원격 `main`에는 미반영 변경이 없으며 GitHub/Vercel 기존 자동 배포 연결을 확인했다. 환경 파일, DB 백업, npm 캐시 및 Vercel 로컬 메타데이터의 Git 추적 파일은 0개다.
+  - UI 소스 `3a01477201bdb48ad035add24593f89c5fce34fe`를 GitHub `main`에 반영했다. [Quality Gates 36775070325](https://github.com/purplestory/StewardFlow/actions/runs/36775070325)의 install/lint/mobile/typecheck/test/build가 모두 성공했다.
+  - 2026-10-01 05:48:11 KST에 [Vercel 배포 5sELCptNdFBrV7RjrN84FUZSNXAQ](https://vercel.com/purplestorys-projects/steward-flow/5sELCptNdFBrV7RjrN84FUZSNXAQ)가 `Deployment has completed`를 보고했다. GitHub deployment `6769807938`은 같은 UI SHA의 `Production/success`이며 운영 alias `https://steward-flow.vercel.app/`에서 새 UI를 확인했다.
+  - 운영 홈/로그인 HTTP `200`, `/join-request -> /join` `307`, 비로그인 `/settings/users -> /login` 클라이언트 이동을 확인했다. 홈/로그인은 390px/1280px에서 가로 넘침이 없다. 홈 헤더/제목/설명/버튼의 왼쪽 위치는 모바일 16px, 데스크톱 88px로 일치하고 본문 로고 0개/헤더 로고 1개다.
+  - 배포 후 결과 문서만 별도 커밋한다. 애플리케이션 소스는 위 검증된 UI SHA와 동일하며 DB/RLS/NAS/OAuth 설정 변경은 없다.
 - [DONE/LOCAL] UI-006
   - 사용자 스크린샷 피드백에 따라 홈 본문의 흰색 정사각 S 아이콘과 들여쓰기를 제거했다. 헤더 로고와 기존 공통 가로 여백은 유지한다.
   - 1280px 화면에서 헤더/제목/설명/버튼의 왼쪽 위치는 88px로 일치한다. 390px 모바일에서는 헤더/제목이 16px로 일치하며 가로 넘침이 없다. 본문 로고 재등장 방지 테스트를 추가했고 38 tests, lint, typecheck, `git diff --check`가 통과했다. 운영 배포는 하지 않았다.

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { clearJoinRedirectCookie, getOAuthOrigin } from "@/lib/utils";
+import Notice from "@/components/common/Notice";
 
 type AuthState = {
   userId: string | null;
@@ -429,8 +430,8 @@ export default function AuthCard() {
   return (
     <div className="space-y-3">
       <div className="space-y-2">
-        <p className="text-sm font-semibold text-slate-900">카카오 로그인</p>
-        <p className="text-xs text-neutral-500">로그인 상태가 유지되며, 초대 링크 가입으로 이어집니다.</p>
+        <p className="text-sm font-semibold text-slate-950">카카오 계정</p>
+        <p className="text-xs leading-5 text-neutral-500">별도 비밀번호 없이 카카오 인증으로 로그인합니다.</p>
         <button
           type="button"
           onClick={handleKakaoSignIn}
@@ -449,7 +450,7 @@ export default function AuthCard() {
               fill="currentColor"
             />
           </svg>
-          카카오톡으로 로그인
+          {loading ? "카카오 연결 중..." : "카카오톡으로 로그인"}
         </button>
       </div>
 
@@ -501,16 +502,14 @@ export default function AuthCard() {
       )}
 
       {message && (
-        <p
-          className={`mt-3 rounded-xl border px-3 py-2 text-sm ${
-            message.includes("오류") || message.includes("실패")
-              ? "border-rose-200 bg-rose-50 text-rose-700"
-              : "border-emerald-200 bg-emerald-50 text-emerald-700"
-          }`}
-          role="status"
+        <Notice
+          className="mt-3 break-words"
+          variant={message === "프로필이 저장되었습니다."
+            ? "success"
+            : message === "변경된 내용이 없습니다." ? "neutral" : "error"}
         >
           {message}
-        </p>
+        </Notice>
       )}
     </div>
   );

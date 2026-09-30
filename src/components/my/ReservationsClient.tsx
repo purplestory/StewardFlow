@@ -409,7 +409,7 @@ export default function ReservationsClient() {
               }`}
             >
               <div className="min-w-0 flex-1">
-                <p className="truncate text-lg font-semibold tracking-tight text-slate-900">
+                <p className="truncate text-lg font-semibold text-slate-900">
                   {reservation.resource_name} {resourceTypeLabel[reservation.resource_type]}{" "}
                   {reservationVerbByType[reservation.resource_type]}
                 </p>

@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { LayoutGrid, List } from "lucide-react";
 import Notice from "@/components/common/Notice";
 import type { Asset } from "@/types/database";
 import AssetCard from "@/components/assets/AssetCard";
@@ -26,8 +27,8 @@ const defaultCategoryLabels: Record<string, string> = {
 };
 
 const listViewOptions = [
-  { value: "grid", label: "그리드" },
-  { value: "list", label: "리스트" },
+  { value: "grid", label: "그리드", icon: LayoutGrid },
+  { value: "list", label: "리스트", icon: List },
 ] as const;
 
 type ListViewMode = (typeof listViewOptions)[number]["value"];
@@ -47,8 +48,9 @@ export default function AssetsListClient() {
   const [viewMode, setViewMode] = useState<ListViewMode>("grid");
 
   // React Query를 사용한 데이터 페칭
-  const { data: assets = [], isLoading: assetsLoading, error: assetsError } = useAssets();
   const { data: userProfile, isLoading: profileLoading } = useUserProfile();
+  const { data: assetData, isLoading: assetsLoading, error: assetsError } = useAssets(Boolean(userProfile?.orgId));
+  const assets = useMemo(() => userProfile?.orgId ? assetData ?? [] : [], [assetData, userProfile?.orgId]);
   const { data: policyData } = useApprovalPolicies(userProfile?.orgId ?? null);
   const { data: orgCategories = [] } = useAssetCategories(userProfile?.orgId ?? null);
 
@@ -148,7 +150,8 @@ export default function AssetsListClient() {
             <button
               type="button"
               onClick={() => setShowRegisterForm(!showRegisterForm)}
-              className="btn-primary whitespace-nowrap"
+              className="btn-primary w-full whitespace-nowrap sm:w-auto"
+              aria-expanded={showRegisterForm}
             >
               {showRegisterForm ? "목록 보기" : "물품 등록"}
             </button>
@@ -156,24 +159,51 @@ export default function AssetsListClient() {
         }
       >
         <div className="space-y-4">
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            <label htmlFor="asset-search" className="sr-only">물품 검색</label>
             <input
-              className="form-input min-w-0 flex-1 basis-52"
+              id="asset-search"
+              type="search"
+              className="form-input min-w-0 shrink-0 sm:flex-1"
               placeholder="자산명, 부서, 태그로 검색"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
             />
-            <div className="flex shrink-0 items-center gap-1">
+            <div
+              className="inline-flex h-10 shrink-0 items-center rounded-lg border border-slate-200 bg-slate-100 p-1"
+              role="group"
+              aria-label="목록 보기 방식"
+            >
               {listViewOptions.map((option) => (
                 <button
                   key={option.value}
                   type="button"
                   onClick={() => setViewMode(option.value)}
+                  aria-pressed={option.value === viewMode}
+                  title={option.label}
+                  aria-label={option.label}
                   className={
                     option.value === viewMode
-                      ? "inline-flex h-10 items-center justify-center rounded-xl border border-slate-900 bg-slate-900 px-3 text-sm font-semibold text-white"
-                      : "inline-flex h-10 items-center justify-center rounded-xl border border-neutral-200 bg-white px-3 text-sm font-semibold text-neutral-600 hover:bg-neutral-100"
+                      ? "inline-flex h-8 flex-1 items-center justify-center rounded-md bg-white px-3 text-sm font-semibold text-slate-950 shadow-sm sm:flex-none"
+                      : "inline-flex h-8 flex-1 items-center justify-center rounded-md px-3 text-sm font-medium text-slate-600 hover:text-slate-950 sm:flex-none"
                   }
+                >
+                  <option.icon className="h-4 w-4" aria-hidden />
+                  <span className="ml-2 sm:sr-only sm:ml-0">{option.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="tab-scroll" aria-label="물품 카테고리 필터">
+            <div className="flex w-max items-center gap-2">
+              {categoryOptions.map((option) => (
+                <button
+                  key={option.value || "all"}
+                  type="button"
+                  onClick={() => setCategory(option.value)}
+                  aria-pressed={option.value === category}
+                  className={`filter-pill ${option.value === category ? "filter-pill-active" : ""}`}
                 >
                   {option.label}
                 </button>
@@ -181,21 +211,13 @@ export default function AssetsListClient() {
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
-            {categoryOptions.map((option) => (
-              <button
-                key={option.value || "all"}
-                type="button"
-                onClick={() => setCategory(option.value)}
-                className={
-                  option.value === category
-                    ? "inline-flex h-8 items-center justify-center rounded-full bg-slate-900 px-3 text-xs font-semibold text-white"
-                    : "inline-flex h-8 items-center justify-center rounded-full border border-neutral-200 bg-white px-3 text-xs font-semibold text-neutral-700 hover:bg-neutral-100"
-                }
-              >
-                {option.label}
+          <div className="flex items-center justify-between gap-3 border-t border-slate-200 pt-3 text-xs text-slate-500">
+            <span aria-live="polite">{loading ? "목록 불러오는 중" : `총 ${filteredAssets.length}개`}</span>
+            {query || category ? (
+              <button type="button" onClick={clearFilters} className="font-semibold text-brand-primary hover:underline">
+                필터 초기화
               </button>
-            ))}
+            ) : null}
           </div>
         </div>
       </PageHero>
@@ -206,9 +228,14 @@ export default function AssetsListClient() {
         </SectionCard>
       )}
 
-      {loading || hasOrganization === null ? (
+      {loading ? (
         <Notice className="p-10">
           자산 목록을 불러오는 중입니다.
+        </Notice>
+      ) : !userProfile?.user ? (
+        <Notice className="p-6">
+          <p>로그인하면 기관의 물품 목록을 확인할 수 있습니다.</p>
+          <Link href="/login" className="btn-primary mt-3">로그인</Link>
         </Notice>
       ) : !hasOrganization ? (
         <Notice variant="warning" className="p-10">
@@ -224,14 +251,16 @@ export default function AssetsListClient() {
         </Notice>
       ) : filteredAssets.length === 0 ? (
         <Notice className="p-10">
-          <p>조건에 맞는 자산이 없습니다.</p>
-          <button
-            type="button"
-            onClick={clearFilters}
-            className="btn-ghost mt-3"
-          >
-            필터 초기화
-          </button>
+          <p>{query || category ? "조건에 맞는 물품이 없습니다." : "아직 등록된 물품이 없습니다."}</p>
+          {query || category ? (
+            <button
+              type="button"
+              onClick={clearFilters}
+              className="btn-ghost mt-3"
+            >
+              필터 초기화
+            </button>
+          ) : null}
         </Notice>
       ) : (
         <>

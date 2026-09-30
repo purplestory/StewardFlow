@@ -26,13 +26,13 @@ export default function SectionCard({
     <section className={cx("surface-card", className)}>
       {title || description || actions ? (
         <header className="module-head border-b border-neutral-200 px-4 py-4 md:px-6">
-          <div>
-            {title ? <h2 className="text-xl font-semibold tracking-tight text-slate-900">{title}</h2> : null}
+          <div className="min-w-0 flex-1">
+            {title ? <h2 className="text-xl font-semibold text-slate-950">{title}</h2> : null}
             {description ? (
               <p className="mt-1 text-sm text-neutral-600">{description}</p>
             ) : null}
           </div>
-          {actions ? <div className="shrink-0">{actions}</div> : null}
+          {actions ? <div className="w-full sm:w-auto sm:shrink-0">{actions}</div> : null}
         </header>
       ) : null}
       <div className={cx("p-4 md:p-6", bodyClassName)}>{children}</div>

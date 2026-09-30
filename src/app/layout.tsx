@@ -67,7 +67,6 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  maximumScale: 1,
   themeColor: "#234689",
 };
 
@@ -87,7 +86,7 @@ export default function RootLayout({
           <WebPushRegistrar />
           <div className="min-h-screen text-neutral-900">
             <Header />
-            <main className="mx-auto w-full max-w-6xl px-4 py-6 md:px-6 md:py-10">
+            <main className="mx-auto min-h-[calc(100vh-68px)] w-full max-w-6xl px-4 py-6 md:px-6 md:py-9">
               {children}
             </main>
           </div>

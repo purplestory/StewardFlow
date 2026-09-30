@@ -1,10 +1,11 @@
 # PROJECT STATE
 
-최종 업데이트: 2026-08-25
+최종 업데이트: 2026-10-01
 기준 브랜치: `main`/`origin/main` (현재 commit은 Git log로 확인)
 
 ## 0. 배포 상태 (반드시 먼저 확인)
-- 원격 Supabase 상태: `Healthy`
+- **현재 UI/UX 작업:** `design_doc.md` 기반 로컬 구현과 공개 화면 검증 완료. 프로덕션 push/배포는 실행 직전 승인 대기이며 아래 이전 배포 기록과 구분한다.
+- 원격 Supabase 상태: `Healthy` (2026-08-25 확인; 이번 UI 작업에서는 원격 DB 상태를 재검증하거나 변경하지 않음)
 - 로컬: P0 인증/테넌트 보안, invite-only 가입, 부서 변경 승인 서버 하드닝, RLS hardening/도서 취소 atomic RPC migration, 도서 내 신청 통합, 의존성/CI/test/Next.js 16 정리가 구현되어 있음
 - **코드 배포: 완료** — Vercel `dpl_Ftp6DqqicKEhPBp8DtZuraiCaWMS` `READY`, `https://steward-flow.vercel.app`.
 - **원격 RLS 적용: 완료** — migration SHA-256 `7c63ff760df5e3d0c4464ea9a775efe32efc8c40d1cee91d1fe9058bed53871e`, transaction 종료 상태 `0`, read-only postcheck 19개 통과.
@@ -43,7 +44,9 @@
 - 로컬 P0 보안 구현 완료: 인증/권한 검증, 계정 삭제 operation 프로토콜, 마지막 최고 관리자 보호, 내부 redirect 제한, service-role tenant boundary, invite-only/초대 권한 고정, 부서 변경 승인 서버 하드닝, 위험한 기관 삭제 UI 비활성화
 - `20260824090000_harden_tenant_rls_boundaries.sql` 원격 적용 완료: tenant RLS, 부서/마지막 admin trigger, 계정 삭제 snapshot·service-only RPC, `cancel_requested_book_loan_atomic` 및 19개 postcheck 확인
 - 내 신청의 도서 대출 상태/원자 취소/승인 후 취소 요청 통합 및 unread 중복 요청 방지 완료
-- Next.js `16.3.2`, Vitest, GitHub Actions quality workflow 및 캐시 ignore 정리 완료
+- Next.js `16.3.8` 보안 패치, Lucide 아이콘, Vitest(37 tests), GitHub Actions quality workflow 및 캐시 ignore 정리 완료; 전체 `npm audit` 취약점 0건(2026-10-01)
+- 홈/헤더 기관 메뉴 설정 일치, 모바일 40px 검색창, 로그인 오류 안내, 키보드 포커스/Escape 복귀, 브라우저 확대/reduced-motion 공통 UI 적용 완료
+- 로그아웃/계정 전환 시 React Query 캐시 초기화; 동일 사용자 token refresh는 캐시를 유지하며 회귀 테스트로 검증
 - 메뉴 순서 저장 후 새로고침 시 복원되던 버그 수정
 - 설정/관리 페이지 공통 스타일 프리미티브 정리
 - 편집/삭제 액션을 텍스트 링크에서 아이콘 버튼 중심으로 통일

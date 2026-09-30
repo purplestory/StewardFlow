@@ -310,7 +310,7 @@ export default function FeatureSettings({ organizationId }: FeatureSettingsProps
   return (
     <section className="surface-card p-5 md:p-6">
       <div className="mb-4">
-        <h3 className="text-xl font-semibold tracking-tight text-slate-900">기능 및 메뉴 설정</h3>
+        <h3 className="text-xl font-semibold text-slate-900">기능 및 메뉴 설정</h3>
         <p className="mt-1 text-sm text-neutral-600">
           기능 활성화, 메뉴 이름, 순서를 하나의 규칙으로 관리합니다.
         </p>

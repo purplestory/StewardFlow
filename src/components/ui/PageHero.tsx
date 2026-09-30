@@ -26,7 +26,7 @@ export default function PageHero({
   backLabel = "목록으로",
 }: PageHeroProps) {
   return (
-    <div className={cx("surface-panel p-5 md:p-7", className)}>
+    <section className={cx("surface-panel p-5 md:p-7", className)}>
       {backHref ? (
         <Link
           href={backHref}
@@ -37,15 +37,15 @@ export default function PageHero({
         </Link>
       ) : null}
       <div className="module-head">
-        <div>
+        <div className="min-w-0 flex-1">
           <h1 className="module-title">{title}</h1>
           {description ? (
             <p className="module-description">{description}</p>
           ) : null}
         </div>
-        {actions ? <div className="shrink-0">{actions}</div> : null}
+        {actions ? <div className="w-full sm:w-auto sm:shrink-0">{actions}</div> : null}
       </div>
       {children ? <div className="mt-4">{children}</div> : null}
-    </div>
+    </section>
   );
 }

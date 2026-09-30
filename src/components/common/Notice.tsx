@@ -12,13 +12,13 @@ type NoticeProps = {
 
 const baseStyles: Record<NoticeVariant, string> = {
   neutral:
-    "rounded-2xl border border-dashed border-neutral-300 bg-white p-6 text-center text-sm text-neutral-500",
+    "rounded-xl border border-dashed border-neutral-300 bg-white p-6 text-center text-sm leading-6 text-neutral-600",
   warning:
-    "rounded-2xl border border-amber-200 bg-amber-50 p-6 text-center text-sm text-amber-700",
+    "rounded-xl border border-amber-200 bg-amber-50 p-6 text-center text-sm leading-6 text-amber-800",
   error:
-    "rounded-2xl border border-rose-200 bg-rose-50 p-6 text-center text-sm text-rose-600",
+    "rounded-xl border border-rose-200 bg-rose-50 p-6 text-center text-sm leading-6 text-rose-700",
   success:
-    "rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-700",
+    "rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm leading-6 text-emerald-800",
 };
 
 export default function Notice({
@@ -26,5 +26,15 @@ export default function Notice({
   className,
   children,
 }: NoticeProps) {
-  return <div className={`${baseStyles[variant]} ${className ?? ""}`}>{children}</div>;
+  const isUrgent = variant === "error" || variant === "warning";
+
+  return (
+    <div
+      className={`${baseStyles[variant]} ${className ?? ""}`}
+      role={isUrgent ? "alert" : "status"}
+      aria-live={isUrgent ? "assertive" : "polite"}
+    >
+      {children}
+    </div>
+  );
 }

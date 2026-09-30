@@ -158,7 +158,7 @@ export default function SpaceAdminPanel() {
       <div className="space-y-4 p-4 md:p-5">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h2 className="text-xl font-semibold tracking-tight text-slate-900">공간 관리</h2>
+          <h2 className="text-xl font-semibold text-slate-900">공간 관리</h2>
           <p className="mt-1 text-sm text-neutral-600">
             공간 상태를 일괄 변경하거나 검색할 수 있습니다.
           </p>

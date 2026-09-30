@@ -1,17 +1,17 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f3f6fb;
-  --foreground: #101828;
+  --background: #f5f7fa;
+  --foreground: #142033;
   --surface: #ffffff;
-  --surface-soft: #f7f9fc;
-  --border: #e2e8f0;
-  --brand-primary: #1f4b99;
-  --brand-primary-strong: #163b7d;
-  --brand-accent: #0f766e;
-  --brand-warm: #d97706;
-  --shadow-soft: 0 8px 24px rgba(15, 23, 42, 0.08);
-  --shadow-card: 0 12px 32px rgba(15, 23, 42, 0.1);
+  --surface-soft: #f0f3f7;
+  --border: #dce2ea;
+  --brand-primary: #234f93;
+  --brand-primary-strong: #193d76;
+  --brand-accent: #087f5b;
+  --brand-warm: #b85c08;
+  --shadow-soft: 0 6px 18px rgba(20, 32, 51, 0.06);
+  --shadow-card: 0 10px 28px rgba(20, 32, 51, 0.08);
 }
 
 @theme inline {
@@ -28,7 +28,19 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-geist-sans), "Noto Sans KR", sans-serif;
-  background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.82) 0%, rgba(243, 246, 251, 1) 100%);
+  min-width: 320px;
+  text-rendering: optimizeLegibility;
+  -webkit-tap-highlight-color: transparent;
+}
+
+::selection {
+  background: rgba(35, 79, 147, 0.18);
+  color: #10284f;
+}
+
+:focus-visible {
+  outline: 3px solid var(--brand-primary);
+  outline-offset: 2px;
 }
 
 .react-calendar {
@@ -172,8 +184,8 @@ body {
 
 /* Professional Form Styles - Unified Design System */
 .form-input {
-  @apply h-10 w-full rounded-lg border border-neutral-200 bg-white text-sm font-normal text-neutral-900 placeholder:text-neutral-400 transition-all duration-200;
-  @apply focus:border-slate-600 focus:outline-none focus:ring-2 focus:ring-slate-500/20 focus:shadow-sm;
+  @apply h-10 w-full rounded-lg border border-neutral-200 bg-white text-sm font-normal text-neutral-900 placeholder:text-neutral-500 transition-all duration-200;
+  @apply focus:border-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-700/15 focus:shadow-sm;
   @apply disabled:bg-neutral-50 disabled:text-neutral-500 disabled:cursor-not-allowed;
   @apply hover:border-neutral-300;
   box-sizing: border-box;
@@ -184,7 +196,7 @@ body {
 
 .form-select {
   @apply h-10 w-full rounded-lg border border-neutral-200 bg-white text-sm font-normal text-neutral-900 transition-all duration-200;
-  @apply focus:border-slate-600 focus:outline-none focus:ring-2 focus:ring-slate-500/20 focus:shadow-sm;
+  @apply focus:border-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-700/15 focus:shadow-sm;
   @apply disabled:bg-neutral-50 disabled:text-neutral-500 disabled:cursor-not-allowed;
   @apply hover:border-neutral-300;
   /* select 요소의 높이를 정확히 맞추기 위한 추가 스타일 */
@@ -200,8 +212,8 @@ body {
 }
 
 .form-textarea {
-  @apply min-h-[100px] w-full rounded-lg border border-neutral-200 bg-white px-4 py-3 text-sm font-normal text-neutral-900 placeholder:text-neutral-400 transition-all duration-200 resize-y;
-  @apply focus:border-slate-600 focus:outline-none focus:ring-2 focus:ring-slate-500/20 focus:shadow-sm;
+  @apply min-h-[100px] w-full rounded-lg border border-neutral-200 bg-white px-4 py-3 text-sm font-normal text-neutral-900 placeholder:text-neutral-500 transition-all duration-200 resize-y;
+  @apply focus:border-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-700/15 focus:shadow-sm;
   @apply disabled:bg-neutral-50 disabled:text-neutral-500 disabled:cursor-not-allowed;
   @apply hover:border-neutral-300;
 }
@@ -290,80 +302,73 @@ input[type="time"] {
 .btn-outline,
 .btn-ghost,
 .btn-danger {
-  @apply h-10 rounded-lg px-4 text-sm transition-all;
+  @apply h-10 rounded-lg px-4 text-sm transition-colors duration-150;
   @apply inline-flex items-center justify-center whitespace-nowrap;
-  @apply focus:outline-none focus:ring-2 focus:ring-offset-2;
+  @apply focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2;
   @apply disabled:cursor-not-allowed disabled:opacity-50;
 }
 
 .btn-primary {
   @apply border border-transparent font-semibold text-white;
-  @apply focus:ring-slate-500;
-  background: linear-gradient(
-    135deg,
-    var(--brand-primary) 0%,
-    var(--brand-primary-strong) 100%
-  );
-  box-shadow: 0 8px 16px rgba(31, 75, 153, 0.16);
+  @apply focus-visible:ring-blue-700;
+  background: var(--brand-primary);
+  box-shadow: 0 4px 10px rgba(35, 79, 147, 0.18);
 }
 
 .btn-primary:hover {
-  transform: translateY(-1px);
-  filter: brightness(1.03);
+  background: var(--brand-primary-strong);
 }
 
 .btn-secondary {
   @apply border border-slate-300 bg-slate-100 font-medium text-slate-800;
   @apply hover:border-slate-400 hover:bg-slate-200;
-  @apply focus:ring-slate-400;
+  @apply focus-visible:ring-slate-400;
 }
 
 .btn-outline {
   @apply border border-neutral-300 bg-white font-medium text-neutral-700;
   @apply hover:border-neutral-400 hover:bg-neutral-50 hover:text-neutral-900;
-  @apply focus:ring-slate-400;
+  @apply focus-visible:ring-slate-400;
 }
 
 .btn-outline-danger {
   @apply border-rose-200 text-rose-700;
   @apply hover:border-rose-300 hover:bg-rose-50 hover:text-rose-800;
-  @apply focus:ring-rose-400;
+  @apply focus-visible:ring-rose-400;
 }
 
 .btn-outline-success {
   @apply border-emerald-200 text-emerald-700;
   @apply hover:border-emerald-300 hover:bg-emerald-50 hover:text-emerald-800;
-  @apply focus:ring-emerald-400;
+  @apply focus-visible:ring-emerald-400;
 }
 
 .btn-outline-warning {
   @apply border-amber-200 text-amber-700;
   @apply hover:border-amber-300 hover:bg-amber-50 hover:text-amber-800;
-  @apply focus:ring-amber-400;
+  @apply focus-visible:ring-amber-400;
 }
 
 .btn-ghost {
   @apply border border-transparent bg-transparent px-3 font-medium text-neutral-700;
   @apply hover:bg-neutral-100 hover:text-neutral-900;
-  @apply focus:ring-slate-400;
+  @apply focus-visible:ring-slate-400;
 }
 
 .btn-ghost-danger {
   @apply text-rose-700;
   @apply hover:bg-rose-50 hover:text-rose-800;
-  @apply focus:ring-rose-400;
+  @apply focus-visible:ring-rose-400;
 }
 
 .btn-danger {
   @apply border border-transparent font-semibold text-white;
-  @apply focus:ring-rose-500;
-  background: linear-gradient(135deg, #dc2626 0%, #be123c 100%);
-  box-shadow: 0 10px 20px rgba(220, 38, 38, 0.2);
+  @apply bg-rose-700 focus-visible:ring-rose-500;
+  box-shadow: 0 4px 10px rgba(190, 18, 60, 0.18);
 }
 
 .btn-danger:hover {
-  transform: translateY(-1px);
-  filter: brightness(1.03);
+  @apply bg-rose-800;
 }
 
 .btn-sm {
@@ -383,22 +388,22 @@ input[type="time"] {
 
 /* Shared Surface Styles */
 .surface-panel {
-  @apply rounded-2xl border border-slate-200 bg-white;
-  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.06);
+  @apply rounded-xl border border-slate-200 bg-white;
+  box-shadow: var(--shadow-soft);
 }
 
 .surface-card {
-  @apply rounded-2xl border border-slate-200 bg-white;
-  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.04);
+  @apply rounded-xl border border-slate-200 bg-white;
+  box-shadow: 0 2px 8px rgba(20, 32, 51, 0.035);
 }
 
 .surface-card-interactive {
-  @apply cursor-pointer transition-all duration-200;
+  @apply cursor-pointer transition-colors duration-150;
 }
 
 .surface-card-interactive:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 14px 26px rgba(15, 23, 42, 0.1);
+  @apply border-slate-300;
+  box-shadow: var(--shadow-card);
 }
 
 .modal-backdrop {
@@ -416,17 +421,17 @@ input[type="time"] {
 }
 
 .filter-pill {
-  @apply h-10 rounded-xl border border-neutral-200 bg-white px-4 text-sm font-medium text-neutral-700 transition-all;
+  @apply h-9 rounded-full border border-neutral-200 bg-white px-3.5 text-sm font-medium text-neutral-700 transition-colors;
   @apply hover:border-neutral-300 hover:bg-neutral-50;
   @apply focus:outline-none focus:ring-2 focus:ring-slate-500/20;
 }
 
 .filter-pill-active {
-  @apply border-slate-900 bg-slate-900 text-white;
+  @apply border-blue-800 bg-brand-primary text-white;
 }
 
 .tab-shell {
-  @apply mb-6 overflow-hidden rounded-2xl border border-slate-200 bg-white p-1.5 shadow-[0_4px_14px_rgba(15,23,42,0.04)];
+  @apply mb-6 overflow-hidden rounded-xl border border-slate-200 bg-white p-1.5 shadow-[0_2px_8px_rgba(20,32,51,0.04)];
 }
 
 .tab-shell-primary {
@@ -469,7 +474,7 @@ input[type="time"] {
 }
 
 .tab-chip-primary-active {
-  @apply bg-slate-950 text-white shadow-[0_4px_10px_rgba(2,6,23,0.24)] hover:bg-slate-900 hover:text-white;
+  @apply bg-brand-primary text-white shadow-sm hover:bg-[#193d76] hover:text-white;
 }
 
 .tab-chip-secondary {
@@ -538,7 +543,7 @@ input[type="time"] {
 }
 
 .module-panel {
-  @apply rounded-2xl border border-slate-200 bg-white p-4 md:p-5;
+  @apply rounded-xl border border-slate-200 bg-white p-4 md:p-5;
 }
 
 .module-head {
@@ -546,15 +551,15 @@ input[type="time"] {
 }
 
 .module-title {
-  @apply text-xl font-semibold tracking-tight text-slate-900;
+  @apply break-words text-2xl font-semibold text-slate-950;
 }
 
 .module-description {
-  @apply mt-1 text-sm text-neutral-600;
+  @apply mt-1.5 max-w-3xl text-sm leading-6 text-neutral-600;
 }
 
 .module-toolbar {
-  @apply rounded-xl bg-slate-50/70 p-3 md:p-4;
+  @apply rounded-lg border border-slate-200/80 bg-slate-50/70 p-3 md:p-4;
 }
 
 .module-toolbar-grid {
@@ -782,4 +787,15 @@ button.day-button abbr {
 svg[viewBox="0 0 1024 1024"] {
   background: transparent !important;
   background-color: transparent !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

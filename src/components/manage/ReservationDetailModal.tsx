@@ -54,7 +54,7 @@ export default function ReservationDetailModal({
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent>
         <DialogHeader className="flex flex-row items-start justify-between gap-3">
-          <DialogTitle className="text-xl tracking-tight">{title}</DialogTitle>
+          <DialogTitle className="text-xl">{title}</DialogTitle>
           <DialogClose asChild>
             <button
               type="button"

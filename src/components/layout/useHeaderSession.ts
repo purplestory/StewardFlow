@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabase";
 
 export type Role = "admin" | "manager" | "user";
@@ -157,9 +157,13 @@ export function useHeaderSession() {
   const [userName, setUserName] = useState<string | null>(null);
   const [userDepartment, setUserDepartment] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
+  const retry = useCallback(() => setReloadKey((key) => key + 1), []);
 
   useEffect(() => {
     let isMounted = true;
+    let requestId = 0;
 
     const resetToGuest = () => {
       setRole("user");
@@ -172,17 +176,22 @@ export function useHeaderSession() {
     };
 
     const loadProfile = async () => {
+      const currentRequest = ++requestId;
+      const isCurrent = () => isMounted && currentRequest === requestId;
+
       try {
         setLoading(true);
+        setError(null);
         const { data: sessionData, error: sessionError } =
           await supabase.auth.getSession();
 
-        if (!isMounted) return;
+        if (!isCurrent()) return;
 
         if (sessionError) {
           console.error("세션 조회 오류:", sessionError.message);
           resetToGuest();
           setUserId(null);
+          setError("로그인 상태를 확인하지 못했습니다. 다시 시도해주세요.");
           setLoading(false);
           return;
         }
@@ -202,11 +211,12 @@ export function useHeaderSession() {
           .eq("id", user.id)
           .maybeSingle();
 
-        if (!isMounted) return;
+        if (!isCurrent()) return;
 
         if (profileError) {
           console.error("프로필 조회 오류:", profileError.message);
           resetToGuest();
+          setError("내 정보를 불러오지 못했습니다. 다시 시도해주세요.");
           setLoading(false);
           return;
         }
@@ -233,13 +243,14 @@ export function useHeaderSession() {
           .eq("id", organizationId)
           .maybeSingle<OrganizationSettingsRow>();
 
-        if (!isMounted) return;
+        if (!isCurrent()) return;
 
-        if (orgError) {
-          console.error("기관 설정 조회 오류:", orgError.message);
+        if (orgError || !orgData) {
+          console.error("기관 설정 조회 오류:", orgError?.message ?? "기관을 찾을 수 없습니다.");
           setFeatures(null);
           setMenuLabels(null);
           setMenuOrder([]);
+          setError("기관 메뉴를 불러오지 못했습니다. 다시 시도해주세요.");
           setLoading(false);
           return;
         }
@@ -250,14 +261,12 @@ export function useHeaderSession() {
         setMenuOrder(normalizeMenuOrder(orgData?.menu_order, normalizedFeatures));
         setLoading(false);
       } catch (error) {
-        if (!isMounted) return;
-        if (error instanceof Error && error.name === "AbortError") {
-          return;
-        }
+        if (!isCurrent()) return;
 
         console.error("헤더 초기화 오류:", error);
         setUserId(null);
         resetToGuest();
+        setError("화면을 불러오지 못했습니다. 다시 시도해주세요.");
         setLoading(false);
       }
     };
@@ -283,7 +292,7 @@ export function useHeaderSession() {
         window.removeEventListener("organizationSettingsUpdated", handleSettingsUpdate);
       }
     };
-  }, []);
+  }, [reloadKey]);
 
   const isManager = role === "admin" || role === "manager";
   const isAuthed = loading
@@ -353,6 +362,8 @@ export function useHeaderSession() {
     userName,
     userDepartment,
     loading,
+    error,
+    retry,
     isManager,
     isAuthed,
     mainNavItems,

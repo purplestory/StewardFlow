@@ -1,7 +1,9 @@
 "use client";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { supabase } from "@/lib/supabase";
+import { subscribeAuthQueryCache } from "@/lib/auth-query-cache";
 
 export default function QueryProvider({
   children,
@@ -27,6 +29,8 @@ export default function QueryProvider({
         },
       })
   );
+
+  useEffect(() => subscribeAuthQueryCache(supabase.auth, queryClient), [queryClient]);
 
   return (
     <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>

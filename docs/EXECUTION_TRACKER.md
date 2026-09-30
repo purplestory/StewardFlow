@@ -1,6 +1,6 @@
 # 실행 트래커 (Single Source of Truth)
 
-최종 업데이트: 2026-08-25
+최종 업데이트: 2026-10-01
 담당: Codex + 사용자
 
 ## 0) 운영 원칙 (필수)
@@ -38,9 +38,26 @@
 | OPS-005 | P1 | DONE | 추적 중인 npm 캐시 제거 | 1,861개 cache/log 파일을 Git index에서만 제거하고 ignore 재추적 방지, lint/typecheck/test 통과; history rewrite는 수행하지 않음 | `.npm/`, `.npm-cache/`, `.gitignore` |
 | OPS-006 | P0 | DONE | RLS 적용 전 원격 DB 수동 백업 | custom-format dump, SHA-256, archive 목록·schema/data 압축 해제 검증 완료 | `.local-backups/steward-flow/20260824-051551-KST/` (Git 제외) |
 | OPS-007 | P0 | DONE | 배포 소스 커밋/푸시 및 재현성 확보 | `29da08a`를 커밋하고 `origin/main` 반영까지 확인 | 현재 로컬 변경 전체 |
+| UI-005 | P1 | DONE | design_doc 기반 모바일 UI/UX 적용 | 공통 스타일, 홈 기관 메뉴 설정 일치, 로그인 오류/빈 상태, 모바일 검색창, 키보드 내비게이션 검증 | `docs/UI_SYSTEM.md`, 홈/로그인/헤더/물품 및 공통 UI |
+| QA-004 | P0 | DONE | UI 변경 품질 및 패키지 보안 검증 | lint/mobile/typecheck/test/build 통과, 패치 의존성 audit 확인 | `package.json`, `package-lock.json`, UI 회귀 검증 |
+| OPS-008 | P1 | TODO | UI 변경 운영 배포 | 실행 직전 사용자 승인 후 main push, Vercel READY, 공개 smoke; DB/OAuth/NAS 변경 없음 | GitHub, Vercel |
 
 ## 2) 작업 로그 (Execution Log)
 시간 기준: Asia/Seoul
+
+### 2026-10-01
+- [IN_PROGRESS/LOCAL] UI-005, QA-004
+  - 기존 로컬 UI 변경을 이어서 검증한다. 홈과 헤더는 같은 기관 메뉴 설정을 사용하며, 조회 오류는 재시도 상태로 표시한다.
+  - 모바일 물품 검색창 40px 높이, 로그인 콜백 오류와 초대 입력 오류 연결, 카드 키보드 포커스, 메뉴 Escape 닫기/초점 복귀를 보완한다. 비로그인 물품 페이지에서는 기관 데이터 조회를 시작하지 않는다.
+  - design_doc의 Lucide 아이콘을 적용하고 Next.js/ESLint 설정을 `16.3.8` 보안 패치 버전으로 갱신했다. 개발 도구 간접 의존성도 기존 버전 범위 내에서 갱신했으며 `npm audit` 전체 취약점은 0건이다. DB/RLS/NAS/OAuth 설정 변경은 없다.
+- [DONE/LOCAL] UI-005
+  - 320px/390px/768px/1280px 공개 화면을 점검해 document horizontal overflow가 없음을 확인했다. 물품 검색창은 320px/390px/1280px에서 40px이며 보기 전환/필터 초기화, 메뉴 Escape/초점 복귀, 초대 입력 오류와 OAuth callback 오류 안내가 동작한다.
+  - 3px 키보드 포커스와 확대를 막지 않는 viewport를 확인했다. 기관 사용자 데이터가 있는 화면 및 실제 카카오 로그인은 QA-002/QA-003의 미완료 범위로 유지한다.
+  - 로그아웃/계정 전환 시 React Query 캐시를 비우고 동일 사용자 token refresh는 유지한다. 홈 상태 7개, 로그인 오류 3개, 인증 캐시 4개 테스트를 추가해 기존 redirect 테스트와 함께 37개가 통과했다.
+  - 운영 배포 승인을 요청했으며 승인 전 main push와 프로덕션 변경은 수행하지 않는다.
+- [DONE/LOCAL] QA-004
+  - 최종 full lint, mobile overflow lint, typecheck, 37 tests, Webpack production build(50 routes), `git diff --check` 통과. `npm audit` 전체 취약점 0건.
+  - 테스트는 홈/로그인 표시 및 인증 캐시 상태 전이 검증이다. 실제 카카오 인증과 signed-in 역할/테넌트 업무 흐름을 완료한 것으로 간주하지 않는다.
 
 ### 2026-08-25
 - [IN_PROGRESS/REMOTE] OPS-004 post-hardening snapshot and replay
@@ -293,6 +310,18 @@
   - 검증: `npm run lint -- src/components/assets/ReservationForm.tsx` (통과)
 
 ## 3) 이슈 / RCA 로그
+
+### RCA-2026-10-01-01
+- 증상: 모바일 검색창 높이가 flex 배치에서 줄어들 수 있었고, 홈의 기관 메뉴 이름/순서가 헤더와 달랐다. 로그인 callback 오류가 표시되지 않았으며 조회 오류가 기관 미참여 상태와 혼동됐다.
+- 원인: column flex 입력의 `flex-1`, 별도 메뉴 조회/판정, 미연결 query 오류 메시지에 의존했다.
+- 조치: 모바일 입력 높이 유지, 공통 기관 메뉴 훅 사용, 오류/초대/비로그인 상태 구분과 재시도 표시, 키보드 메뉴/포커스 보완.
+- 재발 방지: 홈/로그인 SSR 회귀 테스트와 320px~1280px 공개 UI 점검을 추가했다. signed-in 데이터 QA는 별도 미완료 항목으로 유지한다.
+
+### RCA-2026-10-01-02
+- 증상: React Query의 인증 사용자 데이터 캐시가 logout/계정 전환 시 초기화되지 않았고 기존 패키지에서 보안 advisory가 보고됐다.
+- 원인: 캐시 생명주기가 인증 상태 변경과 연결되지 않았으며 이전 lockfile의 보안 패치가 누락됐다.
+- 조치: 계정 변경/로그아웃에서 캐시를 초기화하고 같은 사용자 refresh는 유지한다. Next.js/ESLint를 `16.3.8`로, 해당 간접 의존성은 기존 범위 내 패치로 갱신했다.
+- 재발 방지: 캐시 상태 전이 4개 테스트, 전체 audit 0건, lint/typecheck/37 tests/production build 검증. 프로덕션 반영은 실행 직전 사용자 승인을 유지한다.
 
 ### RCA-2026-08-24-01
 - 증상/감사 결과:

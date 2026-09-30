@@ -1226,7 +1226,7 @@ export default function SampleDataGenerator({
   return (
     <section className="surface-card p-5 md:p-6">
       <div className="mb-4">
-        <h3 className="text-xl font-semibold tracking-tight text-slate-900">샘플 데이터 생성</h3>
+        <h3 className="text-xl font-semibold text-slate-900">샘플 데이터 생성</h3>
         <p className="mt-1 text-sm text-neutral-600">
           서비스를 테스트할 수 있도록 샘플 부서, 물품, 공간을 자동으로 생성합니다.
         </p>

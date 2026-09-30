@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { Menu, X } from "lucide-react";
 import NotificationBadge from "@/components/notifications/NotificationBadge";
 import { supabase } from "@/lib/supabase";
 import LogoIcon from "@/components/common/LogoIcon";
@@ -22,6 +23,9 @@ export default function Header() {
   } = useHeaderSession();
   const [dropdownOpen, setDropdownOpen] = useState<string | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const headerRef = useRef<HTMLElement>(null);
+  const userMenuButtonRef = useRef<HTMLButtonElement>(null);
+  const mobileMenuButtonRef = useRef<HTMLButtonElement>(null);
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
@@ -40,51 +44,66 @@ export default function Header() {
     pathname.startsWith("/books/manage") ||
     pathname.startsWith("/settings/");
 
-  const navLinkClass = (href: string) => {
-    const isServiceTopNavItem = href === "/assets" || href === "/spaces" || href === "/vehicles" || href === "/books";
-    const isActive =
+  const isNavItemActive = (href: string) => {
+    const isServiceTopNavItem =
+      href === "/assets" || href === "/spaces" || href === "/vehicles" || href === "/books";
+
+    return (
       !(isManageWorkspacePath && isServiceTopNavItem) &&
-      (pathname === href || pathname.startsWith(`${href}/`));
-    if (isActive) {
-      return "inline-flex h-10 items-center rounded-xl bg-slate-900 px-3.5 text-sm font-medium text-white shadow-sm";
+      (pathname === href || pathname.startsWith(`${href}/`))
+    );
+  };
+
+  const navLinkClass = (href: string) => {
+    if (isNavItemActive(href)) {
+      return "inline-flex h-10 min-w-0 items-center rounded-lg bg-brand-primary px-3.5 text-sm font-semibold text-white shadow-sm";
     }
-    return "inline-flex h-10 items-center rounded-xl px-3.5 text-sm font-medium text-neutral-600 hover:bg-slate-50 hover:text-slate-900";
+    return "inline-flex h-10 min-w-0 items-center rounded-lg px-3.5 text-sm font-medium text-neutral-600 hover:bg-slate-100 hover:text-slate-950";
   };
 
   const mobileNavLinkClass = (href: string) => {
-    const isServiceTopNavItem = href === "/assets" || href === "/spaces" || href === "/vehicles" || href === "/books";
-    const isActive =
-      !(isManageWorkspacePath && isServiceTopNavItem) &&
-      (pathname === href || pathname.startsWith(`${href}/`));
-    return isActive
-      ? "block border-l-2 border-slate-900 pl-3 pr-2 py-2.5 text-sm font-semibold text-slate-900"
-      : "block pl-3 pr-2 py-2.5 text-sm text-neutral-600 hover:text-slate-900";
+    return isNavItemActive(href)
+      ? "block break-words rounded-lg bg-blue-50 px-3 py-2.5 text-sm font-semibold text-brand-primary"
+      : "block break-words rounded-lg px-3 py-2.5 text-sm text-neutral-600 hover:bg-slate-50 hover:text-slate-950";
   };
 
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      const target = event.target as HTMLElement;
-      if (!target.closest(".dropdown-menu")) {
+    if (!dropdownOpen && !mobileMenuOpen) return;
+
+    const handleClickOutside = (event: PointerEvent) => {
+      if (!(event.target instanceof Node)) return;
+      if (dropdownOpen && !userMenuButtonRef.current?.parentElement?.contains(event.target)) {
         setDropdownOpen(null);
       }
+      if (!headerRef.current?.contains(event.target)) setMobileMenuOpen(false);
     };
 
-    if (dropdownOpen) {
-      document.addEventListener("mousedown", handleClickOutside);
-      return () => document.removeEventListener("mousedown", handleClickOutside);
-    }
-  }, [dropdownOpen]);
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      if (dropdownOpen) userMenuButtonRef.current?.focus();
+      else mobileMenuButtonRef.current?.focus();
+      setDropdownOpen(null);
+      setMobileMenuOpen(false);
+    };
+
+    document.addEventListener("pointerdown", handleClickOutside);
+    document.addEventListener("keydown", handleEscape);
+    return () => {
+      document.removeEventListener("pointerdown", handleClickOutside);
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, [dropdownOpen, mobileMenuOpen]);
 
   return (
-    <header className="sticky top-0 z-40 border-b border-slate-200/80 bg-white/92 shadow-[0_6px_18px_rgba(15,23,42,0.06)] backdrop-blur-md">
-      <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-4 py-2.5 md:px-6">
+    <header ref={headerRef} className="sticky top-0 z-40 border-b border-slate-200/90 bg-white/95 shadow-[0_2px_10px_rgba(15,23,42,0.04)] backdrop-blur-md">
+      <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-3 px-4 py-2.5 md:px-6">
         <Link
           href="/"
-          className="flex items-center gap-2 transition-opacity hover:opacity-85"
+          className="flex shrink-0 items-center gap-2 transition-opacity hover:opacity-85"
         >
-          <LogoIcon className="h-10 w-10 shrink-0 md:h-11 md:w-11" />
-          <div>
-            <p className="text-2xl font-bold tracking-tight text-slate-900">
+          <LogoIcon className="h-9 w-9 shrink-0 md:h-10 md:w-10" />
+          <div className="min-w-0">
+            <p className="text-xl font-bold text-slate-950 md:text-[22px]">
               StewardFlow
             </p>
             <p className="hidden text-[11px] text-slate-500 md:block">
@@ -93,32 +112,44 @@ export default function Header() {
           </div>
         </Link>
 
-        <nav className="hidden items-center gap-2 md:flex">
+        <nav className="hidden min-w-0 items-center gap-1 lg:flex" aria-label="주 메뉴">
           {mainNavItems.map((item) => (
-            <Link key={item.href} href={item.href} className={navLinkClass(item.href)}>
-              {item.label}
+            <Link
+              key={item.href}
+              href={item.href}
+              className={navLinkClass(item.href)}
+              aria-current={isNavItemActive(item.href) ? "page" : undefined}
+              title={item.label}
+            >
+              <span className="max-w-[100px] truncate">{item.label}</span>
             </Link>
           ))}
 
           {!loading && isAuthed && (
-            <div className="ml-1 flex items-center gap-2">
+            <div className="ml-1 flex shrink-0 items-center gap-2">
               {hasOrganization && userItems.length > 0 ? (
-                <div className="relative dropdown-menu">
+                <div className="relative" onBlur={(event) => {
+                  if (!event.currentTarget.contains(event.relatedTarget)) setDropdownOpen(null);
+                }}>
                   <button
+                    ref={userMenuButtonRef}
                     type="button"
                     onClick={() => toggleDropdown("user")}
-                    className="inline-flex h-10 items-center rounded-xl border border-slate-200 bg-white px-3 text-sm font-medium text-neutral-700 hover:border-slate-300 hover:text-slate-900"
+                    className="inline-flex h-10 items-center rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium text-neutral-700 hover:border-slate-300 hover:bg-slate-50 hover:text-slate-950"
+                    aria-expanded={dropdownOpen === "user"}
+                    aria-controls="user-navigation"
                   >
                     <span className="max-w-[180px] truncate">{userMenuLabel}</span>
                   </button>
                   {dropdownOpen === "user" && (
-                    <div className="absolute right-0 top-full z-50 mt-2 min-w-[180px] rounded-xl border border-slate-200 bg-white p-1 shadow-xl">
+                    <nav id="user-navigation" aria-label="내 메뉴" className="absolute right-0 top-full z-50 mt-2 min-w-[190px] rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl">
                       {userItems.map((item, index) => (
                         <Link
                           key={`${item.href}-${index}`}
                           href={item.href}
                           className="block rounded-lg px-3 py-2 text-sm text-neutral-700 hover:bg-slate-50 hover:text-slate-900"
                           onClick={() => setDropdownOpen(null)}
+                          aria-current={isNavItemActive(item.href) ? "page" : undefined}
                         >
                           {item.label}
                         </Link>
@@ -134,7 +165,7 @@ export default function Header() {
                       >
                         로그아웃
                       </button>
-                    </div>
+                    </nav>
                   )}
                 </div>
               ) : (
@@ -144,7 +175,7 @@ export default function Header() {
                       기관 생성
                     </Link>
                   ) : null}
-                  <span className="inline-flex h-10 max-w-[180px] items-center truncate rounded-xl border border-slate-200 bg-white px-3 text-sm text-neutral-700">
+                  <span className="inline-flex h-10 max-w-[180px] items-center truncate rounded-lg border border-slate-200 bg-white px-3 text-sm text-neutral-700">
                     {userMenuLabel}
                   </span>
                   <button
@@ -173,32 +204,28 @@ export default function Header() {
           )}
         </nav>
 
-        <div className="flex items-center gap-2 md:hidden">
+        <div className="flex items-center gap-2 lg:hidden">
           {((!loading && isAuthed) || (loading && hasLocalStorageSession === true)) && (
             <NotificationBadge />
           )}
           <button
+            ref={mobileMenuButtonRef}
             type="button"
             onClick={() => setMobileMenuOpen((prev) => !prev)}
             className="header-icon-button"
-            aria-label="메뉴 열기"
+            aria-label={mobileMenuOpen ? "메뉴 닫기" : "메뉴 열기"}
+            aria-expanded={mobileMenuOpen}
+            aria-controls="mobile-navigation"
+            title={mobileMenuOpen ? "메뉴 닫기" : "메뉴 열기"}
           >
-            {mobileMenuOpen ? (
-              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            ) : (
-              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-              </svg>
-            )}
+            {mobileMenuOpen ? <X className="h-5 w-5" aria-hidden /> : <Menu className="h-5 w-5" aria-hidden />}
           </button>
         </div>
       </div>
 
       {mobileMenuOpen && (
-        <div className="border-t border-slate-200 bg-white/95 backdrop-blur md:hidden">
-          <nav className="mx-auto w-full max-w-6xl px-4 py-3">
+        <div id="mobile-navigation" className="border-t border-slate-200 bg-white shadow-lg lg:hidden">
+          <nav className="mx-auto w-full max-w-6xl px-4 py-3" aria-label="모바일 주 메뉴">
             <div className="space-y-1">
             {mainNavItems.map((item) => (
               <Link
@@ -206,6 +233,7 @@ export default function Header() {
                 href={item.href}
                 className={mobileNavLinkClass(item.href)}
                 onClick={() => setMobileMenuOpen(false)}
+                aria-current={isNavItemActive(item.href) ? "page" : undefined}
               >
                 {item.label}
               </Link>
@@ -214,7 +242,7 @@ export default function Header() {
             {!loading && isAuthed && userItems.length > 0 && (
               <>
                 <div className="my-1 border-t border-slate-100" />
-                <p className="px-3 pt-1 text-[11px] font-semibold tracking-wide text-slate-400">
+                <p className="px-3 pt-1 text-[11px] font-semibold text-slate-400">
                   내 메뉴
                 </p>
                 {userItems.map((item, index) => (
@@ -223,6 +251,7 @@ export default function Header() {
                     href={item.href}
                     className={mobileNavLinkClass(item.href)}
                     onClick={() => setMobileMenuOpen(false)}
+                    aria-current={isNavItemActive(item.href) ? "page" : undefined}
                   >
                     {item.label}
                   </Link>

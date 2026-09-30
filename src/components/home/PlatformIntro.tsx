@@ -1,315 +1,189 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { supabase } from "@/lib/supabase";
+import { ArrowUpRight, BookOpen, Building2, Car, Package, type LucideIcon } from "lucide-react";
 import LogoIcon from "@/components/common/LogoIcon";
+import Notice from "@/components/common/Notice";
+import { useHeaderSession } from "@/components/layout/useHeaderSession";
 
-type OrganizationFeatures = {
-  equipment?: boolean;
-  spaces?: boolean;
-  vehicles?: boolean;
-  books?: boolean;
+type ModuleKey = "equipment" | "spaces" | "vehicles" | "books";
+
+type ModuleCard = {
+  key: ModuleKey;
+  title: string;
+  description: string;
+  href: string;
+  icon: LucideIcon;
+  tone: string;
 };
+
+const moduleCards: ModuleCard[] = [
+  {
+    key: "books",
+    title: "도서",
+    description: "대여와 반납, 독서 기록을 한곳에서 이어갑니다.",
+    href: "/books",
+    tone: "border-blue-200 bg-blue-50 text-blue-800",
+    icon: BookOpen,
+  },
+  {
+    key: "equipment",
+    title: "물품",
+    description: "부서 물품의 위치와 대여 상태를 빠르게 확인합니다.",
+    href: "/assets",
+    tone: "border-teal-200 bg-teal-50 text-teal-800",
+    icon: Package,
+  },
+  {
+    key: "spaces",
+    title: "공간",
+    description: "예배와 모임 일정을 겹침 없이 예약하고 관리합니다.",
+    href: "/spaces",
+    tone: "border-amber-200 bg-amber-50 text-amber-800",
+    icon: Building2,
+  },
+  {
+    key: "vehicles",
+    title: "차량",
+    description: "사용 신청부터 반납 확인과 주행 기록까지 관리합니다.",
+    href: "/vehicles",
+    tone: "border-rose-200 bg-rose-50 text-rose-800",
+    icon: Car,
+  },
+];
 
 function PlatformIntroContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [features, setFeatures] = useState<OrganizationFeatures | null>(null);
+  const {
+    isAuthed,
+    hasOrganization,
+    loading,
+    error,
+    retry,
+    menuLabels,
+    menuOrder,
+    mainNavItems,
+  } = useHeaderSession();
+  const skipRedirect = searchParams.get("skip_redirect") === "true";
 
   useEffect(() => {
-    const checkAuth = async () => {
-      const { data: sessionData } = await supabase.auth.getSession();
-      const user = sessionData.session?.user;
-      setIsAuthenticated(Boolean(user));
+    if (!loading && !error && isAuthed && !hasOrganization && !skipRedirect) {
+      router.replace("/join");
+    }
+  }, [error, hasOrganization, isAuthed, loading, router, skipRedirect]);
 
-      if (!user) {
-        return;
-      }
+  const orderedCards = menuOrder.length
+    ? menuOrder.flatMap((item) => moduleCards.filter((card) => card.key === item.key))
+    : moduleCards;
 
-      const { data: profileData, error: profileError } = await supabase
-        .from("profiles")
-        .select("organization_id")
-        .eq("id", user.id)
-        .maybeSingle();
-
-      if (profileError) {
-        console.error("메인 소개 프로필 조회 오류:", profileError.message);
-        return;
-      }
-
-      const skipRedirect = searchParams.get("skip_redirect") === "true";
-      if (!profileData?.organization_id && !skipRedirect) {
-        router.push("/join");
-        return;
-      }
-
-      if (!profileData?.organization_id) {
-        return;
-      }
-
-      const { data: orgData, error: orgError } = await supabase
-        .from("organizations")
-        .select("features")
-        .eq("id", profileData.organization_id)
-        .maybeSingle();
-
-      if (orgError) {
-        console.error("메인 소개 기관 정보 조회 오류:", orgError.message);
-        return;
-      }
-
-      if (orgData) {
-        setFeatures({
-          equipment: orgData.features?.equipment ?? true,
-          spaces: orgData.features?.spaces ?? true,
-          vehicles: orgData.features?.vehicles ?? false,
-          books: orgData.features?.books ?? false,
-        });
-      }
-    };
-
-    void checkAuth();
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setIsAuthenticated(Boolean(session?.user));
-      if (session?.user) {
-        void checkAuth();
-      } else {
-        setFeatures(null);
-      }
-    });
-
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, [router, searchParams]);
-
-  const isCategoryEnabled = (category: "assets" | "spaces" | "vehicles" | "books") => {
-    if (!isAuthenticated || !features) return false;
-    if (category === "assets") return features.equipment !== false;
-    if (category === "spaces") return features.spaces !== false;
-    if (category === "vehicles") return features.vehicles === true;
-    return features.books === true;
+  const getModuleState = (card: ModuleCard) => {
+    if (loading) return { href: null, label: "확인 중" };
+    if (error) return { href: null, label: "확인 불가" };
+    if (!isAuthed) return { href: "/login", label: "로그인 후 이용" };
+    if (!hasOrganization) return { href: "/join", label: "기관 참여 필요" };
+    if (!mainNavItems.some((item) => item.href === card.href)) {
+      return { href: null, label: "사용 안 함" };
+    }
+    return { href: card.href, label: "바로가기" };
   };
-
-  const handleCategoryClick = (category: "assets" | "spaces" | "vehicles" | "books") => {
-    if (!isCategoryEnabled(category)) {
-      return;
-    }
-    if (category === "assets") {
-      router.push("/assets");
-      return;
-    }
-    if (category === "spaces") {
-      router.push("/spaces");
-      return;
-    }
-    if (category === "vehicles") {
-      router.push("/vehicles");
-      return;
-    }
-    router.push("/books");
-  };
-
-  const categoryCards = [
-    {
-      key: "assets" as const,
-      title: "물품",
-      description: "소유 부서 기준으로 등록하고, 신청부터 반납까지 전 과정을 관리합니다.",
-      accent: "from-sky-500/20 to-blue-500/10",
-      icon: (
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth={1.8}
-          d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
-        />
-      ),
-    },
-    {
-      key: "spaces" as const,
-      title: "공간",
-      description: "공간 예약 충돌을 방지하고, 부서 운영 일정에 맞춰 체계적으로 배정합니다.",
-      accent: "from-teal-500/20 to-cyan-500/10",
-      icon: (
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth={1.8}
-          d="M3 11.5l9-7 9 7M5 10v9a1 1 0 001 1h4v-6h4v6h4a1 1 0 001-1v-9"
-        />
-      ),
-    },
-    {
-      key: "vehicles" as const,
-      title: "차량",
-      description: "사용 신청, 반납 확인, 주행 정보까지 한 화면에서 안전하게 관리합니다.",
-      accent: "from-amber-400/25 to-orange-400/15",
-      icon: (
-        <>
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={1.8}
-            d="M3 13l2-5a2 2 0 011.9-1.3h10.2A2 2 0 0119 8l2 5v6h-2v-2H5v2H3v-6z"
-          />
-          <circle cx="7.5" cy="14.5" r="1.4" strokeWidth={1.8} />
-          <circle cx="16.5" cy="14.5" r="1.4" strokeWidth={1.8} />
-        </>
-      ),
-    },
-    {
-      key: "books" as const,
-      title: "도서",
-      description: "북카페/개인 책장을 연결해 대여, 반납, 독서기록과 응원까지 운영합니다.",
-      accent: "from-indigo-500/20 to-sky-500/10",
-      icon: (
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth={1.8}
-          d="M5 5.5A2.5 2.5 0 017.5 3H20v15H7.5A2.5 2.5 0 005 20.5V5.5zm0 0A2.5 2.5 0 017.5 8H20"
-        />
-      ),
-    },
-  ];
-
-  const benefitItems = [
-    {
-      title: "권한 기반 승인",
-      description: "관리자/부서 관리자 권한에 맞는 승인 경로를 제공합니다.",
-    },
-    {
-      title: "모바일 우선 접근",
-      description: "예배 현장에서도 신청, 승인 상태, 알림을 빠르게 확인할 수 있습니다.",
-    },
-    {
-      title: "신청 내역 추적",
-      description: "내 대여 신청 수정/취소, 상태 변경 이력을 일관되게 관리합니다.",
-    },
-    {
-      title: "부서 간 협업",
-      description: "불용품 양도 요청과 공용 자원 공유를 표준화된 흐름으로 처리합니다.",
-    },
-  ];
 
   return (
-    <div className="space-y-8">
-      <section className="relative overflow-hidden rounded-3xl border border-slate-200 bg-white px-6 py-10 shadow-[0_12px_26px_rgba(15,23,42,0.07)] md:px-10">
-        <div className="pointer-events-none absolute -right-16 -top-20 h-64 w-64 rounded-full bg-sky-500/10 blur-3xl" />
-        <div className="pointer-events-none absolute -left-20 bottom-0 h-56 w-56 rounded-full bg-teal-500/10 blur-3xl" />
-        <div className="relative z-10">
-          <div className="flex items-center justify-center md:justify-start">
-            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-slate-50 ring-1 ring-slate-100 md:h-20 md:w-20">
-              <LogoIcon className="h-12 w-12 md:h-14 md:w-14" />
-            </div>
+    <div className="space-y-8 md:space-y-10">
+      <section
+        className="border-b border-slate-200 pb-8 pt-1 md:pb-10 md:pt-4"
+        aria-busy={loading}
+      >
+        <div className="flex items-start gap-4 md:gap-6">
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white shadow-sm md:h-14 md:w-14">
+            <LogoIcon className="h-9 w-9 md:h-10 md:w-10" />
           </div>
-          <div className="mt-6 text-center md:text-left">
-            <p className="text-sm font-semibold tracking-[0.12em] text-slate-500">
-              CHURCH RESOURCE OPERATIONS
+          <div className="min-w-0 flex-1">
+            <p className="text-xs font-semibold uppercase text-brand-primary">교회 자원관리 시스템</p>
+            <h1 className="mt-1 text-3xl font-bold text-slate-950 md:text-5xl">StewardFlow</h1>
+            <p className="mt-3 max-w-2xl break-keep text-base leading-7 text-slate-600 md:text-lg">
+              물품, 공간, 차량과 도서를 한 흐름으로 연결해 현장의 신청, 승인, 반납을 더 분명하게 관리합니다.
             </p>
-            <h1 className="mt-3 text-3xl font-bold leading-tight text-slate-900 md:text-5xl">
-              교회 자원관리 시스템
-            </h1>
-            <p className="mt-2 text-xl font-semibold text-brand-primary md:text-2xl">
-              StewardFlow
-            </p>
-            <p className="mx-auto mt-4 max-w-2xl text-sm leading-relaxed text-slate-600 md:mx-0 md:text-base">
-              물품, 공간, 차량 운영을 하나의 흐름으로 연결해 신청, 승인, 반납, 알림까지
-              교회 현장에 맞게 관리합니다.
-            </p>
-          </div>
-          <div className="mt-7 grid gap-3 text-sm text-slate-700 md:grid-cols-3">
-            <div className="flex items-center gap-2">
-              <span className="h-1.5 w-1.5 rounded-full bg-slate-400" />
-              <span>조직별 메뉴/권한 설정</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="h-1.5 w-1.5 rounded-full bg-slate-400" />
-              <span>신청 상태 실시간 반영</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="h-1.5 w-1.5 rounded-full bg-slate-400" />
-              <span>모바일 친화형 운영 화면</span>
+            <div className="mt-6 flex flex-col gap-2 sm:flex-row">
+              {loading ? (
+                <span className="inline-flex h-10 items-center gap-2 text-sm font-medium text-slate-600" aria-live="polite">
+                  <span className="h-2 w-2 animate-pulse rounded-full bg-brand-primary" aria-hidden />
+                  로그인 상태 확인 중
+                </span>
+              ) : error ? (
+                <Notice variant="error" className="w-full">
+                  <p>{error}</p>
+                  <button type="button" onClick={retry} className="btn-outline mt-3">다시 시도</button>
+                </Notice>
+              ) : !isAuthed ? (
+                <Link href="/login" className="btn-primary w-full sm:w-auto">카카오로 시작하기</Link>
+              ) : !hasOrganization ? (
+                <Link href="/join" className="btn-primary w-full sm:w-auto">기관 참여하기</Link>
+              ) : (
+                <>
+                  <Link href="/my" className="btn-primary w-full sm:w-auto">내 신청 보기</Link>
+                  <Link href="/notifications" className="btn-outline w-full sm:w-auto">알림 확인</Link>
+                </>
+              )}
             </div>
           </div>
         </div>
       </section>
 
-      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        {categoryCards.map((card) => {
-          const enabled = isCategoryEnabled(card.key);
-          return (
-            <button
-              key={card.key}
-              type="button"
-              onClick={() => handleCategoryClick(card.key)}
-              className={`group relative overflow-hidden rounded-2xl border p-5 text-left transition-all ${
-                enabled
-                  ? "border-slate-200 bg-white shadow-[0_8px_22px_rgba(15,23,42,0.08)] hover:-translate-y-0.5 hover:shadow-[0_14px_28px_rgba(15,23,42,0.12)]"
-                  : "cursor-default border-slate-200/80 bg-slate-50"
-              }`}
-            >
-              <div
-                className={`pointer-events-none absolute inset-0 bg-gradient-to-br opacity-80 ${card.accent}`}
-              />
-              <div className="relative z-10">
-                <div className="flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-2.5">
-                    <svg
-                      className="h-6 w-6 flex-shrink-0 text-slate-700"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      {card.icon}
-                    </svg>
-                    <h2 className="text-lg font-semibold text-slate-900">{card.title}</h2>
+      <section aria-labelledby="service-modules-title">
+        <div className="mb-4 flex flex-wrap items-end justify-between gap-2">
+          <div>
+            <p className="text-xs font-semibold text-brand-accent">서비스</p>
+            <h2 id="service-modules-title" className="mt-1 text-2xl font-semibold text-slate-950">자원 바로가기</h2>
+          </div>
+        </div>
+
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          {orderedCards.map((card) => {
+            const state = getModuleState(card);
+            const title = menuLabels?.[card.key] ?? card.title;
+            const Icon = card.icon;
+            const content = (
+              <>
+                <div className="flex items-start justify-between gap-3">
+                  <div className={`flex h-10 w-10 items-center justify-center rounded-lg border ${card.tone}`}>
+                    <Icon className="h-5 w-5" aria-hidden />
                   </div>
-                  <span
-                    className={`rounded-full px-2.5 py-1 text-[11px] font-medium ${
-                      enabled
-                        ? "bg-emerald-100 text-emerald-700"
-                        : "bg-neutral-200 text-neutral-600"
-                    }`}
-                  >
-                    {enabled ? "사용 가능" : "비활성"}
+                  <span className={`inline-flex items-center gap-1 text-xs font-semibold ${state.href ? "text-brand-primary" : "text-slate-500"}`}>
+                    {state.label}{state.href ? <ArrowUpRight className="h-3.5 w-3.5" aria-hidden /> : null}
                   </span>
                 </div>
-                <p className="mt-3 text-sm leading-relaxed text-slate-700">{card.description}</p>
-              </div>
-            </button>
-          );
-        })}
-      </section>
+                <div className="mt-5">
+                  <h3 className="break-words text-lg font-semibold text-slate-950">{title}</h3>
+                  <p className="mt-1.5 break-keep text-sm leading-6 text-slate-600">{card.description}</p>
+                </div>
+              </>
+            );
 
-      <section className="rounded-2xl border border-slate-200 bg-white p-6">
-        <h2 className="text-xl font-semibold text-slate-900">운영 핵심 포인트</h2>
-        <ul className="mt-4 divide-y divide-slate-200">
-          {benefitItems.map((item) => (
-            <li key={item.title} className="py-3 first:pt-0 last:pb-0">
-              <p className="font-semibold text-slate-900">{item.title}</p>
-              <p className="mt-1 text-sm text-slate-600">{item.description}</p>
-            </li>
-          ))}
-        </ul>
-      </section>
+            if (state.href) {
+              return (
+                <Link
+                  key={card.key}
+                  href={state.href}
+                  className="surface-card surface-card-interactive min-h-44 p-5"
+                  aria-label={`${title}: ${state.label}`}
+                >
+                  {content}
+                </Link>
+              );
+            }
 
-      {(!isAuthenticated || (isAuthenticated && !features)) && (
-        <div className="pb-2 text-center">
-          <Link
-            href={isAuthenticated ? "/join" : "/login"}
-            className="inline-flex h-12 items-center justify-center rounded-xl bg-brand-primary px-8 text-base font-semibold text-white transition-colors hover:bg-[#173d7f]"
-          >
-            {isAuthenticated ? "초대코드 입력" : "시작하기"}
-          </Link>
+            return (
+              <article key={card.key} className="min-h-44 rounded-xl border border-slate-200 bg-slate-100/70 p-5">
+                {content}
+              </article>
+            );
+          })}
         </div>
-      )}
+      </section>
+
     </div>
   );
 }
@@ -318,10 +192,12 @@ export default function PlatformIntro() {
   return (
     <Suspense
       fallback={
-        <div className="flex min-h-[60vh] items-center justify-center">
-          <div className="text-center">
-            <div className="mx-auto h-8 w-8 animate-spin rounded-full border-b-2 border-neutral-900" />
-            <p className="mt-4 text-sm text-neutral-600">로딩 중...</p>
+        <div className="space-y-8" aria-busy="true" aria-label="홈 화면을 불러오는 중">
+          <div className="h-56 animate-pulse rounded-xl bg-slate-200/70" />
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            {Array.from({ length: 4 }).map((_, index) => (
+              <div key={index} className="h-44 animate-pulse rounded-xl bg-slate-200/70" />
+            ))}
           </div>
         </div>
       }

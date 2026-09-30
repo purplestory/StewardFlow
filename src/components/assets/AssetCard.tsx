@@ -1,6 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import type { Asset } from "@/types/database";
+import ResourceStatusBadge from "@/components/ui/ResourceStatusBadge";
 
 type AssetCardProps = {
   asset: Asset;
@@ -28,7 +29,7 @@ const categoryLabel: Record<NonNullable<Asset["category"]>, string> = {
   etc: "기타",
 };
 
-export default function AssetCard({ asset }: AssetCardProps) {
+export default function AssetCard({ asset, requiredRoleLabel }: AssetCardProps) {
   const tags = asset.tags ?? [];
 
   const detailUrl = `/assets/${asset.short_id ?? asset.id}`;
@@ -42,16 +43,17 @@ export default function AssetCard({ asset }: AssetCardProps) {
   return (
     <Link
       href={detailUrl}
-      className="surface-card group flex h-full flex-col p-4 transition-colors hover:border-slate-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
+      className="surface-card surface-card-interactive group flex h-full flex-col p-4"
+      aria-label={`${asset.name} 상세 보기`}
     >
-      <div className="relative aspect-[4/3] w-full overflow-hidden rounded-xl bg-neutral-100 transition-opacity group-hover:opacity-90">
+      <div className="relative aspect-[4/3] w-full overflow-hidden rounded-lg bg-neutral-100">
           {firstImage ? (
             <Image
               src={firstImage}
               alt={asset.name}
               fill
               sizes="(max-width: 768px) 100vw, 33vw"
-              className="h-full w-full object-cover"
+              className="h-full w-full object-cover transition-transform duration-200 group-hover:scale-[1.02]"
               unoptimized
             />
           ) : (
@@ -61,53 +63,11 @@ export default function AssetCard({ asset }: AssetCardProps) {
           )}
       </div>
       <div className="mt-4">
-          <div className="flex items-center gap-2 flex-wrap">
-            <h2 className="text-base font-semibold transition-colors group-hover:text-neutral-700 flex-1 min-w-0">
+          <div className="flex flex-wrap items-start gap-2">
+            <h2 className="min-w-0 flex-1 break-words text-base font-semibold text-slate-950 transition-colors group-hover:text-brand-primary">
               {asset.name}
             </h2>
-          {/* 상태 뱃지 - 제품명 옆에 표시 */}
-          <span
-            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium flex-shrink-0 ${
-              asset.status === "available"
-                ? "bg-emerald-100 text-emerald-700 border border-emerald-200"
-                : asset.status === "rented"
-                ? "bg-blue-100 text-blue-700 border border-blue-200"
-                : asset.status === "repair"
-                ? "bg-amber-100 text-amber-700 border border-amber-200"
-                : asset.status === "lost"
-                ? "bg-rose-100 text-rose-700 border border-rose-200"
-                : asset.status === "retired"
-                ? "bg-neutral-100 text-neutral-700 border border-neutral-200"
-                : "bg-neutral-100 text-neutral-700 border border-neutral-200"
-            }`}
-          >
-            {asset.status === "available" && (
-              <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-              </svg>
-            )}
-            {asset.status === "rented" && (
-              <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
-              </svg>
-            )}
-            {asset.status === "repair" && (
-              <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                <path d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" />
-              </svg>
-            )}
-            {asset.status === "lost" && (
-              <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-              </svg>
-            )}
-            {asset.status === "retired" && (
-              <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-              </svg>
-            )}
-            <span>{statusLabel[asset.status]}</span>
-          </span>
+            <ResourceStatusBadge status={asset.status} label={statusLabel[asset.status]} className="shrink-0" />
           </div>
           {/* 모델명 */}
           {asset.model_name && (
@@ -115,42 +75,29 @@ export default function AssetCard({ asset }: AssetCardProps) {
           )}
       </div>
 
-      {/* 상세 정보 표시 */}
-      <div className="mt-3 space-y-1.5">
+      <dl className="mt-4 grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-1.5 border-t border-slate-100 pt-3 text-xs">
         {asset.category && (
-          <div className="flex items-center gap-2 text-xs text-neutral-600">
-            <span className="font-medium text-neutral-500">카테고리</span>
-            <span>{categoryLabel[asset.category] || asset.category}</span>
-          </div>
+          <><dt className="text-neutral-500">분류</dt><dd className="truncate text-neutral-700">{categoryLabel[asset.category] || asset.category}</dd></>
         )}
-        <div className="flex items-center gap-2 text-xs text-neutral-600">
-          <span className="font-medium text-neutral-500">소유</span>
-          <span>
-            {asset.owner_scope === "organization" ? "기관 공용" : asset.owner_department}
-          </span>
-        </div>
-        <div className="flex items-center gap-2 text-xs text-neutral-600">
-          <span className="font-medium text-neutral-500">설치</span>
-          <span>{asset.mobility ? mobilityLabel[asset.mobility] : "이동"}</span>
-        </div>
+        <dt className="text-neutral-500">소유</dt>
+        <dd className="break-words text-neutral-700">{asset.owner_scope === "organization" ? "기관 공용" : asset.owner_department}</dd>
+        <dt className="text-neutral-500">형태</dt>
+        <dd className="text-neutral-700">{asset.mobility ? mobilityLabel[asset.mobility] : "이동"}</dd>
         {asset.location && (
-          <div className="flex items-center gap-2 text-xs text-neutral-600">
-            <span className="font-medium text-neutral-500">설치(보관) 장소</span>
-            <span>{asset.location}</span>
-          </div>
+          <><dt className="text-neutral-500">위치</dt><dd className="break-words text-neutral-700">{asset.location}</dd></>
         )}
         {asset.quantity > 1 && (
-          <div className="flex items-center gap-2 text-xs text-neutral-600">
-            <span className="font-medium text-neutral-500">수량</span>
-            <span>{asset.quantity}개</span>
-          </div>
+          <><dt className="text-neutral-500">수량</dt><dd className="text-neutral-700">{asset.quantity}개</dd></>
         )}
-      </div>
+        {requiredRoleLabel ? (
+          <><dt className="text-neutral-500">승인</dt><dd className="truncate text-neutral-700">{requiredRoleLabel}</dd></>
+        ) : null}
+      </dl>
 
       {/* 태그 */}
       {tags.length > 0 && (
         <div className="mt-3 flex flex-wrap gap-1.5">
-          {tags.map((tag) => (
+          {tags.slice(0, 3).map((tag) => (
             <span
               key={tag}
               className="inline-flex items-center rounded-full bg-neutral-50 px-2 py-0.5 text-xs font-medium text-neutral-700 border border-neutral-200"
@@ -158,6 +105,7 @@ export default function AssetCard({ asset }: AssetCardProps) {
               {tag}
             </span>
           ))}
+          {tags.length > 3 ? <span className="chip-muted">+{tags.length - 3}</span> : null}
         </div>
       )}
     </Link>

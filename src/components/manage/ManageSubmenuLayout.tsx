@@ -57,7 +57,7 @@ export default function ManageSubmenuLayout<T extends string>({
       <div className="grid gap-5 lg:grid-cols-[220px_minmax(0,1fr)]">
         <aside className="hidden lg:block">
           <div className="surface-card p-2">
-            <p className="px-3 pb-2 pt-1 text-xs font-semibold uppercase tracking-[0.08em] text-neutral-500">
+            <p className="px-3 pb-2 pt-1 text-xs font-semibold uppercase text-neutral-500">
               {menuTitle}
             </p>
             <nav className="space-y-1" aria-label={`${menuTitle} 메뉴`}>

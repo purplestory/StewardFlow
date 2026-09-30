@@ -16,7 +16,7 @@ const DEFAULT_ASSET_CATEGORIES: AssetCategoryOption[] = [
   { value: "etc", label: "기타" },
 ];
 
-export function useAssets() {
+export function useAssets(enabled = true) {
   return useQuery({
     queryKey: ["assets"],
     queryFn: async () => {
@@ -39,6 +39,7 @@ export function useAssets() {
       return (data ?? []) as Asset[];
     },
     staleTime: 1000 * 60 * 2, // 2분간 fresh 상태 유지
+    enabled,
   });
 }
 

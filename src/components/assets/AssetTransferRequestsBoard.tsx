@@ -632,7 +632,7 @@ export default function AssetTransferRequestsBoard() {
       <div className="surface-card p-5 md:p-6">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <h2 className="text-xl font-semibold tracking-tight text-slate-900">불용품 양도 요청</h2>
+            <h2 className="text-xl font-semibold text-slate-900">불용품 양도 요청</h2>
             <p className="mt-1 text-sm text-neutral-600">
               내 요청과 내 부서로 들어온 요청을 확인할 수 있습니다.
             </p>

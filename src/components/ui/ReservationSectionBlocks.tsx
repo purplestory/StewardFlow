@@ -219,7 +219,7 @@ export function ReservationWorkspace({
       <header className="border-b border-neutral-200 bg-gradient-to-r from-white to-slate-50/70 px-4 py-4 md:px-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="space-y-1">
-            <h2 className="text-lg font-semibold tracking-tight text-slate-900">예약 워크스페이스</h2>
+            <h2 className="text-lg font-semibold text-slate-900">예약 워크스페이스</h2>
             <p className="text-sm text-neutral-600">
               기본은 직접 입력 모드이며, 필요할 때만 캘린더를 열어 빠르게 시간대를 선택하세요.
             </p>

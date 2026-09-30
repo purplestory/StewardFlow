@@ -2,6 +2,12 @@
 
 프로젝트 의사결정 로그 (변경 시 계속 추가)
 
+## 2026-10-01
+- 상태: 확정 (로컬 UI 구현/검증, 운영 반영은 실행 직전 승인)
+- 결정: `design_doc.md`와 `UI_SYSTEM.md`를 기준으로 모바일 우선 공통 UI를 적용한다. 홈과 헤더의 기관 메뉴 설정은 같은 훅으로 조회하며, 오류/비로그인/기관 미참여/비활성 상태를 구분한다. Lucide 도구 아이콘, 40px 입력 높이, 키보드 포커스와 Escape 초점 복귀, 브라우저 확대 및 reduced-motion을 유지한다.
+- 영향: 홈/로그인/헤더/물품 목록과 공통 UI. Next.js는 같은 16.3 계열의 보안 패치 버전으로 갱신한다. DB/RLS/NAS/OAuth 설정과 운영 데이터는 변경하지 않는다.
+- 추가 결정: 로그아웃/계정 변경 시 React Query 캐시를 초기화해 이전 계정 데이터의 잔존 표시를 막는다. 동일 사용자 token refresh는 캐시를 유지한다.
+
 ## 2026-08-25
 - 상태: 확정 (archive-backed canonical baseline, production history metadata 보존)
 - 결정: `production-archive-20260825-100124-kst` custom archive와 verified ACL-inclusive r3 restore를 StewardFlow의 canonical recovery baseline으로 사용한다. executable SQL squash는 현재 만들지 않으며, history의 관측값 `20260220103000_bootstrap_books_schema`와 manual hardening evidence를 보존한다.

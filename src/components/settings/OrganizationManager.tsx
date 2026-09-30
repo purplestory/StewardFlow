@@ -260,7 +260,7 @@ export default function OrganizationManager() {
       {organizationId && organization ? (
         <section className="surface-card p-5 md:p-6">
           <div>
-            <h2 className="text-xl font-semibold tracking-tight text-slate-900">내 기관</h2>
+            <h2 className="text-xl font-semibold text-slate-900">내 기관</h2>
             {isEditingName && userRole === "admin" ? (
               <div className="flex gap-2">
                 <input
@@ -329,7 +329,7 @@ export default function OrganizationManager() {
           onSubmit={handleCreate}
           className="surface-card space-y-3 p-5 md:p-6"
         >
-          <h2 className="text-xl font-semibold tracking-tight text-slate-900">기관 생성</h2>
+          <h2 className="text-xl font-semibold text-slate-900">기관 생성</h2>
           <p className="text-sm text-neutral-600">
             새로운 기관을 생성합니다. 기관 생성자는 자동으로 관리자 권한을 받습니다.
           </p>

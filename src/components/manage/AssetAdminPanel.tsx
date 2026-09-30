@@ -183,7 +183,7 @@ export default function AssetAdminPanel() {
       <div className="space-y-4 p-4 md:p-5">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h2 className="text-xl font-semibold tracking-tight text-slate-900">물품 관리</h2>
+          <h2 className="text-xl font-semibold text-slate-900">물품 관리</h2>
           <p className="mt-1 text-sm text-neutral-600">
             물품 상태를 일괄 변경하거나 검색할 수 있습니다.
           </p>
